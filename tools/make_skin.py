@@ -357,24 +357,6 @@ def build_atlas():
         cursor_x += canvas.width + 1
         row_height = max(row_height, canvas.height)
 
-    # --- fonte
-    for character, pattern in GLYPHS_5X7.items():
-        cell = Canvas(GLYPH_WIDTH, GLYPH_HEIGHT)
-        bits = normalize(pattern)
-        for j in range(GLYPH_HEIGHT):
-            for i in range(GLYPH_WIDTH):
-                if bits[j * GLYPH_WIDTH + i] == '#':
-                    cell.set(i, j, GREEN_TEXT)
-        place('font/%d' % ord(character), cell)
-
-    fallback = Canvas(GLYPH_WIDTH, GLYPH_HEIGHT)
-    bits = normalize(FALLBACK)
-    for j in range(GLYPH_HEIGHT):
-        for i in range(GLYPH_WIDTH):
-            if bits[j * GLYPH_WIDTH + i] == '#':
-                fallback.set(i, j, GREEN)
-    place('font/fallback', fallback)
-
     # --- digitos do mostrador
     for character in list('0123456789') + [':', '-']:
         cell = Canvas(digit_cell_width(character), DIGIT_HEIGHT)
@@ -403,42 +385,28 @@ def build_atlas():
                     cell.set(width - 2, j, FOCUS)
             place('button/%s/%s' % (name, state), cell)
 
-    # --- botoes de alternancia, nas medidas do layout classico
-    TOGGLES = (
-        ('eq', 'EQ', 23, 12),
-        ('playlist', 'PL', 23, 12),
-        ('shuffle', 'SHUFFLE', 46, 15),
-        ('repeat', 'REP', 28, 15),
+    # --- botoes sem rotulo, nas medidas do layout classico
+    #
+    # O texto nao e mais assado no sprite: os paineis desenham o rotulo por cima
+    # com a fonte de verdade. Um sprite por TAMANHO, e nao por rotulo — antes
+    # havia um sprite "toggle/eq" com as letras EQ dentro dele.
+    PILLS = (
+        ('eq', 23, 12),        # EQ e PL
+        ('shuffle', 46, 15),
+        ('repeat', 28, 15),
+        ('wide', 28, 13),      # rodape da playlist
+        ('small', 26, 12),     # ON e RST do equalizador
+        ('preset', 44, 12),
     )
-    for name, label, width, height in TOGGLES:
+    for name, width, height in PILLS:
         for state, top, bottom, raised, focus in BUTTON_STATES:
             cell = Canvas(width, height)
             cell.bevel(0, 0, width, height, top, bottom, raised)
-            colour = GREEN_DIM if state == 'disabled' else GREEN
-            text_width = len(label) * (GLYPH_WIDTH + 1) - 1
-            x = (width - text_width) // 2
-            y = (height - GLYPH_HEIGHT) // 2
-            for index, character in enumerate(label):
-                bits = normalize(GLYPHS_5X7.get(character, FALLBACK))
-                for j in range(GLYPH_HEIGHT):
-                    for i in range(GLYPH_WIDTH):
-                        if bits[j * GLYPH_WIDTH + i] == '#':
-                            cell.set(x + index * (GLYPH_WIDTH + 1) + i, y + j, colour)
-            place('toggle/%s/%s' % (name, state), cell)
-
-    # --- botao sem rotulo, para quem desenha o proprio texto por cima
-    #
-    # Os alternadores tem o rotulo assado no sprite. Reaproveita-los para outros
-    # botoes e escrever por cima sobrepoe os dois textos — foi o que aconteceu
-    # no rodape da playlist e nos botoes do equalizador.
-    for state, top, bottom, raised, focus in BUTTON_STATES:
-        cell = Canvas(28, 13)
-        cell.bevel(0, 0, 28, 13, top, bottom, raised)
-        if focus:
-            for i in range(0, 28, 2):
-                cell.set(i, 1, FOCUS)
-                cell.set(i, 11, FOCUS)
-        place('toggle/blank/%s' % state, cell)
+            if focus:
+                for i in range(0, width, 2):
+                    cell.set(i, 1, FOCUS)
+                    cell.set(i, height - 2, FOCUS)
+            place('pill/%s/%s' % (name, state), cell)
 
     # --- pecas de slider
     for state, top, bottom, raised, _ in BUTTON_STATES[:3]:

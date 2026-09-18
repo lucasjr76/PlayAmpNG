@@ -144,868 +144,532 @@
  ],
  "sprites": {
   "button/eject/active": [
-   118,
-   38,
+   262,
+   19,
    22,
    16
   ],
   "button/eject/disabled": [
-   141,
-   38,
+   285,
+   19,
    22,
    16
   ],
   "button/eject/focus": [
-   164,
-   38,
+   308,
+   19,
    22,
    16
   ],
   "button/eject/normal": [
-   72,
-   38,
+   216,
+   19,
    22,
    16
   ],
   "button/eject/pressed": [
-   95,
-   38,
+   239,
+   19,
    22,
    16
   ],
   "button/next/active": [
-   0,
-   38,
+   144,
+   19,
    23,
    18
   ],
   "button/next/disabled": [
-   24,
-   38,
+   168,
+   19,
    23,
    18
   ],
   "button/next/focus": [
-   48,
-   38,
+   192,
+   19,
    23,
    18
   ],
   "button/next/normal": [
-   456,
+   96,
    19,
    23,
    18
   ],
   "button/next/pressed": [
-   480,
+   120,
    19,
    23,
    18
   ],
   "button/pause/active": [
-   264,
-   19,
+   404,
+   0,
    23,
    18
   ],
   "button/pause/disabled": [
-   288,
-   19,
+   428,
+   0,
    23,
    18
   ],
   "button/pause/focus": [
-   312,
-   19,
+   452,
+   0,
    23,
    18
   ],
   "button/pause/normal": [
-   216,
-   19,
+   356,
+   0,
    23,
    18
   ],
   "button/pause/pressed": [
-   240,
-   19,
+   380,
+   0,
    23,
    18
   ],
   "button/play/active": [
-   144,
-   19,
+   284,
+   0,
    23,
    18
   ],
   "button/play/disabled": [
-   168,
-   19,
+   308,
+   0,
    23,
    18
   ],
   "button/play/focus": [
-   192,
-   19,
+   332,
+   0,
    23,
    18
   ],
   "button/play/normal": [
-   96,
-   19,
+   236,
+   0,
    23,
    18
   ],
   "button/play/pressed": [
-   120,
-   19,
+   260,
+   0,
    23,
    18
   ],
   "button/previous/active": [
-   24,
-   19,
+   164,
+   0,
    23,
    18
   ],
   "button/previous/disabled": [
-   48,
-   19,
+   188,
+   0,
    23,
    18
   ],
   "button/previous/focus": [
-   72,
-   19,
+   212,
+   0,
    23,
    18
   ],
   "button/previous/normal": [
-   482,
+   116,
    0,
    23,
    18
   ],
   "button/previous/pressed": [
+   140,
    0,
-   19,
    23,
    18
   ],
   "button/stop/active": [
-   384,
+   24,
    19,
    23,
    18
   ],
   "button/stop/disabled": [
-   408,
+   48,
    19,
    23,
    18
   ],
   "button/stop/focus": [
-   432,
+   72,
    19,
    23,
    18
   ],
   "button/stop/normal": [
-   336,
-   19,
+   476,
+   0,
    23,
    18
   ],
   "button/stop/pressed": [
-   360,
+   0,
    19,
    23,
    18
   ],
   "digit/45": [
-   472,
+   106,
    0,
    9,
    14
   ],
   "digit/48": [
-   366,
+   0,
    0,
    9,
    14
   ],
   "digit/49": [
-   376,
+   10,
    0,
    9,
    14
   ],
   "digit/50": [
-   386,
+   20,
    0,
    9,
    14
   ],
   "digit/51": [
-   396,
+   30,
    0,
    9,
    14
   ],
   "digit/52": [
-   406,
+   40,
    0,
    9,
    14
   ],
   "digit/53": [
-   416,
+   50,
    0,
    9,
    14
   ],
   "digit/54": [
-   426,
+   60,
    0,
    9,
    14
   ],
   "digit/55": [
-   436,
+   70,
    0,
    9,
    14
   ],
   "digit/56": [
-   446,
+   80,
    0,
    9,
    14
   ],
   "digit/57": [
-   456,
+   90,
    0,
    9,
    14
   ],
   "digit/58": [
-   466,
+   100,
    0,
    5,
    14
   ],
-  "font/32": [
-   216,
-   0,
-   5,
-   7
-  ],
-  "font/33": [
-   306,
-   0,
-   5,
-   7
-  ],
-  "font/34": [
-   336,
-   0,
-   5,
-   7
-  ],
-  "font/35": [
-   330,
-   0,
-   5,
-   7
-  ],
-  "font/37": [
-   300,
-   0,
-   5,
-   7
-  ],
-  "font/38": [
-   294,
-   0,
-   5,
-   7
-  ],
-  "font/39": [
-   282,
-   0,
-   5,
-   7
-  ],
-  "font/40": [
-   258,
-   0,
-   5,
-   7
-  ],
-  "font/41": [
-   264,
-   0,
-   5,
-   7
-  ],
-  "font/42": [
-   318,
-   0,
-   5,
-   7
-  ],
-  "font/43": [
-   288,
-   0,
-   5,
-   7
-  ],
-  "font/44": [
-   228,
-   0,
-   5,
-   7
-  ],
-  "font/45": [
-   240,
-   0,
-   5,
-   7
-  ],
-  "font/46": [
-   222,
-   0,
-   5,
-   7
-  ],
-  "font/47": [
-   252,
-   0,
-   5,
-   7
-  ],
-  "font/48": [
-   156,
-   0,
-   5,
-   7
-  ],
-  "font/49": [
-   162,
-   0,
-   5,
-   7
-  ],
-  "font/50": [
-   168,
-   0,
-   5,
-   7
-  ],
-  "font/51": [
-   174,
-   0,
-   5,
-   7
-  ],
-  "font/52": [
-   180,
-   0,
-   5,
-   7
-  ],
-  "font/53": [
-   186,
-   0,
-   5,
-   7
-  ],
-  "font/54": [
-   192,
-   0,
-   5,
-   7
-  ],
-  "font/55": [
-   198,
-   0,
-   5,
-   7
-  ],
-  "font/56": [
-   204,
-   0,
-   5,
-   7
-  ],
-  "font/57": [
-   210,
-   0,
-   5,
-   7
-  ],
-  "font/58": [
-   234,
-   0,
-   5,
-   7
-  ],
-  "font/60": [
-   342,
-   0,
-   5,
-   7
-  ],
-  "font/61": [
-   324,
-   0,
-   5,
-   7
-  ],
-  "font/62": [
-   348,
-   0,
-   5,
-   7
-  ],
-  "font/63": [
-   312,
-   0,
-   5,
-   7
-  ],
-  "font/64": [
-   354,
-   0,
-   5,
-   7
-  ],
-  "font/65": [
-   0,
-   0,
-   5,
-   7
-  ],
-  "font/66": [
-   6,
-   0,
-   5,
-   7
-  ],
-  "font/67": [
-   12,
-   0,
-   5,
-   7
-  ],
-  "font/68": [
-   18,
-   0,
-   5,
-   7
-  ],
-  "font/69": [
-   24,
-   0,
-   5,
-   7
-  ],
-  "font/70": [
-   30,
-   0,
-   5,
-   7
-  ],
-  "font/71": [
-   36,
-   0,
-   5,
-   7
-  ],
-  "font/72": [
-   42,
-   0,
-   5,
-   7
-  ],
-  "font/73": [
-   48,
-   0,
-   5,
-   7
-  ],
-  "font/74": [
-   54,
-   0,
-   5,
-   7
-  ],
-  "font/75": [
-   60,
-   0,
-   5,
-   7
-  ],
-  "font/76": [
-   66,
-   0,
-   5,
-   7
-  ],
-  "font/77": [
-   72,
-   0,
-   5,
-   7
-  ],
-  "font/78": [
-   78,
-   0,
-   5,
-   7
-  ],
-  "font/79": [
-   84,
-   0,
-   5,
-   7
-  ],
-  "font/80": [
-   90,
-   0,
-   5,
-   7
-  ],
-  "font/81": [
-   96,
-   0,
-   5,
-   7
-  ],
-  "font/82": [
-   102,
-   0,
-   5,
-   7
-  ],
-  "font/83": [
-   108,
-   0,
-   5,
-   7
-  ],
-  "font/84": [
-   114,
-   0,
-   5,
-   7
-  ],
-  "font/85": [
-   120,
-   0,
-   5,
-   7
-  ],
-  "font/86": [
-   126,
-   0,
-   5,
-   7
-  ],
-  "font/87": [
-   132,
-   0,
-   5,
-   7
-  ],
-  "font/88": [
-   138,
-   0,
-   5,
-   7
-  ],
-  "font/89": [
-   144,
-   0,
-   5,
-   7
-  ],
-  "font/90": [
-   150,
-   0,
-   5,
-   7
-  ],
-  "font/91": [
-   270,
-   0,
-   5,
-   7
-  ],
-  "font/93": [
-   276,
-   0,
-   5,
-   7
-  ],
-  "font/95": [
-   246,
-   0,
-   5,
-   7
-  ],
-  "font/fallback": [
-   360,
-   0,
-   5,
-   7
-  ],
   "frame/panel": [
-   111,
-   73,
+   468,
+   54,
    8,
    8
   ],
   "frame/titlebar": [
-   189,
-   73,
+   40,
+   67,
    8,
    14
   ],
   "frame/well": [
-   120,
-   73,
+   477,
+   54,
    8,
    8
   ],
+  "pill/eq/active": [
+   379,
+   19,
+   23,
+   12
+  ],
+  "pill/eq/disabled": [
+   403,
+   19,
+   23,
+   12
+  ],
+  "pill/eq/focus": [
+   427,
+   19,
+   23,
+   12
+  ],
+  "pill/eq/normal": [
+   331,
+   19,
+   23,
+   12
+  ],
+  "pill/eq/pressed": [
+   355,
+   19,
+   23,
+   12
+  ],
+  "pill/preset/active": [
+   198,
+   54,
+   44,
+   12
+  ],
+  "pill/preset/disabled": [
+   243,
+   54,
+   44,
+   12
+  ],
+  "pill/preset/focus": [
+   288,
+   54,
+   44,
+   12
+  ],
+  "pill/preset/normal": [
+   108,
+   54,
+   44,
+   12
+  ],
+  "pill/preset/pressed": [
+   153,
+   54,
+   44,
+   12
+  ],
+  "pill/repeat/active": [
+   246,
+   38,
+   28,
+   15
+  ],
+  "pill/repeat/disabled": [
+   275,
+   38,
+   28,
+   15
+  ],
+  "pill/repeat/focus": [
+   304,
+   38,
+   28,
+   15
+  ],
+  "pill/repeat/normal": [
+   188,
+   38,
+   28,
+   15
+  ],
+  "pill/repeat/pressed": [
+   217,
+   38,
+   28,
+   15
+  ],
+  "pill/shuffle/active": [
+   47,
+   38,
+   46,
+   15
+  ],
+  "pill/shuffle/disabled": [
+   94,
+   38,
+   46,
+   15
+  ],
+  "pill/shuffle/focus": [
+   141,
+   38,
+   46,
+   15
+  ],
+  "pill/shuffle/normal": [
+   451,
+   19,
+   46,
+   15
+  ],
+  "pill/shuffle/pressed": [
+   0,
+   38,
+   46,
+   15
+  ],
+  "pill/small/active": [
+   27,
+   54,
+   26,
+   12
+  ],
+  "pill/small/disabled": [
+   54,
+   54,
+   26,
+   12
+  ],
+  "pill/small/focus": [
+   81,
+   54,
+   26,
+   12
+  ],
+  "pill/small/normal": [
+   478,
+   38,
+   26,
+   12
+  ],
+  "pill/small/pressed": [
+   0,
+   54,
+   26,
+   12
+  ],
+  "pill/wide/active": [
+   391,
+   38,
+   28,
+   13
+  ],
+  "pill/wide/disabled": [
+   420,
+   38,
+   28,
+   13
+  ],
+  "pill/wide/focus": [
+   449,
+   38,
+   28,
+   13
+  ],
+  "pill/wide/normal": [
+   333,
+   38,
+   28,
+   13
+  ],
+  "pill/wide/pressed": [
+   362,
+   38,
+   28,
+   13
+  ],
   "slider/groove": [
-   102,
-   73,
+   459,
+   54,
    8,
    8
   ],
   "slider/position/active": [
-   72,
-   73,
+   429,
+   54,
    29,
    10
   ],
   "slider/position/normal": [
-   12,
-   73,
+   369,
+   54,
    29,
    10
   ],
   "slider/position/pressed": [
-   42,
-   73,
+   399,
+   54,
    29,
    10
   ],
   "slider/thumb/active": [
-   0,
-   73,
+   357,
+   54,
    11,
    11
   ],
   "slider/thumb/normal": [
-   478,
-   57,
+   333,
+   54,
    11,
    11
   ],
   "slider/thumb/pressed": [
-   490,
-   57,
+   345,
+   54,
    11,
    11
   ],
   "title/close/normal": [
-   169,
-   73,
+   20,
+   67,
    9,
    9
   ],
   "title/close/pressed": [
-   179,
-   73,
+   30,
+   67,
    9,
    9
   ],
   "title/minimize/normal": [
-   129,
-   73,
+   486,
+   54,
    9,
    9
   ],
   "title/minimize/pressed": [
-   139,
-   73,
+   496,
+   54,
    9,
    9
   ],
   "title/shade/normal": [
-   149,
-   73,
+   0,
+   67,
    9,
    9
   ],
   "title/shade/pressed": [
-   159,
-   73,
+   10,
+   67,
    9,
    9
-  ],
-  "toggle/blank/active": [
-   391,
-   57,
-   28,
-   13
-  ],
-  "toggle/blank/disabled": [
-   420,
-   57,
-   28,
-   13
-  ],
-  "toggle/blank/focus": [
-   449,
-   57,
-   28,
-   13
-  ],
-  "toggle/blank/normal": [
-   333,
-   57,
-   28,
-   13
-  ],
-  "toggle/blank/pressed": [
-   362,
-   57,
-   28,
-   13
-  ],
-  "toggle/eq/active": [
-   235,
-   38,
-   23,
-   12
-  ],
-  "toggle/eq/disabled": [
-   259,
-   38,
-   23,
-   12
-  ],
-  "toggle/eq/focus": [
-   283,
-   38,
-   23,
-   12
-  ],
-  "toggle/eq/normal": [
-   187,
-   38,
-   23,
-   12
-  ],
-  "toggle/eq/pressed": [
-   211,
-   38,
-   23,
-   12
-  ],
-  "toggle/playlist/active": [
-   355,
-   38,
-   23,
-   12
-  ],
-  "toggle/playlist/disabled": [
-   379,
-   38,
-   23,
-   12
-  ],
-  "toggle/playlist/focus": [
-   403,
-   38,
-   23,
-   12
-  ],
-  "toggle/playlist/normal": [
-   307,
-   38,
-   23,
-   12
-  ],
-  "toggle/playlist/pressed": [
-   331,
-   38,
-   23,
-   12
-  ],
-  "toggle/repeat/active": [
-   246,
-   57,
-   28,
-   15
-  ],
-  "toggle/repeat/disabled": [
-   275,
-   57,
-   28,
-   15
-  ],
-  "toggle/repeat/focus": [
-   304,
-   57,
-   28,
-   15
-  ],
-  "toggle/repeat/normal": [
-   188,
-   57,
-   28,
-   15
-  ],
-  "toggle/repeat/pressed": [
-   217,
-   57,
-   28,
-   15
-  ],
-  "toggle/shuffle/active": [
-   47,
-   57,
-   46,
-   15
-  ],
-  "toggle/shuffle/disabled": [
-   94,
-   57,
-   46,
-   15
-  ],
-  "toggle/shuffle/focus": [
-   141,
-   57,
-   46,
-   15
-  ],
-  "toggle/shuffle/normal": [
-   427,
-   38,
-   46,
-   15
-  ],
-  "toggle/shuffle/pressed": [
-   0,
-   57,
-   46,
-   15
   ]
  },
  "transparent": [

@@ -107,19 +107,20 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
     const QString caption = QStringLiteral("EQUALIZADOR");
     atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
 
-    const auto labeled = [&](const QRect& area, const QString& label, bool active) {
+    const auto labeled = [&](const char* pill, const QRect& area, const QString& label,
+                             bool active) {
         atlas_.draw(painter,
-                    QStringLiteral("toggle/blank/%1")
-                        .arg(QLatin1String(active ? "active" : "normal")),
+                    QStringLiteral("pill/%1/%2")
+                        .arg(QLatin1String(pill), QLatin1String(active ? "active" : "normal")),
                     area.x(), area.y());
         atlas_.draw_text(painter, label,
                          area.x() + (area.width() - atlas_.text_width(label)) / 2,
                          area.y() + (area.height() - atlas_.glyph_height()) / 2);
     };
-    labeled(kBypass, equalizer_.bypass() ? QStringLiteral("OFF") : QStringLiteral("ON"),
+    labeled("small", kBypass, equalizer_.bypass() ? QStringLiteral("OFF") : QStringLiteral("ON"),
             !equalizer_.bypass());
-    labeled(kReset, QStringLiteral("RST"), false);
-    labeled(kPreset, preset_name_.left(7), false);
+    labeled("small", kReset, QStringLiteral("RST"), false);
+    labeled("preset", kPreset, QStringLiteral("PRESETS"), false);
 
     // Mostrador da curva de resposta: poco escuro com a linha ligando os ganhos
     // das bandas. E o retorno que falta quando os sliders nao tem numero.

@@ -19,7 +19,7 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 | Linguagem visual | Cinza escuro, bordas chanfradas com luz no topo-esquerda, mostradores e texto em verde |
 | Estados de botão | Normal, pressionado, ativo, desabilitado e foco — os cinco exigidos |
 | Barra de título desenhada pelo aplicativo | Sem moldura do sistema, como no original |
-| Tipografia bitmap | Fonte própria de 5 × 7, maiúsculas, minúsculas mapeadas para maiúsculas |
+| Tipografia | **Silkscreen** (SIL OFL), fonte de pixel desenhada para 8 px. Rasterizada uma vez na carga, em 1×, sem suavização, para um atlas de texto |
 | Mostrador de tempo | Dígitos próprios de 9 × 14, em sete segmentos **com os segmentos separados** — barras verticais recuadas duas linhas em relação às horizontais, de modo que cada segmento se lê como peça solta |
 | Relevo dos controles | Face em degradê vertical mais duas arestas (contorno e realce interno). Uma face chapada com uma linha de contorno lê-se como retângulo desenhado, não como volume |
 
@@ -31,7 +31,7 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 | **Paleta** é própria | Verde `#00ED00` sobre cinza `#3A3A3A`, poços em preto puro, chanfros em `#626262` e `#1A1A1A`. A primeira versão usava verde-primavera `#00FF7F`, que puxa para o azul; o mostrador clássico é verde puro, e a diferença salta aos olhos na tela ainda que suma numa captura pequena. |
 | **Degradê do espectro** é próprio | Verde na base, amarelo no meio, vermelho no pico, em 16 passos. A progressão perceptiva segue a referência; os valores RGB são nossos. A primeira versão variava o matiz por **barra**, produzindo um arco-íris horizontal que o Winamp nunca teve — o clássico varia a cor com a **altura**. |
 | **Rótulos das bandas do equalizador** | O Winamp não rotula as bandas. Mantivemos os rótulos por legibilidade, o que obrigou a alargar o passo de 18 para 20 px. |
-| **Desenho dos glifos** é próprio | A fonte do Winamp é um bitmap protegido. A nossa tem a mesma altura de 7 px e o mesmo espírito compacto. |
+| **A fonte não é a do Winamp** | A do Winamp é um bitmap protegido. A Silkscreen é uma fonte de pixel independente, de licença aberta, com proporções próximas. |
 | **Espectro com 19 barras, verde a amarelo** | O número de barras é o do clássico; a rampa de cor é nossa. |
 | **Apenas escala inteira** (1×, 2×, 3×) | Escala fracionária borraria pixel art e desalinharia os mostradores de sete segmentos. O preço é não haver ajuste fino de tamanho. |
 | **1× é praticamente inutilizável em 4K** | 275 × 116 px num monitor de alta densidade é um selo postal. O padrão é 2×. O 1× existe como caso de teste de fidelidade, não como modo de uso. |

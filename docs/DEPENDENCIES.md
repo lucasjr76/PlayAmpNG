@@ -21,8 +21,11 @@ Atualizado no M0. Versões abaixo são as **verificadas na máquina de desenvolv
 | FFmpeg — libavutil | 61.1.101 | idem | Utilitários | idem |
 | FFmpeg — libswresample | 7.1.101 | idem | Reamostragem e conversão para f32 | idem |
 | miniaudio | 0.11.25 | MIT-0 ou domínio público (dupla) | Enumeração de dispositivos e saída de áudio | `FetchContent`, tag fixada |
+| Silkscreen | — | SIL Open Font License 1.1 | Fonte de pixel de toda a interface | Arquivo em `assets/skin/font/`, com `OFL.txt` ao lado |
 
 Nenhuma outra dependência. DSP, FFT, playlist, parsers M3U/PLS e persistência são código próprio.
+
+A Silkscreen substituiu um desenho próprio de 60 glifos em 5 × 7. A fonte desenhada à mão era grosseira, e existem fontes de pixel prontas, bem desenhadas e com licença permissiva — foi trabalho jogado fora. A OFL exige que a licença acompanhe o arquivo, e ela está em `assets/skin/font/OFL.txt`.
 
 ---
 

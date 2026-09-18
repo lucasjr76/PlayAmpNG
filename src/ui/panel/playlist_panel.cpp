@@ -172,11 +172,14 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
         const int reserved = kListMargin + duration_width + 8;
         const int available = std::max(0, kWidth - reserved - title_x);
 
+        // Com fonte proporcional nao da para dividir pela largura do glifo:
+        // corta-se medindo, tirando um caractere por vez ate caber.
         QString title = QString::fromStdString(track.display_title());
         if (atlas_.text_width(title) > available) {
-            const int per_glyph = atlas_.glyph_width() + 1;
-            const int fits = std::max(0, (available + 1) / per_glyph - 1);
-            title = title.left(fits) + QStringLiteral(".");
+            while (!title.isEmpty() &&
+                   atlas_.text_width(title + QStringLiteral(".")) > available)
+                title.chop(1);
+            title += QStringLiteral(".");
         }
 
         atlas_.draw_text(painter, title, title_x, y, index == current ? green : dim);
@@ -198,7 +201,7 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
     // Rodape: botoes e totais.
     for (int i = 0; i < kButtonCount; ++i) {
         const QRect area = button_rect(i);
-        atlas_.draw(painter, QStringLiteral("toggle/blank/normal"), area.x(), area.y());
+        atlas_.draw(painter, QStringLiteral("pill/wide/normal"), area.x(), area.y());
         const QString label = QLatin1String(kButtons[i].label);
         atlas_.draw_text(painter, label, area.x() + (kButtonWidth - atlas_.text_width(label)) / 2,
                          area.y() + 3);

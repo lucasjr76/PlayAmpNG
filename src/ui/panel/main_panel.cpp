@@ -31,15 +31,23 @@ constexpr QRect kTimeWell{30, 22, 62, 19};
 constexpr QRect kTime{35, 24, 50, 14};
 constexpr QRect kTitleWell{108, 22, 158, 12};
 constexpr QRect kTitle{111, 25, 152, 7};
+// A moldura e a area util sao retangulos DIFERENTES.
+//
+// Antes eram o mesmo: as barras comecavam em cima da aresta esquerda e a ultima
+// linha ficava sob a aresta de baixo, entao o espectro parecia vazar da caixa.
+// 19 barras de 3 px com 1 px de intervalo pedem 76 px de area util; a moldura
+// e um pixel maior de cada lado.
+constexpr QRect kVisFrame{23, 42, 78, 18};
 constexpr QRect kVis{24, 43, 76, 16};
-// Numeros alinhados A DIREITA das suas posicoes, para que 3 e 4 digitos nao
-// empurrem o rotulo seguinte — foi assim que "128 KBPS" colidiu com "44 KHZ".
-constexpr int kBitrateRight = 129;
-constexpr int kBitrateLabel = 133;
-constexpr int kSampleRateRight = 172;
-constexpr int kSampleRateLabel = 176;
-constexpr int kMono = 200;
-constexpr int kStereo = 228;
+// Posicoes calculadas a partir das larguras MEDIDAS da fonte, e nao estimadas:
+// KBPS 24 px, KHZ 17, MONO 26, STEREO 33. Numeros alinhados a direita, para
+// que 3 ou 4 digitos nao empurrem o rotulo seguinte.
+constexpr int kBitrateRight = 130;
+constexpr int kBitrateLabel = 133;   // + 24 = 157
+constexpr int kSampleRateRight = 176;
+constexpr int kSampleRateLabel = 179;  // + 17 = 196
+constexpr int kMono = 201;             // + 26 = 227
+constexpr int kStereo = 231;           // + 33 = 264
 constexpr int kInfoY = 43;
 constexpr QRect kVolume{107, 57, 68, 13};
 constexpr QRect kBalance{177, 57, 38, 13};
@@ -204,8 +212,11 @@ void MainPanel::paint_frame(QPainter& painter) {
                          atlas_.color(QStringLiteral("bevel_light")));
     };
 
-    for (const QRect& area : {kTimeWell, kTitleWell, kVis, kPosition, kVolume, kBalance})
+    for (const QRect& area : {kTimeWell, kTitleWell, kVisFrame, kPosition, kVolume, kBalance})
         well(area);
+    // Interior do poco do espectro, ja dentro da moldura.
+    painter.fillRect(kVis.x() * s, kVis.y() * s, kVis.width() * s, kVis.height() * s,
+                     atlas_.color(QStringLiteral("well")));
 
     // Textura do trilho de posicao: duas linhas discretas no lugar de um
     // retangulo preto chapado, que pesava demais em 248 px de largura.
@@ -427,20 +438,31 @@ void MainPanel::paint_buttons(QPainter& painter) {
                         .arg(QLatin1String(button.name), QLatin1String(state_for(button.hit))),
                     button.area.x(), button.area.y());
 
-    const auto toggle = [&](const char* name, const QRect& area, Hit hit, bool active) {
+    // O sprite e so a pastilha; o rotulo e desenhado por cima com a fonte de
+    // verdade. Antes havia um sprite por rotulo, com o texto assado dentro.
+    const auto toggle = [&](const char* pill, const QString& label, const QRect& area, Hit hit,
+                            bool active) {
         const char* state = pressed_ == hit  ? "pressed"
                             : active         ? "active"
                             : focus_ == hit  ? "focus"
                                              : "normal";
         atlas_.draw(painter,
-                    QStringLiteral("toggle/%1/%2").arg(QLatin1String(name), QLatin1String(state)),
+                    QStringLiteral("pill/%1/%2").arg(QLatin1String(pill), QLatin1String(state)),
                     area.x(), area.y());
+        atlas_.draw_text(painter, label,
+                         area.x() + (area.width() - atlas_.text_width(label)) / 2,
+                         area.y() + (area.height() - atlas_.glyph_height()) / 2,
+                         active ? atlas_.color(QStringLiteral("green"))
+                                : atlas_.color(QStringLiteral("green_text")));
     };
 
-    toggle("eq", kEqualizer, Hit::Equalizer, equalizer_visible && equalizer_visible());
-    toggle("playlist", kPlaylist, Hit::Playlist, playlist_visible && playlist_visible());
-    toggle("shuffle", kShuffle, Hit::Shuffle, controller_.shuffle());
-    toggle("repeat", kRepeat, Hit::Repeat, controller_.repeat() != core::Repeat::Off);
+    toggle("eq", QStringLiteral("EQ"), kEqualizer, Hit::Equalizer,
+           equalizer_visible && equalizer_visible());
+    toggle("eq", QStringLiteral("PL"), kPlaylist, Hit::Playlist,
+           playlist_visible && playlist_visible());
+    toggle("shuffle", QStringLiteral("SHUFFLE"), kShuffle, Hit::Shuffle, controller_.shuffle());
+    toggle("repeat", QStringLiteral("REP"), kRepeat, Hit::Repeat,
+           controller_.repeat() != core::Repeat::Off);
 }
 
 // ------------------------------------------------------------------ entrada

@@ -37,9 +37,16 @@ public:
     // tamanho saem de uma peca so.
     void draw_tiled(QPainter& painter, const QString& name, const QRect& area) const;
 
-    // --- fonte bitmap 5x7. Minusculas viram maiusculas, como no classico.
-    int glyph_width() const { return glyph_width_; }
-    int glyph_height() const { return glyph_height_; }
+    // --- texto.
+    //
+    // Os glifos vem da Silkscreen (SIL Open Font License), uma fonte de pixel
+    // desenhada para 8 px, e nao mais de um desenho proprio glifo a glifo. Sao
+    // rasterizados UMA vez na carga, em 1x e sem suavizacao, para um atlas
+    // proprio; dai em diante o desenho e blit, igual aos demais sprites.
+    //
+    // Desenhar 60 glifos a mao foi trabalho jogado fora: o resultado era
+    // grosseiro e existem fontes de pixel prontas e bem desenhadas.
+    int glyph_height() const { return text_height_; }
     int text_width(const QString& text) const;
     void draw_text(QPainter& painter, const QString& text, int x, int y,
                    const QColor& tint = QColor()) const;
@@ -64,13 +71,22 @@ private:
     void draw_raw(QPainter& painter, const QString& name, int x, int y,
                   const QColor& tint) const;
 
+    bool build_text_atlas(const QString& directory, QString& error);
+
+    struct Glyph {
+        QRect cell;     // no atlas de texto, em 1x
+        int advance = 0;
+    };
+
     QPixmap source_;
     QPixmap scaled_;
+    QPixmap text_source_;
+    QPixmap text_scaled_;
+    QHash<char16_t, Glyph> glyphs_;
+    int text_height_ = 5;
     QHash<QString, QRect> sprites_;
     QHash<QString, QColor> palette_;
     int scale_ = 1;
-    int glyph_width_ = 5;
-    int glyph_height_ = 7;
     int digit_height_ = 13;
     QVector<QColor> spectrum_;
     QColor peak_{200, 200, 200};
