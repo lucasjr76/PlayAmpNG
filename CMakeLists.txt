@@ -53,7 +53,9 @@ add_library(pang_core STATIC
   src/core/audio/probe.cpp
   src/core/audio/decoder.cpp
   src/core/audio/engine.cpp
+  src/core/dsp/analyzer.cpp
   src/core/dsp/biquad.cpp
+  src/core/dsp/fft.cpp
   src/core/dsp/equalizer.cpp
   src/core/dsp/gain.cpp
   src/core/dsp/limiter.cpp
@@ -136,6 +138,15 @@ target_link_libraries(pang_realtime_tests PRIVATE pang_core)
 target_compile_definitions(pang_realtime_tests PRIVATE
   PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
 set_target_properties(pang_realtime_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_vis_tests tests/test_visualization.cpp)
+target_link_libraries(pang_vis_tests PRIVATE pang_core)
+target_compile_definitions(pang_vis_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_vis_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME visualization COMMAND pang_vis_tests)
+set_tests_properties(visualization PROPERTIES TIMEOUT 120)
 
 add_test(NAME realtime COMMAND pang_realtime_tests)
 

@@ -132,6 +132,17 @@ public:
     // "so atenua", que e a primeira das tres defesas contra clipping.
     void set_replaygain_max_boost_db(float db) { replaygain_max_boost_db_ = db; }
 
+    // --- visualizacao (VI-17, VI-19, VI-21)
+    //
+    // VI-17 — desligar a visualizacao desliga a CAPTURA, na origem. Parar so o
+    // consumo deixaria o custo da copia dentro do callback de audio.
+    void set_capture_enabled(bool on) { capture_enabled_.store(on, std::memory_order_relaxed); }
+    bool capture_enabled() const { return capture_enabled_.load(std::memory_order_relaxed); }
+
+    // Consome amostras do ponto de captura (pos-equalizador, pre-volume).
+    // Chamado pelo thread da interface. Devolve quantos floats saiu.
+    std::size_t read_visualization(float* destination, std::size_t max_floats);
+
     // AU-22/AU-23 — atuacoes do clamp rigido e latencia introduzida pelo
     // lookahead do limitador, em quadros.
     std::uint32_t clamp_hits() const { return limiter_.clamp_hits(); }
@@ -196,6 +207,12 @@ private:
     std::int64_t track_origin_ = 0;      // so o thread de audio escreve
     std::int64_t position_base_ = 0;     // idem
     std::atomic<std::uint32_t> underruns_{0};
+
+    // Ring de captura da visualizacao. Separado do ring de audio: o audio
+    // nunca espera por ele, e um bloco que nao couber e descartado.
+    FloatRing vis_ring_;
+    std::atomic<bool> capture_enabled_{false};
+    std::atomic<std::uint32_t> vis_drops_{0};
 
     SegmentQueue segments_;
     std::atomic<std::uint64_t> current_token_{0};

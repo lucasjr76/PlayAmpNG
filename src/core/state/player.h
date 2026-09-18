@@ -58,6 +58,7 @@ struct Snapshot {
     float replaygain_db = 0.0f;   // 0 quando desligado ou ausente na fonte
     bool replaygain_present = false;
     std::uint32_t clamp_hits = 0;
+    std::uint32_t vis_drops = 0;
 };
 
 }  // namespace pang::core

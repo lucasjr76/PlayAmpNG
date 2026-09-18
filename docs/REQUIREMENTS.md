@@ -99,27 +99,27 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| VI-01 | Espectro alimentado por amostras reais do áudio em reprodução | AUTO | M4 | PENDENTE |
-| VI-02 | FFT com janela Hann | AUTO | M4 | PENDENTE |
+| VI-01 | Espectro alimentado por amostras reais do áudio em reprodução | AUTO | M4 | OK (M4) |
+| VI-02 | FFT com janela Hann | AUTO | M4 | OK (M4) |
 | VI-03 | Tamanho da FFT, normalização, faixa dinâmica e taxa de atualização documentados | MANUAL | M0 | OK (M0) |
-| VI-04 | Senoide de 1 kHz @ 44.1 kHz → pico no bin correto (±1) | AUTO | M4 | PENDENTE |
-| VI-05 | Senoide de amplitude 1.0 → 0 dBFS ±0.5 dB no bin | AUTO | M4 | PENDENTE |
-| VI-06 | Agrupamento em 19 barras com distribuição logarítmica | MANUAL | M4 | PENDENTE |
-| VI-07 | Magnitudes em escala logarítmica de amplitude | AUTO | M4 | PENDENTE |
-| VI-08 | Suavização temporal com subida e queda distintas | MANUAL | M4 | PENDENTE |
-| VI-09 | Retenção e queda de picos | MANUAL | M4 | PENDENTE |
+| VI-04 | Senoide de 1 kHz @ 44.1 kHz → pico no bin correto (±1) | AUTO | M4 | OK (M4) |
+| VI-05 | Senoide de amplitude 1.0 → 0 dBFS ±0.5 dB no bin | AUTO | M4 | OK (M4) |
+| VI-06 | Agrupamento em 19 barras com distribuição logarítmica | MANUAL | M4 | OK (M4) |
+| VI-07 | Magnitudes em escala logarítmica de amplitude | AUTO | M4 | OK (M4) |
+| VI-08 | Suavização temporal com subida e queda distintas | MANUAL | M4 | OK (M4) |
+| VI-09 | Retenção e queda de picos | MANUAL | M4 | OK (M4) |
 | VI-10 | Cores coerentes com a aparência clássica | MANUAL | M5 | PENDENTE |
-| VI-11 | Barras acima de Nyquist da fonte permanecem vazias | AUTO | M4 | PENDENTE |
-| VI-12 | Silêncio não gera `NaN` nem `inf` | AUTO | M4 | PENDENTE |
-| VI-13 | Canais em oposição de fase não fazem o espectro desaparecer | AUTO | M4 | PENDENTE |
+| VI-11 | Barras acima de Nyquist da fonte permanecem vazias | AUTO | M4 | OK (M4) |
+| VI-12 | Silêncio não gera `NaN` nem `inf` | AUTO | M4 | OK (M4) |
+| VI-13 | Canais em oposição de fase não fazem o espectro desaparecer | AUTO | M4 | OK (M4) |
 | VI-14 | Combinação estéreo documentada (magnitudes pós-FFT) | MANUAL | M0 | OK (M0) |
-| VI-15 | Silêncio, pausa e parada representados corretamente e de forma distinta | MANUAL | M4 | PENDENTE |
-| VI-16 | Modo osciloscópio com representação temporal real | MANUAL | M4 | PENDENTE |
-| VI-17 | Desligar a visualização desliga a captura na origem: nenhuma cópia executada no callback | MEDIDO | M4 | PENDENTE |
-| VI-18 | Atualização independente da interface geral | MANUAL | M4 | PENDENTE |
-| VI-19 | Transferência de amostras não bloqueia o thread de áudio | MANUAL | M4 | PENDENTE |
-| VI-20 | Ausência de número aleatório, animação pré-calculada ou dado de demonstração | MANUAL | M4 | PENDENTE |
-| VI-21 | Ring de captura descarta bloco quando cheio, nunca sobrescreve região sob leitura, e conta os descartes | AUTO | M4 | PENDENTE |
+| VI-15 | Silêncio, pausa e parada representados corretamente e de forma distinta | MANUAL | M4 | OK (M4) |
+| VI-16 | Modo osciloscópio com representação temporal real | MANUAL | M4 | OK (M4) |
+| VI-17 | Desligar a visualização desliga a captura na origem: nenhuma cópia executada no callback | MEDIDO | M4 | OK (M4) |
+| VI-18 | Atualização independente da interface geral | MANUAL | M4 | OK (M4) |
+| VI-19 | Transferência de amostras não bloqueia o thread de áudio | MANUAL | M4 | OK (M4) |
+| VI-20 | Ausência de número aleatório, animação pré-calculada ou dado de demonstração | MANUAL | M4 | OK (M4) |
+| VI-21 | Ring de captura descarta bloco quando cheio, nunca sobrescreve região sob leitura, e conta os descartes | AUTO | M4 | OK (M4) |
 
 ## EQ — Equalizador (spec §6)
 

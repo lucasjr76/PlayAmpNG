@@ -20,12 +20,19 @@ constexpr std::size_t kDecodeChunkFrames = 4096;
 
 constexpr double kVolumeRampSeconds = 0.020;  // AU-10
 
+// Oito quadros de FFT de folga. O suficiente para a interface a 60 Hz nunca
+// perder bloco em uso normal, e pequeno o bastante para o atraso da
+// visualizacao em relacao ao som nao ser perceptivel.
+constexpr std::size_t kVisBlocks = 8;
+constexpr std::size_t kVisBlockFrames = 1024;
+
 }  // namespace
 
 Engine::Engine(int sample_rate, int channels)
     : sample_rate_(sample_rate),
       channels_(channels),
-      ring_(static_cast<std::size_t>(sample_rate * kRingSeconds) * channels) {
+      ring_(static_cast<std::size_t>(sample_rate * kRingSeconds) * channels),
+      vis_ring_(kVisBlocks * kVisBlockFrames * static_cast<std::size_t>(channels)) {
     replaygain_.configure(sample_rate, kVolumeRampSeconds);
     equalizer_.configure(sample_rate, channels);
     volume_balance_.configure(sample_rate, channels);
@@ -309,6 +316,7 @@ Snapshot Engine::snapshot() const {
     s.peak = pub.peak;
     s.underruns = pub.underruns;
     s.clamp_hits = pub.clamp_hits;
+    s.vis_drops = pub.vis_drops;
     s.replaygain_db = replaygain_db_.load(std::memory_order_relaxed);
     s.replaygain_present = replaygain_present_.load(std::memory_order_relaxed);
     return s;
@@ -352,7 +360,21 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     // exatamente como ele sairia para o dispositivo.
     replaygain_.process(out, frames, channels_);   // 1
     equalizer_.process(out, frames);               // 2 (preamp) e 3 (cascata)
-    // [M4: ponto de captura da visualizacao entra aqui]
+
+    // PONTO DE CAPTURA da visualizacao: depois do equalizador, antes de
+    // balanco e volume. O espectro reage ao equalizador — que e o retorno que o
+    // usuario espera — e nao encolhe quando o volume baixa, o que deixaria a
+    // visualizacao morta em volume zero.
+    if (capture_enabled_.load(std::memory_order_relaxed)) {
+        // VI-21 — descarte, nunca sobrescrita. Sobrescrever dado nao consumido
+        // e corrida: o consumidor pode estar lendo exatamente aquela regiao.
+        // O callback nao espera e nao escreve por cima; o bloco novo se perde e
+        // o contador registra.
+        if (vis_ring_.writable() >= wanted)
+            vis_ring_.write(out, wanted);
+        else
+            vis_drops_.fetch_add(1, std::memory_order_relaxed);
+    }
     volume_balance_.process(out, frames);          // 4 e 5
     limiter_.process(out, frames);                 // 6 e 7
 
@@ -382,7 +404,12 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     pub.peak = peak;
     pub.underruns = underruns_.load(std::memory_order_relaxed);
     pub.clamp_hits = limiter_.clamp_hits();
+    pub.vis_drops = vis_drops_.load(std::memory_order_relaxed);
     pub_.store(pub);
+}
+
+std::size_t Engine::read_visualization(float* destination, std::size_t max_floats) {
+    return vis_ring_.read(destination, max_floats);
 }
 
 void Engine::apply_segment(const TrackSegment& segment) noexcept {

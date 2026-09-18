@@ -16,6 +16,8 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QInputDialog>
+#include <QPainter>
+#include <QPaintEvent>
 #include <QLineEdit>
 #include <QListView>
 #include <QMimeData>
@@ -33,6 +35,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
+#include "core/dsp/analyzer.h"
 #include "core/dsp/presets.h"
 #include "core/meta/scanner.h"
 #include "core/playlist/m3u.h"
@@ -132,6 +135,117 @@ protected:
         if (!paths.isEmpty() && on_drop) on_drop(paths);
         event->acceptProposedAction();
     }
+};
+
+// Visualizacao: espectro e osciloscopio.
+//
+// Provisoria como o resto, mas ja alimentada pelo sinal real: o que ela desenha
+// sai do ponto de captura do engine, pos-equalizador. Nao ha numero aleatorio,
+// animacao pronta nem dado de demonstracao em lugar nenhum (VI-20).
+class VisualizationWidget : public QWidget {
+public:
+    enum class Mode { Off, Spectrum, Scope };
+
+    explicit VisualizationWidget(pang::core::Engine& engine) : engine_(engine) {
+        setMinimumHeight(76);
+        analyzer_.configure(engine.sample_rate(), engine.channels());
+        buffer_.resize(8192);
+    }
+
+    void set_mode(Mode mode) {
+        mode_ = mode;
+        // VI-17 — desligar desliga a captura na origem, e nao so o desenho.
+        engine_.set_capture_enabled(mode != Mode::Off);
+        if (mode == Mode::Off) analyzer_.reset();
+        update();
+    }
+    Mode mode() const { return mode_; }
+
+    // Chamado pelo temporizador da visualizacao, independente do resto da
+    // interface (VI-18).
+    void tick(float dt_seconds, pang::core::State state, int source_rate) {
+        if (mode_ == Mode::Off) return;
+
+        if (source_rate > 0)
+            analyzer_.set_source_nyquist(static_cast<float>(source_rate) / 2.0f);
+
+        // VI-15 — tocando desenha, pausado congela, parado vai a zero.
+        if (state == pang::core::State::Stopped || state == pang::core::State::Error) {
+            analyzer_.reset();
+            update();
+            return;
+        }
+        if (state == pang::core::State::Paused) {
+            analyzer_.hold();
+            update();
+            return;
+        }
+
+        for (;;) {
+            const std::size_t got = engine_.read_visualization(buffer_.data(), buffer_.size());
+            if (got == 0) break;
+            analyzer_.feed(buffer_.data(), got / engine_.channels());
+            if (got < buffer_.size()) break;
+        }
+        analyzer_.advance_peaks(dt_seconds);
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        painter.fillRect(rect(), QColor(0, 0, 0));
+        if (mode_ == Mode::Off) return;
+
+        if (mode_ == Mode::Scope) {
+            paint_scope(painter);
+            return;
+        }
+        paint_spectrum(painter);
+    }
+
+private:
+    void paint_spectrum(QPainter& painter) {
+        const int bars = pang::core::dsp::SpectrumAnalyzer::kBars;
+        const qreal bar_width = qreal(width()) / bars;
+
+        for (int bar = 0; bar < bars; ++bar) {
+            const qreal x = bar * bar_width;
+            const float value = analyzer_.bars()[static_cast<std::size_t>(bar)];
+            const int bar_height = int(value * height());
+
+            // Verde no grave passando a amarelo no agudo, na linha do classico.
+            const int hue = 120 - 120 * bar / bars / 2;
+            painter.fillRect(QRectF(x + 1, height() - bar_height, bar_width - 2, bar_height),
+                             QColor::fromHsv(hue, 255, 220));
+
+            const int peak_y = height() - int(analyzer_.peaks()[static_cast<std::size_t>(bar)] *
+                                              height());
+            painter.fillRect(QRectF(x + 1, peak_y, bar_width - 2, 2), QColor(200, 200, 200));
+        }
+    }
+
+    void paint_scope(QPainter& painter) {
+        const std::vector<float>& scope = analyzer_.scope();
+        if (scope.empty()) return;
+
+        painter.setPen(QColor(0, 255, 127));
+        const qreal middle = height() / 2.0;
+        const qreal scale = height() / 2.0;
+        QPointF previous(0, middle);
+        for (int x = 0; x < width(); ++x) {
+            const std::size_t index = static_cast<std::size_t>(
+                qreal(x) / width() * (scope.size() - 1));
+            const QPointF point(x, middle - scope[index] * scale);
+            painter.drawLine(previous, point);
+            previous = point;
+        }
+    }
+
+    pang::core::Engine& engine_;
+    pang::core::dsp::SpectrumAnalyzer analyzer_;
+    std::vector<float> buffer_;
+    Mode mode_ = Mode::Spectrum;
 };
 
 // Painel do equalizador. Provisorio como o resto: no M5 vira sprite.
@@ -379,6 +493,9 @@ int main(int argc, char** argv) {
     auto* import_list = new QPushButton(QStringLiteral("Importar"));
     auto* export_list = new QPushButton(QStringLiteral("Exportar"));
     auto* eq_button = new QPushButton(QStringLiteral("EQ"));
+    auto* vis_mode = new QComboBox;
+    vis_mode->addItems({QStringLiteral("Espectro"), QStringLiteral("Osciloscopio"),
+                        QStringLiteral("Visualizacao: nao")});
     auto* balance = new QSlider(Qt::Horizontal);
     auto* replaygain = new QComboBox;
     shuffle->setCheckable(true);
@@ -390,6 +507,9 @@ int main(int argc, char** argv) {
     auto* grid = new QGridLayout(&window);
     int row = 0;
     grid->addWidget(status, row++, 0, 1, 6);
+    // O widget de visualizacao so existe com dispositivo aberto; a linha fica
+    // reservada aqui e preenchida adiante.
+    const int visualization_row = row++;
     grid->addWidget(elapsed, row, 0);
     grid->addWidget(position, row, 1, 1, 4);
     grid->addWidget(duration, row++, 5);
@@ -399,6 +519,7 @@ int main(int argc, char** argv) {
     grid->addWidget(balance, row, 1, 1, 3);
     grid->addWidget(replaygain, row, 4);
     grid->addWidget(eq_button, row++, 5);
+    grid->addWidget(vis_mode, row++, 0, 1, 6);
     grid->addWidget(previous, row, 0);
     grid->addWidget(play, row, 1);
     grid->addWidget(pause, row, 2);
@@ -440,6 +561,25 @@ int main(int argc, char** argv) {
     shuffle->setChecked(saved.shuffle);
     repeat->setText(QString::fromLatin1(repeat_label(controller->repeat())));
     replaygain->setCurrentIndex(saved.replaygain_mode);
+
+    auto* visualization = new VisualizationWidget(*engine);
+    grid->addWidget(visualization, visualization_row, 0, 1, 6);
+    visualization->set_mode(VisualizationWidget::Mode::Spectrum);
+
+    QObject::connect(vis_mode, &QComboBox::currentIndexChanged, [visualization](int index) {
+        visualization->set_mode(index == 0   ? VisualizationWidget::Mode::Spectrum
+                                : index == 1 ? VisualizationWidget::Mode::Scope
+                                             : VisualizationWidget::Mode::Off);
+    });
+
+    // VI-18 — a visualizacao tem temporizador proprio, a 60 Hz, independente do
+    // de 10 Hz que atualiza textos e barra de progresso.
+    auto* vis_timer = new QTimer(&window);
+    QObject::connect(vis_timer, &QTimer::timeout, [&, visualization] {
+        const auto snap = engine->snapshot();
+        visualization->tick(0.016f, snap.state, snap.sample_rate);
+    });
+    vis_timer->start(16);
 
     auto* eq_panel = new EqualizerPanel(engine->equalizer(), saved.user_presets);
     QObject::connect(eq_button, &QPushButton::clicked, [eq_panel] {
@@ -639,6 +779,8 @@ int main(int argc, char** argv) {
             line += QStringLiteral("  ·  RG %1 dB").arg(snap.replaygain_db, 0, 'f', 1);
         // AU-17 — o usuario ve que o limitador atuou, em vez de so ouvir.
         if (snap.clamp_hits > 0) line += QStringLiteral("  ·  CLIP");
+        if (snap.vis_drops > 0)
+            line += QStringLiteral("  ·  vis descartados: %1").arg(snap.vis_drops);
         if (snap.underruns > 0) line += QStringLiteral("  ·  underruns: %1").arg(snap.underruns);
         if (snap.state == State::Error) line = QString::fromStdString(engine->last_error());
         status->setText(line);

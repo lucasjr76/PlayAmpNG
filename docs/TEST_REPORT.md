@@ -312,3 +312,97 @@ Verificado por interposição de `operator new` num binário de teste próprio, 
 ### Requisitos atendidos
 
 23 em `OK (M3)`. Total acumulado: 83 de 175 com estado diferente de `PENDENTE`.
+
+---
+
+## M4 — Visualizações
+
+Data: 2026-09-18
+
+Suíte: `ctest` 8/8 verdes, ~4,3 s.
+
+### VI-04, VI-05 — a senoide cai onde deve
+
+```
+senoide 1 kHz: pico no bin 23 (esperado 23), amplitude 0.969 (-0.27 dBFS)
+```
+
+Bin exato. Os 0,27 dB de desvio não são erro de normalização: 1000 Hz cai entre os bins 23 e 24 (23,2 exatos), e a perda de festonamento da janela de Hann nessa posição é justamente dessa ordem. Uma senoide centrada num bin daria 0,00 dB. O limite de ±0,5 dB foi definido antes contando com isso.
+
+### VI-13 — oposição de fase
+
+```
+energia do espectro: em fase 1.691 · oposicao de fase 1.691 · so esquerda 1.605
+```
+
+Idênticas. É esse o resultado que a combinação depois da transformada produz; somar os canais antes da FFT levaria a coluna do meio a zero, que é o defeito que a especificação manda evitar. A diferença para o canal isolado fica em 0,45 dB, dentro dos 3 dB do limite.
+
+### VI-06, VI-07 — mapeamento de frequência e amplitude
+
+```
+barra mais alta por frequencia:  100 Hz->1  500 Hz->7  2000 Hz->11  8000 Hz->15  16000 Hz->17
+barra de 1 kHz: amplitude 0,5 -> 0.910 · amplitude 0,005 -> 0.339
+```
+
+Frequências crescentes acendem barras sucessivamente mais à direita, com o espaçamento logarítmico esperado. Os 40 dB entre as duas amplitudes aparecem como 0,57 de diferença de altura numa escala de 70 dB — 0,571 é o valor teórico.
+
+### VI-08, VI-09 — suavização e picos
+
+```
+suavizacao em um quadro: subida 0.546 de 0.910, queda 0.137 de 0.910
+pico: 0.910 apos o sinal, 0.051 depois de ~1 s de silencio
+```
+
+Subida quatro vezes mais rápida que a queda, coerente com os coeficientes documentados (α 0,6 e 0,15).
+
+### VI-12 — silêncio
+
+Nenhum `NaN`, nenhum `inf`, todas as barras no piso. A trava de magnitude em `1e-10` antes do logaritmo é o que evita `log(0)`; sem ela o espectro inteiro viraria `NaN` na primeira pausa.
+
+### VI-16 — osciloscópio
+
+```
+osciloscopio: pico 0.500 (sinal de entrada 0,5)
+```
+
+Amostras reais, sem ganho. Em oposição de fase a mistura mono dá linha reta — e ali isso é a informação correta, não defeito.
+
+### VI-01, VI-17, VI-21 — protocolo do ring de captura
+
+```
+captura: 4096 floats, pico 0.500 (arquivo de teste tem amplitude 0,5)
+descartes de visualizacao apos encher o ring: 184
+```
+
+| Verificação | Resultado |
+|---|---|
+| Captura desligada não alimenta o ring | **Passou** — leitura devolve 0 floats |
+| Captura ligada entrega o áudio real, não dado inventado | **Passou** — pico 0,500, igual ao arquivo |
+| Ring cheio descarta o bloco e conta o descarte | **Passou** — 184 descartes |
+| O conteúdo remanescente continua válido | **Passou** — nada foi sobrescrito por cima |
+
+### VI-20 — contraprova
+
+Com o analisador configurado e `advance_peaks` chamado cem vezes **sem alimentar amostra alguma**, todas as barras e picos permanecem exatamente em zero. Se houvesse número aleatório ou animação pré-calculada, subiriam sozinhos.
+
+### Defeito de teste encontrado
+
+O teste de queda de picos passava por acidente, pelo mesmo mecanismo que já apareceu no M2:
+
+```
+pico: 0.910 apos o sinal, 0.910 depois de ~1 s
+```
+
+Os dois valores eram iguais até a terceira casa, e a comparação `<` passava por diferença de quarta casa. A causa é de projeto, não defeito: o pico nunca fica abaixo da barra, e a barra só desce quando há novo quadro — parar de alimentar congela tudo, que é exatamente o comportamento pedido para a pausa (VI-15). O teste passou a alimentar silêncio e a exigir queda mensurável (0,2 na escala). Com isso o pico cai de 0,910 para 0,051.
+
+Terceira vez nesta sessão que uma asserção passa por acidente. As três tinham a mesma forma: amostrar um estado num instante em vez de esperar um evento observável.
+
+### Não verificado
+
+- **VI-10** (cores coerentes com a aparência clássica) — as cores atuais são provisórias; a verificação é do M5, junto com o atlas.
+- **VI-03 e VI-14** já constavam como `OK (M0)`: são os requisitos documentais de parâmetros e de combinação estéreo.
+- Windows e macOS.
+
+### Requisitos atendidos
+
+18 em `OK (M4)`. Total acumulado: 101 de 175 com estado diferente de `PENDENTE`.
