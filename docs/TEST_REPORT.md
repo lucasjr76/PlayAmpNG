@@ -43,3 +43,33 @@ Data: 2026-09-18 · Máquina: ver `DEPENDENCIES.md`
 ### Não verificado nesta etapa
 
 Reprodução de áudio (nenhuma amostra chega ao dispositivo ainda), FLAC, Vorbis e AAC (só cabeçalhos de WAV, MP3 e Opus foram lidos), qualquer item de DSP, playlist, interface ou integração com o sistema.
+
+---
+
+## M0 — revisão 0.2 (após crítica técnica)
+
+Data: 2026-09-18
+
+### Executado
+
+| Verificação | Tipo | Resultado |
+|---|---|---|
+| `NDEBUG` está mesmo presente na configuração padrão | MANUAL | **Confirmado** — `-DNDEBUG` aparece nas flags reais de `RelWithDebInfo`. `assert()` estaria morto silenciosamente; AR-10 não era teórico |
+| `PANG_CHECK` avalia a condição sob `NDEBUG` | AUTO | **Passou** — teste `core`, caso `test_check_survives_ndebug` |
+| `PANG_CHECK` relata falha e sai com código ≠ 0 | MANUAL | **Passou** — falha proposital compilada com `-DNDEBUG -O2` imprimiu a condição e retornou `exit=1` |
+| Suíte `core` roda headless, sem Qt e sem dispositivo | AUTO | **Passou** — 5 casos, 2/2 testes CTest verdes |
+| Enumeração tolera ausência de dispositivos | AUTO | **Passou** — critério é "lista OU erro, nunca os dois" |
+| Link específico por plataforma corrigido | MANUAL | `libm` deixou de ser ligado no Windows; frameworks CoreAudio/AudioToolbox adicionados no macOS. **Não verificado em execução** — ver abaixo |
+
+### Não verificado
+
+- **Build e testes em Windows e macOS.** A matriz de CI existe (`.github/workflows/ci.yml`), o repositório foi inicializado, mas nada rodou ainda: não há remoto nem execução de workflow. O requisito de "M0 verde nos três sistemas" permanece **NÃO VERIFICADO**, não `OK`. A perna do Windows (Qt por action + FFmpeg por vcpkg) é a mais provável de precisar de ajuste na primeira execução.
+- Reprodução de áudio, FLAC, Vorbis e AAC, DSP, playlist, interface e integração com o sistema.
+
+### Requisitos atendidos
+
+`EQ-13` e `AR-10` → `OK (M0)`, somando-se aos oito da revisão 0.1. Total: 10 de 175.
+
+### Correções de documento nesta revisão
+
+Doze itens, listados em `ARCHITECTURE.md`, seção "Mudanças da versão 0.1 para a 0.2". Os quatro de maior consequência técnica: limitador sem lookahead não podia cumprir o teto prometido; o ring de visualização tinha corrida de leitura; o "bloco de estado atômico" presumia lock-free onde não há; e o critério de gapless podia passar por acidente.
