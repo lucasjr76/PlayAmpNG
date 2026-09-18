@@ -46,9 +46,11 @@ void same_band(std::initializer_list<QRect> group, const char* what) {
 }  // namespace
 
 int main() {
-    // Coluna da esquerda: tudo que mora nela comeca e termina junto.
-    same_left({kTimeWell, kVisFrame}, "coluna esquerda: tempo e visualizacao com a mesma borda esquerda");
-    same_right({kTimeWell, kVisFrame}, "coluna esquerda: tempo e visualizacao com a mesma borda direita");
+    // Tempo e visualizacao vivem DENTRO do mesmo bloco preto, e nao em dois
+    // pocos separados: e isso que da a leitura de mostrador unico.
+    PANG_CHECK(kDisplayBlock.contains(kTime), "o mostrador de tempo fica dentro do bloco");
+    PANG_CHECK(kDisplayBlock.contains(kVis), "a visualizacao fica dentro do bloco");
+    PANG_CHECK(kVis.y() > bottom(kTime), "a visualizacao fica abaixo do tempo, sem sobrepor");
 
     // Coluna da direita.
     same_left({kTitleWell, kVolume}, "coluna direita: titulo e volume com a mesma borda esquerda");
@@ -58,11 +60,12 @@ int main() {
                "borda direita compartilhada por titulo, PL, barra de posicao e repeat");
 
     // Margem esquerda, compartilhada pelo que comeca nela.
-    same_left({kTimeWell, kVisFrame, kPosition, kPrevious},
+    same_left({kDisplayBlock, kPosition, kPrevious},
               "margem esquerda compartilhada pelos elementos que comecam nela");
 
     // Linhas da grade.
-    same_band({kTimeWell, kTitleWell}, "linha 1: os dois mostradores ocupam a mesma faixa");
+    PANG_CHECK(kDisplayBlock.y() == kTitleWell.y(),
+               "bloco da esquerda e poco do titulo comecam na mesma linha");
     same_band({kVolume, kBalance, kEqualizer, kPlaylist},
               "linha 2: volume, balanco, EQ e PL ocupam a mesma faixa");
     same_band({kPrevious, kPlay, kPause, kStop, kNext},
@@ -77,11 +80,11 @@ int main() {
     // A area util da visualizacao acomoda 19 barras de 3 px com 1 px de
     // intervalo, sem sobra a distribuir.
     PANG_CHECK(kVis.width() == 19 * 4, "area util da visualizacao cabe 19 barras de passo 4");
-    PANG_CHECK(kVis.x() == kVisFrame.x() + 1 && right(kVis) == right(kVisFrame) - 1,
-               "area util da visualizacao fica dentro da moldura, com 1 px de cada lado");
+    PANG_CHECK(kVis.x() == kDisplayBlock.x() + 1 && right(kVis) <= right(kDisplayBlock) - 1,
+               "area util da visualizacao respeita a borda do bloco");
 
     // Nada ultrapassa o painel.
-    for (const QRect& r : {kTimeWell, kTitleWell, kVisFrame, kVolume, kBalance, kEqualizer,
+    for (const QRect& r : {kDisplayBlock, kTitleWell, kVolume, kBalance, kEqualizer,
                            kPlaylist, kPosition, kPrevious, kNext, kEject, kShuffle, kRepeat,
                            kClose})
         PANG_CHECK(r.x() >= 0 && right(r) < 275 && r.y() >= 0 && bottom(r) < 116,

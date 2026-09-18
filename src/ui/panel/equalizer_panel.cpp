@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <algorithm>
 
 namespace pang::ui {
 namespace {
@@ -173,20 +174,30 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
         const QRect area = slider_rect(index);
         const bool active = index < 0 || equalizer_.band_active(index);
 
-        // Fenda rebaixada de 3 px centrada no pixel do meio, com aresta clara
-        // a direita: le-se como rasgo no painel, nao como barra desenhada.
-        const int center = area.x() + area.width() / 2;   // 13 -> X+6
-        painter.fillRect((center - 1) * s, area.y() * s, 3 * s, area.height() * s,
-                         atlas_.color(QStringLiteral("well")));
-        painter.fillRect((center + 2) * s, area.y() * s, s, area.height() * s,
-                         atlas_.color(QStringLiteral("bevel_light")));
+        // Trilho de COR SOLIDA, escolhida pelo GANHO da banda.
+        //
+        // No original cada banda tem a cor do proprio ajuste: verde quando
+        // corta, amarelo perto do plano, laranja quando reforca. A versao
+        // anterior desenhava uma fenda preta igual para todas, sem informacao
+        // nenhuma.
+        const int center = area.x() + area.width() / 2;
+        const float gain = index < 0 ? equalizer_.preamp_db() : equalizer_.band_db(index);
+        const float normalized = (gain + Equalizer::kRangeDb) / (2.0f * Equalizer::kRangeDb);
 
-        // Entalhe do zero dentro da propria fenda. As marcas laterais da versao
-        // anterior se alinhavam entre sliders e viravam uma regua tracejada
-        // atravessando o painel.
-        const int middle = area.y() + (area.height() - kThumbHeight) / 2 + kThumbHeight / 2;
-        painter.fillRect((center - 3) * s, middle * s, 7 * s, s,
-                         atlas_.color(QStringLiteral("green_dim")));
+        const QVector<QColor>& gradient = atlas_.spectrum();
+        QColor track = atlas_.color(QStringLiteral("green"));
+        if (!gradient.isEmpty()) {
+            const int gi = static_cast<int>(std::clamp(normalized, 0.0f, 1.0f) *
+                                            (gradient.size() - 1));
+            track = gradient[static_cast<std::size_t>(gi)];
+        }
+        if (!active || equalizer_.bypass()) track = track.darker(220);
+
+        painter.fillRect((center - 3) * s, area.y() * s, 7 * s, area.height() * s, track);
+        painter.fillRect((center - 4) * s, area.y() * s, s, area.height() * s,
+                         atlas_.color(QStringLiteral("bevel_dark")));
+        painter.fillRect((center + 4) * s, area.y() * s, s, area.height() * s,
+                         atlas_.color(QStringLiteral("bevel_light")));
 
         const float db = index < 0 ? equalizer_.preamp_db() : equalizer_.band_db(index);
         const float fraction = 0.5f - db / (2.0f * Equalizer::kRangeDb);
@@ -199,6 +210,30 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
                                                      : active           ? "normal"
                                                                         : "active"));
         atlas_.draw(painter, thumb, area.x() + (area.width() - kThumbWidthPx) / 2, y);
+    }
+
+    // Marcas de escala em +12 dB, 0 dB e -12 dB, nos vaos ENTRE os sliders.
+    //
+    // Eu as tinha removido achando que a regua tracejada era invencao minha; a
+    // referencia mostra que ela existe no original. O que estava errado era o
+    // comprimento: traco curto no vao le como escala, traco colado no slider
+    // vira uma linha continua atravessando o painel.
+    const int travel = kSliderHeight - kThumbHeight;
+    for (int step = 0; step <= 2; ++step) {
+        const int y = kSliderTop + kThumbHeight / 2 + step * travel / 2;
+        for (int band = -1; band < Equalizer::kBands; ++band) {
+            const QRect area = slider_rect(band);
+            const int gap_x = area.x() + area.width() + 2;
+            if (band == Equalizer::kBands - 1) continue;
+            painter.fillRect(gap_x * s, y * s, 4 * s, s,
+                             atlas_.color(QStringLiteral("green_dim")));
+        }
+        // Tambem antes do primeiro e depois do ultimo, para fechar a escala.
+        painter.fillRect((slider_rect(-1).x() - 6) * s, y * s, 4 * s, s,
+                         atlas_.color(QStringLiteral("green_dim")));
+        const QRect last = slider_rect(Equalizer::kBands - 1);
+        painter.fillRect((last.x() + last.width() + 2) * s, y * s, 4 * s, s,
+                         atlas_.color(QStringLiteral("green_dim")));
     }
 
     // Rotulos de frequencia.

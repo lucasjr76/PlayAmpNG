@@ -175,11 +175,8 @@ void MainPanel::paint_frame(QPainter& painter) {
                          atlas_.color(QStringLiteral("bevel_light")));
     };
 
-    for (const QRect& area : {kTimeWell, kTitleWell, kVisFrame, kPosition, kVolume, kBalance})
+    for (const QRect& area : {kDisplayBlock, kTitleWell, kPosition, kVolume, kBalance})
         well(area);
-    // Interior do poco do espectro, ja dentro da moldura.
-    painter.fillRect(kVis.x() * s, kVis.y() * s, kVis.width() * s, kVis.height() * s,
-                     atlas_.color(QStringLiteral("well")));
 
     // Linha guia do trilho de posicao: DUAS linhas da mesma cor, ocupando as
     // duas fileiras centrais do interior.
@@ -192,39 +189,30 @@ void MainPanel::paint_frame(QPainter& painter) {
         painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + row) * s,
                          (kPosition.width() - 2) * s, s, QColor(48, 48, 48));
 
-    // O trilho do volume carrega o degrade do espectro na horizontal: o proprio
-    // trilho diz o nivel, sem precisar de numero. Vem do classico.
-    const QVector<QColor>& gradient = atlas_.spectrum();
-    if (!gradient.isEmpty()) {
-        const int inner_x = kVolume.x() + 1;
-        const int inner_w = kVolume.width() - 2;
-        for (int i = 0; i < inner_w; ++i) {
-            const int index = i * (static_cast<int>(gradient.size()) - 1) / std::max(1, inner_w - 1);
-            painter.fillRect((inner_x + i) * s, (kVolume.y() + 4) * s, s, 5 * s,
-                             gradient[static_cast<std::size_t>(index)].darker(160));
-        }
-        const int filled = static_cast<int>(engine_.volume() * inner_w);
-        for (int i = 0; i < filled; ++i) {
-            const int index = i * (static_cast<int>(gradient.size()) - 1) / std::max(1, inner_w - 1);
-            painter.fillRect((inner_x + i) * s, (kVolume.y() + 4) * s, s, 5 * s,
-                             gradient[static_cast<std::size_t>(index)]);
-        }
-    }
+    // Trilhos de COR SOLIDA, escolhida pelo VALOR.
+    //
+    // A versao anterior pintava um degrade de arco-iris fixo no fundo e
+    // "preenchia" ate o valor. No original o trilho e uma faixa de uma cor so,
+    // e e a COR que diz o valor: verde em nivel baixo, amarelo no meio,
+    // laranja/vermelho no alto. Sem degrade de fundo.
+    const auto value_color = [this](float normalized) {
+        const QVector<QColor>& gradient = atlas_.spectrum();
+        if (gradient.isEmpty()) return QColor(0, 237, 0);
+        const int index = static_cast<int>(std::clamp(normalized, 0.0f, 1.0f) *
+                                           (gradient.size() - 1));
+        return gradient[static_cast<std::size_t>(index)];
+    };
 
-    // O trilho do balanco espelha o degrade a partir do centro: o desvio para
-    // um lado aparece como cor, e o centro fica verde.
-    if (!gradient.isEmpty()) {
-        const int inner_x = kBalance.x() + 1;
-        const int inner_w = kBalance.width() - 2;
-        for (int i = 0; i < inner_w; ++i) {
-            const float offset =
-                std::fabs(static_cast<float>(i) / std::max(1, inner_w - 1) * 2.0f - 1.0f);
-            const int index = static_cast<int>(offset * (gradient.size() - 1));
-            painter.fillRect((inner_x + i) * s, (kBalance.y() + 4) * s, s, 5 * s,
-                             gradient[static_cast<std::size_t>(std::clamp<int>(
-                                 index, 0, static_cast<int>(gradient.size()) - 1))]);
-        }
-    }
+    // A faixa ocupa quase toda a altura do poco, como no original — uma tira
+    // fina de 5 px no meio de 13 nao le como "barra".
+    const auto value_bar = [&](const QRect& area, float normalized) {
+        painter.fillRect((area.x() + 2) * s, (area.y() + 2) * s, (area.width() - 4) * s,
+                         (area.height() - 4) * s, value_color(normalized));
+    };
+
+    value_bar(kVolume, engine_.volume());
+    // No balanco o que importa e o DESVIO do centro, nao o lado.
+    value_bar(kBalance, std::fabs(engine_.balance()));
 
     // Borda externa do painel, de um pixel: sem ela a janela sem moldura do
     // sistema fica sem limite visivel contra um fundo escuro.
@@ -245,7 +233,7 @@ void MainPanel::paint_display(QPainter& painter) {
     // Centrado no poco pela largura MEDIDA do texto. Com posicao fixa, "00:00"
     // e "-99:99" ficam desalinhados um em relacao ao outro.
     const QString time = prefix + format_time(frames, engine_.sample_rate());
-    const int time_x = kTimeWell.x() + (kTimeWell.width() - atlas_.time_width(time)) / 2;
+    const int time_x = kTime.x() + (kTime.width() - atlas_.time_width(time)) / 2;
     atlas_.draw_time(painter, time, time_x, kTime.y());
 
     // PL-17, PL-18, PL-19 — ausencia nao vira numero plausivel.
