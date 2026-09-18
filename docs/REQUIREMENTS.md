@@ -40,9 +40,9 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| PL-01 | Reproduzir | AUTO | M1 | PENDENTE |
-| PL-02 | Pausar e continuar na mesma posição | AUTO | M1 | PENDENTE |
-| PL-03 | Parar: estado `Stopped`, posição 0, faixa mantida | AUTO | M1 | PENDENTE |
+| PL-01 | Reproduzir | AUTO | M1 | OK (M1) |
+| PL-02 | Pausar e continuar na mesma posição | AUTO | M1 | OK (M1) |
+| PL-03 | Parar: estado `Stopped`, posição 0, faixa mantida | AUTO | M1 | OK (M1) |
 | PL-04 | Faixa anterior sempre vai à anterior, nunca reinicia a atual | AUTO | M2 | PENDENTE |
 | PL-05 | Próxima faixa | AUTO | M2 | PENDENTE |
 | PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | PENDENTE |
@@ -60,8 +60,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-18 | Display: frequência de amostragem | AUTO | M5 | PENDENTE |
 | PL-19 | Display: indicação mono/estéreo | AUTO | M5 | PENDENTE |
 | PL-20 | Display: posição da faixa na playlist | AUTO | M5 | PENDENTE |
-| PL-21 | Barra de progresso acompanha a posição real do backend | MEDIDO | M1 | PENDENTE |
-| PL-22 | Busca temporal quando a fonte suporta | AUTO | M1 | PENDENTE |
+| PL-21 | Barra de progresso acompanha a posição real do backend | MEDIDO | M1 | OK (M1) |
+| PL-22 | Busca temporal quando a fonte suporta | AUTO | M1 | OK (M1) |
 | PL-23 | Busca desabilitada quando a fonte não suporta | AUTO | M6 | PENDENTE |
 | PL-24 | Fim da playlist: repeat=off para; repeat=all reinicia; repeat=track repete | AUTO | M2 | PENDENTE |
 | PL-25 | Troca de faixa durante pausa mantém o estado pausado, posição 0 | AUTO | M2 | PENDENTE |
@@ -71,15 +71,15 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| AU-01 | Decodificação por biblioteca consolidada, sem codec próprio | MANUAL | M1 | PENDENTE |
-| AU-02 | Reprodução real de MP3 | AUTO | M1 | PENDENTE |
-| AU-03 | Reprodução real de WAV | AUTO | M1 | PENDENTE |
-| AU-04 | Reprodução real de FLAC | AUTO | M1 | PENDENTE |
-| AU-05 | Reprodução real de Ogg Vorbis | AUTO | M1 | PENDENTE |
-| AU-06 | Reprodução real de Opus | AUTO | M1 | PENDENTE |
-| AU-07 | Reprodução real de AAC/M4A | AUTO | M1 | PENDENTE |
+| AU-01 | Decodificação por biblioteca consolidada, sem codec próprio | MANUAL | M1 | OK (M1) |
+| AU-02 | Reprodução real de MP3 | AUTO | M1 | OK (M1) |
+| AU-03 | Reprodução real de WAV | AUTO | M1 | OK (M1) |
+| AU-04 | Reprodução real de FLAC | AUTO | M1 | OK (M1) |
+| AU-05 | Reprodução real de Ogg Vorbis | AUTO | M1 | OK (M1) |
+| AU-06 | Reprodução real de Opus | AUTO | M1 | OK (M1) |
+| AU-07 | Reprodução real de AAC/M4A | AUTO | M1 | OK (M1) |
 | AU-08 | Disponibilidade efetiva de cada formato documentada por pacote distribuído | MANUAL | M7 | PENDENTE |
-| AU-09 | Processamento interno em ponto flutuante (f32) | MANUAL | M1 | PENDENTE |
+| AU-09 | Processamento interno em ponto flutuante (f32) | MANUAL | M1 | OK (M1) |
 | AU-10 | Mudanças de ganho com rampa, sem estalo | MEDIDO | M3 | PENDENTE |
 | AU-11 | Seleção de dispositivo de saída | MANUAL | M6 | PENDENTE |
 | AU-12 | Tratamento de desconexão do dispositivo: reabrir até 3×, preservar posição | MANUAL | M6 | PENDENTE |
@@ -90,7 +90,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AU-17 | Indicador de clipping na interface quando o limitador atua | MANUAL | M5 | PENDENTE |
 | AU-18 | Ordem dos estágios de processamento documentada | MANUAL | M0 | OK (M0) |
 | AU-19 | Ponto de captura da visualização documentado | MANUAL | M0 | OK (M0) |
-| AU-20 | Disco, rede, metadados e interface fora do processamento crítico | MANUAL | M1 | PENDENTE |
+| AU-20 | Disco, rede, metadados e interface fora do processamento crítico | MANUAL | M1 | OK (M1) |
 | AU-21 | Nenhuma operação bloqueante, log síncrono ou alocação no callback de áudio | MANUAL + MEDIDO | M3 | PENDENTE |
 | AU-22 | Limitador com lookahead contém transiente de 1 amostra a 0 dBFS; contador do clamp rígido permanece zero | MEDIDO | M3 | PENDENTE |
 | AU-23 | Latência total reportada = lookahead do limitador + buffer do dispositivo | MEDIDO | M3 | PENDENTE |
@@ -187,7 +187,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | IN-04 | Integração com teclas multimídia | MANUAL | M6 | PENDENTE |
 | IN-05 | Integração MPRIS no Linux | MANUAL | M6 | PENDENTE |
 | IN-06 | Opção de manter a janela acima das demais | MANUAL | M6 | PENDENTE |
-| IN-07 | Abertura de arquivos por argumentos de linha de comando | AUTO | M1 | PENDENTE |
+| IN-07 | Abertura de arquivos por argumentos de linha de comando | AUTO | M1 | OK (M1) |
 | IN-08 | Arquivo passado a uma instância já aberta é enfileirado nela | MANUAL | M6 | PENDENTE |
 | IN-09 | Gravação atômica de configuração, playlist, presets e layout | AUTO | M5 | PENDENTE |
 | IN-10 | Configuração inválida → renomeia para `.bad`, carrega padrões, registra log | AUTO | M5 | PENDENTE |
@@ -198,22 +198,22 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
 | AR-01 | Responsabilidades separadas conforme §10 | MANUAL | M0 | OK (M0) |
-| AR-02 | Estados explícitos: Stopped, Loading, Playing, Paused, Buffering, Error | AUTO | M1 | PENDENTE |
+| AR-02 | Estados explícitos: Stopped, Loading, Playing, Paused, Buffering, Error | AUTO | M1 | OK (M1) |
 | AR-03 | Resposta assíncrona de geração antiga é descartada sem efeito | AUTO | M2 | PENDENTE |
-| AR-04 | Interface reflete o estado confirmado pelo backend, inclusive em falha | AUTO | M1 | PENDENTE |
+| AR-04 | Interface reflete o estado confirmado pelo backend, inclusive em falha | AUTO | M1 | OK (M1) |
 | AR-05 | Logs úteis para diagnóstico | MANUAL | M1 | PENDENTE |
-| AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | PENDENTE |
+| AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | PARCIAL (M1) — funcao de redacao verificada; integracao com streaming em M6 |
 | AR-07 | `core/` não inclui Qt nem API de sistema operacional | AUTO (verificação de build) | M0 | OK (M0) |
 | AR-08 | `core/` permanece único e compartilhado, sem API de sistema, e passa na íntegra a suíte nos três sistemas | AUTO | M8/M9 | PENDENTE |
-| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 100 ms | AUTO | M1 | PENDENTE |
+| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 100 ms | AUTO | M1 | PARCIAL (M1) — mecanismo ativo e parada pronta; cancelamento de abertura de rede bloqueada so em M6 |
 | AR-10 | Verificações de teste permanecem ativas em build de release (`PANG_CHECK`, não `assert`) | AUTO | M0 | OK (M0) |
-| AR-11 | Estado publicado por seqlock; nenhum tipo presumido lock-free sem `static_assert` | AUTO | M1 | PENDENTE |
+| AR-11 | Estado publicado por seqlock; nenhum tipo presumido lock-free sem `static_assert` | AUTO | M1 | OK (M1) |
 
 ## RB — Robustez (spec §11)
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| RB-01 | Arquivo ausente → `Error`, sem crash, playlist intacta | AUTO | M2 | PENDENTE |
+| RB-01 | Arquivo ausente → `Error`, sem crash, playlist intacta | AUTO | M2 | OK (M1) |
 | RB-02 | Arquivo corrompido ou truncado → `Error`, sem crash | AUTO | M2 | PENDENTE |
 | RB-03 | Arquivo sem permissão de leitura → `Error`, sem crash | AUTO | M2 | PENDENTE |
 | RB-04 | Interrupção de stream → reconexão ou `Error` explícito | MANUAL | M6 | PENDENTE |

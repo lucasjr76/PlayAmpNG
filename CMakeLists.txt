@@ -50,7 +50,10 @@ add_custom_target(core_purity ALL
 
 # core/ : C++20 puro. Sem Qt, sem API de sistema operacional. Testavel headless.
 add_library(pang_core STATIC
-  src/core/audio/probe.cpp)
+  src/core/audio/probe.cpp
+  src/core/audio/decoder.cpp
+  src/core/audio/engine.cpp
+  src/core/util/log.cpp)
 target_include_directories(pang_core PUBLIC src)
 target_link_libraries(pang_core PUBLIC PkgConfig::FFMPEG)
 set_target_properties(pang_core PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
@@ -91,6 +94,15 @@ target_link_libraries(pang_tests PRIVATE pang_core pang_platform)
 set_target_properties(pang_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME core COMMAND pang_tests)
+
+add_executable(pang_audio_tests tests/test_audio.cpp)
+target_link_libraries(pang_audio_tests PRIVATE pang_core)
+target_compile_definitions(pang_audio_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_audio_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME audio COMMAND pang_audio_tests)
+set_tests_properties(audio PROPERTIES TIMEOUT 120)
 
 add_test(NAME m0_headless COMMAND pang_probe)
 set_tests_properties(m0_headless PROPERTIES

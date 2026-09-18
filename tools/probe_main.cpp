@@ -8,9 +8,14 @@
 //
 // Uso: pang_probe [arquivo-ou-url ...]
 
+#include <chrono>
 #include <cstdio>
+#include <cstring>
+#include <memory>
 #include <string>
+#include <thread>
 
+#include "core/audio/engine.h"
 #include "core/audio/probe.h"
 #include "platform/audio_device.h"
 
@@ -56,9 +61,73 @@ void print_probe(const std::string& url) {
     std::printf("  busca      %s\n", r->seekable ? "suportada" : "nao suportada");
 }
 
+// Reproducao pelo dispositivo real, sem Qt e sem janela.
+//
+// Os testes chamam Engine::render() diretamente, o que cobre o engine mas nao
+// o caminho pela camada de plataforma. Este modo exercita dispositivo, callback
+// e engine juntos — que e o que de fato toca som.
+int play(const std::string& url, double seconds) {
+    pang::platform::AudioOutput output;
+    std::unique_ptr<pang::core::Engine> engine;
+
+    struct Bridge {
+        pang::core::Engine* engine = nullptr;
+        int channels = 2;
+    } bridge;
+
+    auto render = [](void* user, float* out, std::uint32_t frames) {
+        auto* b = static_cast<Bridge*>(user);
+        if (b->engine)
+            b->engine->render(out, frames);
+        else
+            std::memset(out, 0, static_cast<std::size_t>(frames) * b->channels * sizeof(float));
+    };
+
+    std::string error;
+    if (!output.start(44100, 2, render, &bridge, error)) {
+        std::printf("erro: %s\n", error.c_str());
+        return 1;
+    }
+    engine = std::make_unique<pang::core::Engine>(output.sample_rate(), output.channels());
+    bridge.engine = engine.get();
+    bridge.channels = output.channels();
+
+    std::printf("\ndispositivo: %s  %d Hz  %d canais\n", output.device_name().c_str(),
+                output.sample_rate(), output.channels());
+
+    output.suspend();  // precondicao de load(): render() parado
+    engine->load(url, true);
+    output.resume();
+
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::milliseconds(static_cast<int>(seconds * 1000));
+    pang::core::Snapshot snap;
+    while (std::chrono::steady_clock::now() < deadline) {
+        snap = engine->snapshot();
+        if (snap.state == pang::core::State::Stopped && snap.position_frames > 0) break;
+        if (snap.state == pang::core::State::Error) {
+            std::printf("erro: %s\n", engine->last_error().c_str());
+            return 1;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+
+    output.suspend();
+    std::printf("estado=%s  posicao=%.3f s  underruns=%u\n", pang::core::to_string(snap.state),
+                static_cast<double>(snap.position_frames) / output.sample_rate(), snap.underruns);
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
+    // pang_probe --play <arquivo> [segundos]
+    if (argc >= 3 && std::string(argv[1]) == "--play") {
+        print_environment();
+        const double seconds = argc >= 4 ? std::atof(argv[3]) : 10.0;
+        return play(argv[2], seconds);
+    }
+
     print_environment();
     for (int i = 1; i < argc; ++i) print_probe(argv[i]);
     return 0;
