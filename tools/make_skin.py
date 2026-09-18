@@ -28,18 +28,30 @@ import zlib
 # O verde da primeira versao era verde-primavera (0,255,127), que puxa para o
 # azul. O mostrador classico e verde puro. A diferenca some numa captura pequena
 # e salta aos olhos na tela.
-BG          = (58, 58, 58)     # cinza base do painel
+BG          = (60, 60, 60)     # cinza base do painel
 BG_DARK     = (0, 0, 0)        # poco de mostrador: preto, como no classico
-BEVEL_LIGHT = (98, 98, 98)     # aresta iluminada (topo-esquerda)
-BEVEL_DARK  = (26, 26, 26)     # aresta sombreada (baixo-direita)
-FACE        = (70, 70, 70)     # face de botao em repouso
-FACE_HOT    = (86, 86, 86)     # botao ativo
-FACE_DOWN   = (44, 44, 44)     # botao pressionado
-DISABLED    = (62, 62, 62)
-GREEN       = (0, 237, 0)      # mostradores e texto
-GREEN_DIM   = (0, 96, 0)       # texto desabilitado
-FOCUS       = (0, 180, 0)      # contorno de foco
-GRAY_TEXT   = (168, 168, 168)
+BEVEL_LIGHT = (122, 122, 122)  # aresta iluminada (topo-esquerda)
+BEVEL_DARK  = (22, 22, 22)     # aresta sombreada (baixo-direita)
+
+# Faces de botao com degrade vertical, claro em cima e escuro embaixo.
+#
+# Uma face chapada com uma linha de contorno le-se como "retangulo com borda",
+# nao como volume. O que dava a impressao de relevo nas interfaces daquela epoca
+# era justamente o degrade de duas ou tres paradas dentro do proprio botao.
+FACE_TOP        = (92, 92, 92)
+FACE_BOTTOM     = (58, 58, 58)
+FACE_HOT_TOP    = (112, 112, 112)
+FACE_HOT_BOTTOM = (74, 74, 74)
+FACE_DOWN_TOP   = (44, 44, 44)
+FACE_DOWN_BOTTOM= (62, 62, 62)   # invertido: pressionado escurece em cima
+DISABLED_TOP    = (72, 72, 72)
+DISABLED_BOTTOM = (54, 54, 54)
+
+GREEN       = (0, 255, 12)     # mostrador de tempo e espectro
+GREEN_TEXT  = (0, 224, 24)     # texto pequeno
+GREEN_DIM   = (0, 104, 12)     # texto desabilitado
+FOCUS       = (0, 200, 16)     # contorno de foco
+GRAY_TEXT   = (176, 176, 176)
 TRANSPARENT = (255, 0, 255)    # cor-chave, nunca desenhada
 
 # Degrade vertical do espectro, da base para o topo.
@@ -81,14 +93,35 @@ class Canvas:
         for j in range(y, y + h):
             self.set(x, j, color)
 
-    def bevel(self, x, y, w, h, face, raised=True):
-        """Retangulo chanfrado: luz no topo-esquerda quando elevado."""
+    def gradient(self, x, y, w, h, top, bottom):
+        """Preenche com degrade vertical entre duas cores."""
+        for j in range(h):
+            t = j / max(1, h - 1)
+            color = tuple(int(top[c] + (bottom[c] - top[c]) * t) for c in range(3))
+            self.hline(x, y + j, w, color)
+
+    def bevel(self, x, y, w, h, top, bottom, raised=True):
+        """Retangulo chanfrado com face em degrade.
+
+        Duas arestas em vez de uma: a externa faz o contorno e a interna faz o
+        realce, que e o que produz a sensacao de volume. Com uma aresta so o
+        resultado parece um retangulo desenhado, nao um botao.
+        """
         light, dark = (BEVEL_LIGHT, BEVEL_DARK) if raised else (BEVEL_DARK, BEVEL_LIGHT)
-        self.rect(x, y, w, h, face)
+        self.gradient(x, y, w, h, top, bottom)
+
         self.hline(x, y, w, light)
         self.vline(x, y, h, light)
         self.hline(x, y + h - 1, w, dark)
         self.vline(x + w - 1, y, h, dark)
+
+        inner_light = tuple(min(255, c + 26) for c in top)
+        inner_dark = tuple(max(0, c - 22) for c in bottom)
+        if w > 3 and h > 3:
+            self.hline(x + 1, y + 1, w - 2, inner_light if raised else inner_dark)
+            self.vline(x + 1, y + 1, h - 2, inner_light if raised else inner_dark)
+            self.hline(x + 1, y + h - 2, w - 2, inner_dark if raised else inner_light)
+            self.vline(x + w - 2, y + 1, h - 2, inner_dark if raised else inner_light)
 
     def blit(self, other, x, y):
         for j in range(other.height):
@@ -230,7 +263,7 @@ SEGMENTS = {
 }
 
 DIGIT_WIDTH = 9
-DIGIT_HEIGHT = 13
+DIGIT_HEIGHT = 14
 
 
 def digit_cell_width(character):
@@ -241,10 +274,8 @@ def digit_cell_width(character):
 
 def draw_digit(canvas, character, color):
     if character == ':':
-        # Centrado na celula de 5 px: encostado a esquerda, abria um vao grande
-        # antes do digito seguinte.
         canvas.rect(2, 3, 2, 2, color)
-        canvas.rect(2, 8, 2, 2, color)
+        canvas.rect(2, 9, 2, 2, color)
         return
     if character == '-':
         canvas.rect(2, 6, 5, 2, color)
@@ -252,24 +283,29 @@ def draw_digit(canvas, character, color):
     if character not in SEGMENTS:
         return
 
+    # Segmentos SEPARADOS, com entalhe nos cantos.
+    #
+    # Na versao anterior as barras verticais comecavam na mesma linha da
+    # horizontal e os segmentos fundiam num bloco continuo — o "display feio".
+    # Num mostrador de sete segmentos de verdade cada barra e uma peca solta.
     top, upper_left, upper_right, middle, lower_left, lower_right, bottom = SEGMENTS[character]
     if top:         canvas.rect(2, 0, 5, 2, color)
-    if upper_left:  canvas.rect(0, 1, 2, 6, color)
-    if upper_right: canvas.rect(7, 1, 2, 6, color)
+    if upper_left:  canvas.rect(0, 2, 2, 4, color)
+    if upper_right: canvas.rect(7, 2, 2, 4, color)
     if middle:      canvas.rect(2, 6, 5, 2, color)
-    if lower_left:  canvas.rect(0, 7, 2, 6, color)
-    if lower_right: canvas.rect(7, 7, 2, 6, color)
-    if bottom:      canvas.rect(2, 11, 5, 2, color)
+    if lower_left:  canvas.rect(0, 8, 2, 4, color)
+    if lower_right: canvas.rect(7, 8, 2, 4, color)
+    if bottom:      canvas.rect(2, 12, 5, 2, color)
 
 
 # -------------------------------------------------------------------- botoes
 
 BUTTON_STATES = [
-    ('normal',   FACE,      True,  False),
-    ('pressed',  FACE_DOWN, False, False),
-    ('active',   FACE_HOT,  True,  False),
-    ('disabled', DISABLED,  True,  False),
-    ('focus',    FACE,      True,  True),
+    ('normal',   FACE_TOP,      FACE_BOTTOM,      True,  False),
+    ('pressed',  FACE_DOWN_TOP, FACE_DOWN_BOTTOM, False, False),
+    ('active',   FACE_HOT_TOP,  FACE_HOT_BOTTOM,  True,  False),
+    ('disabled', DISABLED_TOP,  DISABLED_BOTTOM,  True,  False),
+    ('focus',    FACE_TOP,      FACE_BOTTOM,      True,  True),
 ]
 
 
@@ -328,7 +364,7 @@ def build_atlas():
         for j in range(GLYPH_HEIGHT):
             for i in range(GLYPH_WIDTH):
                 if bits[j * GLYPH_WIDTH + i] == '#':
-                    cell.set(i, j, GREEN)
+                    cell.set(i, j, GREEN_TEXT)
         place('font/%d' % ord(character), cell)
 
     fallback = Canvas(GLYPH_WIDTH, GLYPH_HEIGHT)
@@ -348,9 +384,9 @@ def build_atlas():
     # --- botoes de transporte, cinco estados cada
     for name in ('previous', 'play', 'pause', 'stop', 'next', 'eject'):
         width, height = (22, 16) if name == 'eject' else (23, 18)
-        for state, face, raised, focus in BUTTON_STATES:
+        for state, top, bottom, raised, focus in BUTTON_STATES:
             cell = Canvas(width, height)
-            cell.bevel(0, 0, width, height, face, raised)
+            cell.bevel(0, 0, width, height, top, bottom, raised)
             symbol = GREEN_DIM if state == 'disabled' else GREEN
             offset = Canvas(width, height)
             draw_glyph_shape(offset, name, symbol, width, height)
@@ -375,9 +411,9 @@ def build_atlas():
         ('repeat', 'REP', 28, 15),
     )
     for name, label, width, height in TOGGLES:
-        for state, face, raised, focus in BUTTON_STATES:
+        for state, top, bottom, raised, focus in BUTTON_STATES:
             cell = Canvas(width, height)
-            cell.bevel(0, 0, width, height, face, raised)
+            cell.bevel(0, 0, width, height, top, bottom, raised)
             colour = GREEN_DIM if state == 'disabled' else GREEN
             text_width = len(label) * (GLYPH_WIDTH + 1) - 1
             x = (width - text_width) // 2
@@ -395,9 +431,9 @@ def build_atlas():
     # Os alternadores tem o rotulo assado no sprite. Reaproveita-los para outros
     # botoes e escrever por cima sobrepoe os dois textos — foi o que aconteceu
     # no rodape da playlist e nos botoes do equalizador.
-    for state, face, raised, focus in BUTTON_STATES:
+    for state, top, bottom, raised, focus in BUTTON_STATES:
         cell = Canvas(28, 13)
-        cell.bevel(0, 0, 28, 13, face, raised)
+        cell.bevel(0, 0, 28, 13, top, bottom, raised)
         if focus:
             for i in range(0, 28, 2):
                 cell.set(i, 1, FOCUS)
@@ -405,27 +441,28 @@ def build_atlas():
         place('toggle/blank/%s' % state, cell)
 
     # --- pecas de slider
-    for state, face, raised, _ in BUTTON_STATES[:3]:
+    for state, top, bottom, raised, _ in BUTTON_STATES[:3]:
         cell = Canvas(11, 11)
-        cell.bevel(0, 0, 11, 11, face, raised)
+        cell.bevel(0, 0, 11, 11, top, bottom, raised)
         cell.vline(5, 2, 7, BEVEL_LIGHT if raised else BEVEL_DARK)
         place('slider/thumb/%s' % state, cell)
 
-    for state, face, raised, _ in BUTTON_STATES[:3]:
+    for state, top, bottom, raised, _ in BUTTON_STATES[:3]:
         cell = Canvas(29, 10)
-        cell.bevel(0, 0, 29, 10, face, raised)
+        cell.bevel(0, 0, 29, 10, top, bottom, raised)
         for i in (12, 14, 16):
             cell.vline(i, 2, 6, BEVEL_LIGHT if raised else BEVEL_DARK)
         place('slider/position/%s' % state, cell)
 
     groove = Canvas(8, 8)
-    groove.bevel(0, 3, 8, 3, BG_DARK, False)
+    groove.bevel(0, 3, 8, 3, BG_DARK, BG_DARK, False)
     place('slider/groove', groove)
 
     # --- pecas de moldura: canto e aresta de painel, para montar em qualquer tamanho
     for name, width, height, dark in (('panel', 8, 8, False), ('well', 8, 8, True)):
         cell = Canvas(width, height)
-        cell.bevel(0, 0, width, height, BG_DARK if dark else BG, not dark)
+        cell.bevel(0, 0, width, height, BG_DARK if dark else FACE_TOP,
+                   BG_DARK if dark else FACE_BOTTOM, not dark)
         place('frame/%s' % name, cell)
 
     # --- botoes da barra de titulo (minimizar, compactar, fechar)
@@ -433,9 +470,9 @@ def build_atlas():
     # A janela nao tem moldura do sistema, entao sem estes botoes nao ha como
     # minimizar nem fechar pela interface — so pelo gerenciador de janelas.
     for name in ('minimize', 'shade', 'close'):
-        for state, face, raised, _ in BUTTON_STATES[:2]:
+        for state, top, bottom, raised, _ in BUTTON_STATES[:2]:
             cell = Canvas(9, 9)
-            cell.bevel(0, 0, 9, 9, face, raised)
+            cell.bevel(0, 0, 9, 9, top, bottom, raised)
             mark = GREEN
             offset = 1 if state == 'pressed' else 0
             if name == 'minimize':
@@ -451,7 +488,7 @@ def build_atlas():
 
     # --- barra de titulo com faixas, no espirito do classico
     title = Canvas(8, 14)
-    title.rect(0, 0, 8, 14, BG)
+    title.gradient(0, 0, 8, 14, (84, 84, 84), (52, 52, 52))
     title.hline(0, 0, 8, BEVEL_LIGHT)
     title.hline(0, 13, 8, BEVEL_DARK)
     for j in range(3, 11, 2):
@@ -481,7 +518,8 @@ def main():
         'palette': {
             'background': list(BG), 'well': list(BG_DARK),
             'bevel_light': list(BEVEL_LIGHT), 'bevel_dark': list(BEVEL_DARK),
-            'green': list(GREEN), 'green_dim': list(GREEN_DIM),
+            'green': list(GREEN), 'green_text': list(GREEN_TEXT),
+            'green_dim': list(GREEN_DIM),
             'gray_text': list(GRAY_TEXT), 'focus': list(FOCUS),
         },
         'sprites': sprites,

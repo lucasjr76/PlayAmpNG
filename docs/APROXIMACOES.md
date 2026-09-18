@@ -20,7 +20,8 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 | Estados de botão | Normal, pressionado, ativo, desabilitado e foco — os cinco exigidos |
 | Barra de título desenhada pelo aplicativo | Sem moldura do sistema, como no original |
 | Tipografia bitmap | Fonte própria de 5 × 7, maiúsculas, minúsculas mapeadas para maiúsculas |
-| Mostrador de tempo | Dígitos próprios de 9 × 13, em sete segmentos |
+| Mostrador de tempo | Dígitos próprios de 9 × 14, em sete segmentos **com os segmentos separados** — barras verticais recuadas duas linhas em relação às horizontais, de modo que cada segmento se lê como peça solta |
+| Relevo dos controles | Face em degradê vertical mais duas arestas (contorno e realce interno). Uma face chapada com uma linha de contorno lê-se como retângulo desenhado, não como volume |
 
 ## O que diverge, e por quê
 

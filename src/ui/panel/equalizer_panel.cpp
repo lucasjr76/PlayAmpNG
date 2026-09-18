@@ -21,17 +21,20 @@ constexpr QRect kReset{44, 18, 26, 12};
 constexpr QRect kCurve{87, 17, 113, 19};
 constexpr QRect kPreset{206, 18, 44, 12};
 
-constexpr int kSliderTop = 40;
-constexpr int kSliderHeight = 56;
+// Layout simetrico: 17 px de margem dos dois lados.
+//
+//   17 (margem) + 14 (preamp) + 24 (separacao) + 9*21 + 14 (bandas) + 17 = 275
+//
+// A versao anterior deixava 11 px a direita e um vao de 35 px depois do preamp,
+// o que jogava o conjunto para a esquerda e sobrava espaco de um lado so.
+constexpr int kSliderTop = 38;
+constexpr int kSliderHeight = 54;
 constexpr int kSliderWidth = 14;
-constexpr int kPreampX = 21;
-// Passo de 20 px, e nao os 18 do classico: o Winamp nao rotula as bandas, e sem
-// rotulo 18 basta. Com "170" e "310" embaixo, 18 px faz as legendas colarem
-// umas nas outras — foi o que aconteceu, virou "1703106001K".
-constexpr int kBandX = 70;
-constexpr int kBandSpacing = 20;
+constexpr int kPreampX = 17;
+constexpr int kBandX = 55;
+constexpr int kBandSpacing = 21;
 constexpr int kThumbHeight = 11;
-constexpr int kLabelY = 100;
+constexpr int kLabelY = 96;
 
 QString band_label(int band) {
     const float hz = Equalizer::frequencies()[static_cast<std::size_t>(band)];

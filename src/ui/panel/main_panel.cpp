@@ -27,8 +27,8 @@ constexpr QRect kShade{254, 3, 9, 9};
 constexpr QRect kClose{264, 3, 9, 9};
 // O poco acomoda o caso mais largo, "-99:99" com 50 px, e nao mais que isso:
 // sobra demais a direita deixava o mostrador desequilibrado.
-constexpr QRect kTimeWell{30, 23, 62, 17};
-constexpr QRect kTime{35, 25, 50, 13};
+constexpr QRect kTimeWell{30, 22, 62, 19};
+constexpr QRect kTime{35, 24, 50, 14};
 constexpr QRect kTitleWell{108, 22, 158, 12};
 constexpr QRect kTitle{111, 25, 152, 7};
 constexpr QRect kVis{24, 43, 76, 16};
