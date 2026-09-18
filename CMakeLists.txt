@@ -176,6 +176,13 @@ set_target_properties(pang_recovery_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUT
 
 add_test(NAME recovery COMMAND pang_recovery_tests)
 
+add_executable(pang_layout_tests tests/test_layout.cpp)
+target_include_directories(pang_layout_tests PRIVATE src)
+target_link_libraries(pang_layout_tests PRIVATE Qt6::Core)
+set_target_properties(pang_layout_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME layout COMMAND pang_layout_tests)
+
 add_test(NAME visualization COMMAND pang_vis_tests)
 set_tests_properties(visualization PROPERTIES TIMEOUT 120)
 

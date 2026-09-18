@@ -1,5 +1,7 @@
 #include "ui/panel/main_panel.h"
 
+#include "ui/panel/main_layout.h"
+
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -14,54 +16,7 @@ namespace {
 
 using core::State;
 
-// Geometria em coordenadas logicas (escala 1x).
-//
-// As posicoes seguem o layout do Winamp Classic, que e a referencia declarada:
-// mostrador de tempo em 36,26; visualizacao em 24,43 com 76x16; titulo da faixa
-// em 111,27; volume em 107,57; barra de posicao em 16,72; transporte em 16,88.
-// A primeira versao usava coordenadas inventadas que cabiam em 275x116 mas nao
-// tinham a densidade nem o ritmo do original.
-constexpr QRect kTitlebar{0, 0, 275, 14};
-constexpr QRect kMinimize{244, 3, 9, 9};
-constexpr QRect kShade{254, 3, 9, 9};
-constexpr QRect kClose{264, 3, 9, 9};
-// O poco acomoda o caso mais largo, "-99:99" com 50 px, e nao mais que isso:
-// sobra demais a direita deixava o mostrador desequilibrado.
-constexpr QRect kTimeWell{30, 22, 62, 19};
-constexpr QRect kTime{35, 24, 50, 14};
-constexpr QRect kTitleWell{108, 21, 158, 14};
-constexpr QRect kTitle{111, 24, 152, 10};
-// A moldura e a area util sao retangulos DIFERENTES.
-//
-// Antes eram o mesmo: as barras comecavam em cima da aresta esquerda e a ultima
-// linha ficava sob a aresta de baixo, entao o espectro parecia vazar da caixa.
-// 19 barras de 3 px com 1 px de intervalo pedem 76 px de area util; a moldura
-// e um pixel maior de cada lado.
-constexpr QRect kVisFrame{23, 42, 78, 18};
-constexpr QRect kVis{24, 43, 76, 16};
-// Posicoes calculadas a partir das larguras MEDIDAS da fonte, e nao estimadas:
-// KBPS 24 px, KHZ 17, MONO 26, STEREO 33. Numeros alinhados a direita, para
-// que 3 ou 4 digitos nao empurrem o rotulo seguinte.
-constexpr int kBitrateRight = 130;
-constexpr int kBitrateLabel = 133;   // + 24 = 157
-constexpr int kSampleRateRight = 176;
-constexpr int kSampleRateLabel = 179;  // + 17 = 196
-constexpr int kMono = 201;             // + 26 = 227
-constexpr int kStereo = 231;           // + 33 = 264
-constexpr int kInfoY = 43;
-constexpr QRect kVolume{107, 57, 68, 13};
-constexpr QRect kBalance{177, 57, 38, 13};
-constexpr QRect kEqualizer{219, 58, 23, 12};
-constexpr QRect kPlaylist{242, 58, 23, 12};
-constexpr QRect kPosition{16, 72, 248, 10};
-constexpr QRect kPrevious{16, 88, 23, 18};
-constexpr QRect kPlay{39, 88, 23, 18};
-constexpr QRect kPause{62, 88, 23, 18};
-constexpr QRect kStop{85, 88, 23, 18};
-constexpr QRect kNext{108, 88, 23, 18};
-constexpr QRect kEject{136, 89, 22, 16};
-constexpr QRect kShuffle{164, 89, 46, 15};
-constexpr QRect kRepeat{212, 89, 28, 15};
+using namespace pang::ui::layout;
 
 constexpr int kThumbWidth = 11;
 constexpr int kPositionThumbWidth = 29;
