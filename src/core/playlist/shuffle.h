@@ -27,6 +27,11 @@ public:
     // modo de repeticao.
     int next();
 
+    // Proximo item SEM avancar o cursor. Usado para a pre-carga do gapless:
+    // saber qual e a proxima faixa nao pode consumir o ciclo, senao um "proxima"
+    // manual antes do fim pularia um item.
+    int peek_next() const;
+
     // -1 quando ja esta no inicio do historico.
     int previous();
 

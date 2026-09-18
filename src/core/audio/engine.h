@@ -17,6 +17,63 @@
 
 namespace pang::core {
 
+// Descreve uma faixa que passou a ocupar o ring a partir de `start_frame`.
+//
+// O ring carrega amostras, nao faixas. Para que a emenda de gapless nao precise
+// esvaziar nada, uma fila paralela diz a partir de que quadro consumido as
+// amostras pertencem a proxima faixa. E o thread de audio, ao cruzar essa
+// marca, quem troca posicao, duracao e demais metadados publicados.
+struct TrackSegment {
+    std::uint64_t generation = 0;
+    std::uint64_t token = 0;  // identidade da faixa do lado do Controller
+    std::int64_t start_frame = 0;
+    std::int64_t duration_frames = -1;
+    std::int64_t bitrate_bps = -1;
+    int sample_rate = 0;
+    int channels = 0;
+    bool seekable = false;
+    float replaygain_db = 0.0f;
+    bool replaygain_present = false;
+};
+
+// Fila SPSC de tamanho fixo: decodificador empurra, audio consome.
+class SegmentQueue {
+public:
+    static constexpr std::size_t kCapacity = 16;
+
+    bool push(const TrackSegment& segment) noexcept {
+        const std::size_t tail = tail_.load(std::memory_order_relaxed);
+        const std::size_t next = (tail + 1) % kCapacity;
+        if (next == head_.load(std::memory_order_acquire)) return false;  // cheia
+        slots_[tail] = segment;
+        tail_.store(next, std::memory_order_release);
+        return true;
+    }
+
+    const TrackSegment* peek() const noexcept {
+        const std::size_t head = head_.load(std::memory_order_relaxed);
+        if (head == tail_.load(std::memory_order_acquire)) return nullptr;
+        return &slots_[head];
+    }
+
+    void pop() noexcept {
+        const std::size_t head = head_.load(std::memory_order_relaxed);
+        if (head == tail_.load(std::memory_order_acquire)) return;
+        head_.store((head + 1) % kCapacity, std::memory_order_release);
+    }
+
+    // Precondicao: nem produtor nem consumidor em execucao.
+    void clear() noexcept {
+        head_.store(0, std::memory_order_relaxed);
+        tail_.store(0, std::memory_order_relaxed);
+    }
+
+private:
+    TrackSegment slots_[kCapacity]{};
+    std::atomic<std::size_t> head_{0};
+    std::atomic<std::size_t> tail_{0};
+};
+
 // Engine de reproducao.
 //
 // Nao conhece Qt nem dispositivo de audio: expoe render(), que preenche um
@@ -51,7 +108,7 @@ public:
     // buffer: Playing, Paused ou Stopped. Os tres casos existem porque PL-25
     // exige que trocar de faixa durante a pausa continue pausado, e o fim de
     // playlist com repeat=off (PL-24) precisa parar sem comecar a tocar.
-    void load(const std::string& url, State desired);
+    void load(const std::string& url, State desired, std::uint64_t token = 0);
     void stop();
     bool seek(double seconds);
 
@@ -88,6 +145,16 @@ public:
     // stop() do usuario. Limpado por load(), stop() e seek().
     bool ended() const { return ended_.load(std::memory_order_acquire); }
 
+    // --- gapless (AU-13)
+    //
+    // set_next informa qual faixa emendar quando a atual acabar. O
+    // decodificador abre a proxima sem esvaziar o ring, entao nao ha lacuna.
+    // O `token` e opaco para o engine: o Controller usa o id da faixa, e le de
+    // volta em current_token() para saber que a emenda aconteceu.
+    void set_next(std::string url, std::uint64_t token);
+    void clear_next();
+    std::uint64_t current_token() const { return current_token_.load(std::memory_order_acquire); }
+
     // --- thread de audio
     void render(float* out, std::uint32_t frames) noexcept;
 
@@ -96,6 +163,8 @@ public:
 
 private:
     void apply_replaygain(const ProbeResult& info);
+    void publish_track_info(const ProbeResult& info);
+    void apply_segment(const TrackSegment& segment) noexcept;
     void start_decoder(const std::string& url, State desired);
     void join_decoder();
     void decode_loop(std::string url, State desired);
@@ -109,12 +178,30 @@ private:
     std::atomic<bool> thread_quit_{false};
 
     std::atomic<State> state_{State::Stopped};
+
+    // generation_ e a geracao do que ESTA TOCANDO; generation_seq_ e o
+    // contador de onde saem as novas. Com gapless o decodificador abre a faixa
+    // seguinte segundos antes de ela ser ouvida, entao publicar a geracao na
+    // decodificacao faria a interface trocar de faixa antes do som trocar.
     std::atomic<std::uint64_t> generation_{0};
+    std::atomic<std::uint64_t> generation_seq_{0};
     std::atomic<bool> eof_{false};
     std::atomic<bool> ended_{false};
 
-    std::atomic<std::int64_t> position_frames_{0};
+    // Contabilidade de posicao com emenda.
+    //   posicao = position_base_ + (consumed_ - track_origin_)
+    // A emenda apenas move track_origin_ para o inicio da nova faixa e zera a
+    // base, sem interromper o fluxo de amostras.
+    std::atomic<std::int64_t> consumed_frames_{0};
+    std::int64_t track_origin_ = 0;      // so o thread de audio escreve
+    std::int64_t position_base_ = 0;     // idem
     std::atomic<std::uint32_t> underruns_{0};
+
+    SegmentQueue segments_;
+    std::atomic<std::uint64_t> current_token_{0};
+    std::mutex next_mutex_;
+    std::string next_url_;
+    std::uint64_t next_token_ = 0;
 
     // Cadeia de processamento, na ordem de ARCHITECTURE.md secao 5.
     dsp::RampedGain replaygain_;

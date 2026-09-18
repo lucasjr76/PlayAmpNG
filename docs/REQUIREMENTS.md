@@ -48,8 +48,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | OK (M2) |
 | PL-07 | Abrir diretório, com busca recursiva opcional | AUTO + MANUAL | M2 | OK (M2) |
 | PL-08 | Abrir URL de áudio | MANUAL | M6 | PENDENTE |
-| PL-09 | Volume com efeito real e rampa suave | MEDIDO | M3 | PENDENTE |
-| PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | PENDENTE |
+| PL-09 | Volume com efeito real e rampa suave | MEDIDO | M3 | OK (M3) |
+| PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | OK (M3) |
 | PL-11 | Shuffle ligado/desligado | AUTO | M2 | OK (M2) |
 | PL-12 | Repetição: desligada, da faixa, da playlist | AUTO | M2 | OK (M2) |
 | PL-13 | Exibir/ocultar equalizador e playlist pelo player | MANUAL | M5 | PENDENTE |
@@ -80,20 +80,20 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AU-07 | Reprodução real de AAC/M4A | AUTO | M1 | OK (M1) |
 | AU-08 | Disponibilidade efetiva de cada formato documentada por pacote distribuído | MANUAL | M7 | PENDENTE |
 | AU-09 | Processamento interno em ponto flutuante (f32) | MANUAL | M1 | OK (M1) |
-| AU-10 | Mudanças de ganho com rampa, sem estalo | MEDIDO | M3 | PENDENTE |
+| AU-10 | Mudanças de ganho com rampa, sem estalo | MEDIDO | M3 | OK (M3) |
 | AU-11 | Seleção de dispositivo de saída | MANUAL | M6 | PENDENTE |
 | AU-12 | Tratamento de desconexão do dispositivo: reabrir até 3×, preservar posição | MANUAL | M6 | PENDENTE |
-| AU-13 | Gapless: sinal de rampa cortado em dois arquivos reproduz sem amostra a mais nem a menos na junção | MEDIDO | M3 | PENDENTE |
-| AU-14 | Matriz de disponibilidade de gapless por formato, medida e não presumida | MEDIDO | M3 | PENDENTE |
-| AU-15 | Leitura de ReplayGain, modos por faixa e por álbum | AUTO | M3 | PENDENTE |
-| AU-16 | Anti-clipping: nenhuma amostra da saída acima de -1.0 dBFS (pico de amostra; true peak não é prometido) | MEDIDO | M3 | PENDENTE |
-| AU-17 | Indicador de clipping na interface quando o limitador atua | MANUAL | M5 | PENDENTE |
+| AU-13 | Gapless: sinal de rampa cortado em dois arquivos reproduz sem amostra a mais nem a menos na junção | MEDIDO | M3 | OK (M3) |
+| AU-14 | Matriz de disponibilidade de gapless por formato, medida e não presumida | MEDIDO | M3 | OK (M3) |
+| AU-15 | Leitura de ReplayGain, modos por faixa e por álbum | AUTO | M3 | OK (M3) |
+| AU-16 | Anti-clipping: nenhuma amostra da saída acima de -1.0 dBFS (pico de amostra; true peak não é prometido) | MEDIDO | M3 | OK (M3) |
+| AU-17 | Indicador de clipping na interface quando o limitador atua | MANUAL | M5 | OK (M3) |
 | AU-18 | Ordem dos estágios de processamento documentada | MANUAL | M0 | OK (M0) |
 | AU-19 | Ponto de captura da visualização documentado | MANUAL | M0 | OK (M0) |
 | AU-20 | Disco, rede, metadados e interface fora do processamento crítico | MANUAL | M1 | OK (M1) |
-| AU-21 | Nenhuma operação bloqueante, log síncrono ou alocação no callback de áudio | MANUAL + MEDIDO | M3 | PENDENTE |
-| AU-22 | Limitador com lookahead contém transiente de 1 amostra a 0 dBFS; contador do clamp rígido permanece zero | MEDIDO | M3 | PENDENTE |
-| AU-23 | Latência total reportada = lookahead do limitador + buffer do dispositivo | MEDIDO | M3 | PENDENTE |
+| AU-21 | Nenhuma operação bloqueante, log síncrono ou alocação no callback de áudio | MANUAL + MEDIDO | M3 | OK (M3) |
+| AU-22 | Limitador com lookahead contém transiente de 1 amostra a 0 dBFS; contador do clamp rígido permanece zero | MEDIDO | M3 | OK (M3) |
+| AU-23 | Latência total reportada = lookahead do limitador + buffer do dispositivo | MEDIDO | M3 | OK (M3) |
 
 ## VI — Visualização (spec §5)
 
@@ -125,21 +125,21 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| EQ-01 | Dez bandas estéreo nas frequências de referência + preamp | AUTO | M3 | PENDENTE |
-| EQ-02 | Ajuste de ganho em dB, faixa ±12 dB documentada | AUTO | M3 | PENDENTE |
-| EQ-03 | Resposta medida por banda dentro de ±1 dB do ganho pedido | MEDIDO | M3 | PENDENTE |
-| EQ-04 | Bypass retira a equalização: após o crossfade, saída do estágio bit a bit igual à entrada | AUTO | M3 | PENDENTE |
-| EQ-05 | Reset para resposta plana | AUTO | M3 | PENDENTE |
-| EQ-06 | Presets integrados | MANUAL | M3 | PENDENTE |
+| EQ-01 | Dez bandas estéreo nas frequências de referência + preamp | AUTO | M3 | OK (M3) |
+| EQ-02 | Ajuste de ganho em dB, faixa ±12 dB documentada | AUTO | M3 | OK (M3) |
+| EQ-03 | Resposta medida por banda dentro de ±1 dB do ganho pedido | MEDIDO | M3 | OK (M3) |
+| EQ-04 | Bypass retira a equalização: após o crossfade, saída do estágio bit a bit igual à entrada | AUTO | M3 | OK (M3) |
+| EQ-05 | Reset para resposta plana | AUTO | M3 | OK (M3) |
+| EQ-06 | Presets integrados | MANUAL | M3 | OK (M3) |
 | EQ-07 | Criar, editar, salvar e excluir presets do usuário | MANUAL | M5 | PENDENTE |
-| EQ-08 | Mudanças aplicadas suavemente durante reprodução, sem estalo | MEDIDO | M3 | PENDENTE |
-| EQ-09 | Persistência dos ajustes entre sessões | AUTO | M3 | PENDENTE |
+| EQ-08 | Mudanças aplicadas suavemente durante reprodução, sem estalo | MEDIDO | M3 | OK (M3) |
+| EQ-09 | Persistência dos ajustes entre sessões | AUTO | M3 | OK (M3) |
 | EQ-10 | Tipo de filtro, largura de banda e Q documentados | MANUAL | M0 | OK (M0) |
-| EQ-11 | Banda com centro ≥ 0.45·sr vira identidade, sem instabilidade | AUTO | M3 | PENDENTE |
-| EQ-12 | Sliders de bandas inativas aparecem desabilitados | MANUAL | M5 | PENDENTE |
+| EQ-11 | Banda com centro ≥ 0.45·sr vira identidade, sem instabilidade | AUTO | M3 | OK (M3) |
+| EQ-12 | Sliders de bandas inativas aparecem desabilitados | MANUAL | M5 | OK (M3) |
 | EQ-13 | Tipo de filtro, fórmula de Q e tabela de valores por banda documentados e implementáveis | MANUAL | M0 | OK (M0) |
-| EQ-14 | Bypass neutraliza também o preamp | AUTO | M3 | PENDENTE |
-| EQ-15 | Transição de bypass sem descontinuidade de primeira derivada | MEDIDO | M3 | PENDENTE |
+| EQ-14 | Bypass neutraliza também o preamp | AUTO | M3 | OK (M3) |
+| EQ-15 | Transição de bypass sem descontinuidade de primeira derivada | MEDIDO | M3 | OK (M3) |
 
 ## LI — Playlist (spec §7)
 

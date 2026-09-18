@@ -6,6 +6,8 @@
 
 #include <QAbstractListModel>
 #include <QApplication>
+#include <QComboBox>
+#include <QCloseEvent>
 #include <QCommandLineParser>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -13,6 +15,7 @@
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
+#include <QInputDialog>
 #include <QLineEdit>
 #include <QListView>
 #include <QMimeData>
@@ -26,10 +29,16 @@
 #include <mutex>
 #include <vector>
 
+#include <QCheckBox>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+
+#include "core/dsp/presets.h"
 #include "core/meta/scanner.h"
 #include "core/playlist/m3u.h"
 #include "core/state/controller.h"
 #include "platform/audio_device.h"
+#include "ui/settings.h"
 
 using pang::core::Repeat;
 using pang::core::State;
@@ -123,6 +132,154 @@ protected:
         if (!paths.isEmpty() && on_drop) on_drop(paths);
         event->acceptProposedAction();
     }
+};
+
+// Painel do equalizador. Provisorio como o resto: no M5 vira sprite.
+class EqualizerPanel : public QWidget {
+public:
+    EqualizerPanel(pang::core::dsp::Equalizer& equalizer,
+                   std::vector<pang::core::dsp::EqPreset>& user_presets)
+        : equalizer_(equalizer), user_presets_(user_presets) {
+        setWindowTitle(QStringLiteral("Equalizador"));
+        setStyleSheet(QStringLiteral("background:#2b2b2b; color:#00ff7f;"));
+
+        auto* columns = new QHBoxLayout;
+
+        preamp_ = add_slider(columns, QStringLiteral("Preamp"));
+        QObject::connect(preamp_, &QSlider::valueChanged, [this](int value) {
+            equalizer_.set_preamp_db(static_cast<float>(value) / 10.0f);
+            mark_custom();
+        });
+
+        const auto& frequencies = pang::core::dsp::Equalizer::frequencies();
+        for (int band = 0; band < pang::core::dsp::Equalizer::kBands; ++band) {
+            const float hz = frequencies[static_cast<std::size_t>(band)];
+            const QString label = hz >= 1000 ? QStringLiteral("%1k").arg(hz / 1000)
+                                             : QStringLiteral("%1").arg(int(hz));
+            QSlider* slider = add_slider(columns, label);
+            // EQ-12 — banda inativa por Nyquist aparece desabilitada, em vez de
+            // aceitar o arraste e nao fazer nada.
+            slider->setEnabled(equalizer_.band_active(band));
+            QObject::connect(slider, &QSlider::valueChanged, [this, band](int value) {
+                equalizer_.set_band_db(band, static_cast<float>(value) / 10.0f);
+                mark_custom();
+            });
+            bands_[static_cast<std::size_t>(band)] = slider;
+        }
+
+        presets_ = new QComboBox;
+        auto* bypass = new QCheckBox(QStringLiteral("Bypass"));
+        auto* reset = new QPushButton(QStringLiteral("Reset"));
+        auto* save_preset = new QPushButton(QStringLiteral("Salvar preset"));
+        auto* delete_preset = new QPushButton(QStringLiteral("Excluir preset"));
+
+        bypass->setChecked(equalizer_.bypass());
+        QObject::connect(bypass, &QCheckBox::toggled,
+                         [this](bool on) { equalizer_.set_bypass(on); });
+        QObject::connect(reset, &QPushButton::clicked, [this] {
+            equalizer_.reset();
+            refresh_from_equalizer();
+        });
+        QObject::connect(presets_, &QComboBox::currentIndexChanged, [this](int index) {
+            if (suppress_ || index <= 0) return;
+            const auto& builtin = pang::core::dsp::builtin_presets();
+            const int offset = index - 1;
+            const pang::core::dsp::EqPreset& preset =
+                offset < static_cast<int>(builtin.size())
+                    ? builtin[static_cast<std::size_t>(offset)]
+                    : user_presets_[static_cast<std::size_t>(offset - builtin.size())];
+            pang::core::dsp::apply(equalizer_,
+                                   pang::core::dsp::from_preset(preset));
+            refresh_from_equalizer();
+            suppress_ = true;
+            presets_->setCurrentIndex(index);
+            suppress_ = false;
+        });
+        QObject::connect(save_preset, &QPushButton::clicked, [this] {
+            bool ok = false;
+            const QString name = QInputDialog::getText(this, QStringLiteral("Salvar preset"),
+                                                       QStringLiteral("Nome:"), QLineEdit::Normal,
+                                                       {}, &ok);
+            if (!ok || name.isEmpty()) return;
+            pang::core::dsp::EqPreset preset;
+            preset.name = name.toStdString();
+            preset.preamp_db = equalizer_.preamp_db();
+            for (int b = 0; b < pang::core::dsp::Equalizer::kBands; ++b)
+                preset.bands[static_cast<std::size_t>(b)] = equalizer_.band_db(b);
+            user_presets_.push_back(preset);
+            reload_presets();
+        });
+        QObject::connect(delete_preset, &QPushButton::clicked, [this] {
+            const int index = presets_->currentIndex() - 1 -
+                              static_cast<int>(pang::core::dsp::builtin_presets().size());
+            if (index < 0 || index >= static_cast<int>(user_presets_.size())) return;
+            user_presets_.erase(user_presets_.begin() + index);
+            reload_presets();
+        });
+
+        auto* controls = new QHBoxLayout;
+        controls->addWidget(presets_);
+        controls->addWidget(bypass);
+        controls->addWidget(reset);
+        controls->addWidget(save_preset);
+        controls->addWidget(delete_preset);
+
+        auto* root = new QVBoxLayout(this);
+        root->addLayout(columns);
+        root->addLayout(controls);
+
+        reload_presets();
+        refresh_from_equalizer();
+    }
+
+    void refresh_from_equalizer() {
+        suppress_ = true;
+        preamp_->setValue(static_cast<int>(equalizer_.preamp_db() * 10.0f));
+        for (int b = 0; b < pang::core::dsp::Equalizer::kBands; ++b)
+            bands_[static_cast<std::size_t>(b)]->setValue(
+                static_cast<int>(equalizer_.band_db(b) * 10.0f));
+        suppress_ = false;
+    }
+
+private:
+    QSlider* add_slider(QHBoxLayout* into, const QString& label) {
+        auto* column = new QVBoxLayout;
+        auto* slider = new QSlider(Qt::Vertical);
+        const int range = static_cast<int>(pang::core::dsp::Equalizer::kRangeDb * 10.0f);
+        slider->setRange(-range, range);
+        slider->setValue(0);
+        column->addWidget(slider, 1, Qt::AlignHCenter);
+        auto* caption = new QLabel(label);
+        caption->setAlignment(Qt::AlignHCenter);
+        column->addWidget(caption);
+        into->addLayout(column);
+        return slider;
+    }
+
+    void reload_presets() {
+        suppress_ = true;
+        presets_->clear();
+        presets_->addItem(QStringLiteral("(personalizado)"));
+        for (const auto& preset : pang::core::dsp::builtin_presets())
+            presets_->addItem(QString::fromStdString(preset.name));
+        for (const auto& preset : user_presets_)
+            presets_->addItem(QStringLiteral("* %1").arg(QString::fromStdString(preset.name)));
+        suppress_ = false;
+    }
+
+    void mark_custom() {
+        if (suppress_) return;
+        suppress_ = true;
+        presets_->setCurrentIndex(0);
+        suppress_ = false;
+    }
+
+    pang::core::dsp::Equalizer& equalizer_;
+    std::vector<pang::core::dsp::EqPreset>& user_presets_;
+    QSlider* preamp_ = nullptr;
+    std::array<QSlider*, pang::core::dsp::Equalizer::kBands> bands_{};
+    QComboBox* presets_ = nullptr;
+    bool suppress_ = false;
 };
 
 const char* repeat_label(Repeat r) {
@@ -221,7 +378,14 @@ int main(int argc, char** argv) {
     auto* clear_all = new QPushButton(QStringLiteral("Limpar"));
     auto* import_list = new QPushButton(QStringLiteral("Importar"));
     auto* export_list = new QPushButton(QStringLiteral("Exportar"));
+    auto* eq_button = new QPushButton(QStringLiteral("EQ"));
+    auto* balance = new QSlider(Qt::Horizontal);
+    auto* replaygain = new QComboBox;
     shuffle->setCheckable(true);
+    balance->setRange(-100, 100);
+    balance->setValue(0);
+    replaygain->addItems({QStringLiteral("ReplayGain: nao"), QStringLiteral("ReplayGain: faixa"),
+                          QStringLiteral("ReplayGain: album")});
 
     auto* grid = new QGridLayout(&window);
     int row = 0;
@@ -231,6 +395,10 @@ int main(int argc, char** argv) {
     grid->addWidget(duration, row++, 5);
     grid->addWidget(new QLabel(QStringLiteral("Vol")), row, 0);
     grid->addWidget(volume, row++, 1, 1, 5);
+    grid->addWidget(new QLabel(QStringLiteral("Bal")), row, 0);
+    grid->addWidget(balance, row, 1, 1, 3);
+    grid->addWidget(replaygain, row, 4);
+    grid->addWidget(eq_button, row++, 5);
     grid->addWidget(previous, row, 0);
     grid->addWidget(play, row, 1);
     grid->addWidget(pause, row, 2);
@@ -258,6 +426,37 @@ int main(int argc, char** argv) {
 
     auto* model = new PlaylistModel(controller->playlist());
     list->setModel(model);
+
+    // --------------------------------------------------- configuracao salva
+    pang::ui::settings::AppState saved = pang::ui::settings::load();
+    engine->set_volume(saved.volume);
+    engine->set_balance(saved.balance);
+    engine->set_replaygain_mode(static_cast<pang::core::ReplayGainMode>(saved.replaygain_mode));
+    pang::core::dsp::apply(engine->equalizer(), saved.eq);   // EQ-09
+    controller->set_shuffle(saved.shuffle);
+    controller->set_repeat(static_cast<Repeat>(saved.repeat));
+    volume->setValue(static_cast<int>(saved.volume * 100.0f));
+    balance->setValue(static_cast<int>(saved.balance * 100.0f));
+    shuffle->setChecked(saved.shuffle);
+    repeat->setText(QString::fromLatin1(repeat_label(controller->repeat())));
+    replaygain->setCurrentIndex(saved.replaygain_mode);
+
+    auto* eq_panel = new EqualizerPanel(engine->equalizer(), saved.user_presets);
+    QObject::connect(eq_button, &QPushButton::clicked, [eq_panel] {
+        eq_panel->setVisible(!eq_panel->isVisible());
+    });
+
+    // IN-09 — grava ao sair, atomicamente.
+    QObject::connect(&app, &QApplication::aboutToQuit, [&] {
+        saved.volume = engine->volume();
+        saved.balance = engine->balance();
+        saved.shuffle = controller->shuffle();
+        saved.repeat = static_cast<int>(controller->repeat());
+        saved.replaygain_mode = static_cast<int>(engine->replaygain_mode());
+        saved.eq = pang::core::dsp::capture(engine->equalizer());
+        pang::ui::settings::save(saved);
+        eq_panel->close();
+    });
 
     // ------------------------------------------------- metadados assincronos
     //
@@ -373,6 +572,11 @@ int main(int argc, char** argv) {
 
     QObject::connect(volume, &QSlider::valueChanged,
                      [&](int v) { engine->set_volume(static_cast<float>(v) / 100.0f); });
+    QObject::connect(balance, &QSlider::valueChanged,
+                     [&](int v) { engine->set_balance(static_cast<float>(v) / 100.0f); });
+    QObject::connect(replaygain, &QComboBox::currentIndexChanged, [&](int index) {
+        engine->set_replaygain_mode(static_cast<pang::core::ReplayGainMode>(index));
+    });
 
     QObject::connect(position, &QSlider::sliderReleased, [&] {
         const auto snap = engine->snapshot();
@@ -431,6 +635,10 @@ int main(int argc, char** argv) {
         line += QStringLiteral("  ·  %1").arg(
             snap.bitrate_bps > 0 ? QStringLiteral("%1 kbps").arg(snap.bitrate_bps / 1000)
                                  : QStringLiteral("bitrate -"));
+        if (snap.replaygain_present)
+            line += QStringLiteral("  ·  RG %1 dB").arg(snap.replaygain_db, 0, 'f', 1);
+        // AU-17 — o usuario ve que o limitador atuou, em vez de so ouvir.
+        if (snap.clamp_hits > 0) line += QStringLiteral("  ·  CLIP");
         if (snap.underruns > 0) line += QStringLiteral("  ·  underruns: %1").arg(snap.underruns);
         if (snap.state == State::Error) line = QString::fromStdString(engine->last_error());
         status->setText(line);

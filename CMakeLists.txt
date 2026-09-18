@@ -57,6 +57,7 @@ add_library(pang_core STATIC
   src/core/dsp/equalizer.cpp
   src/core/dsp/gain.cpp
   src/core/dsp/limiter.cpp
+  src/core/dsp/presets.cpp
   src/core/meta/scanner.cpp
   src/core/meta/tags.cpp
   src/core/playlist/m3u.cpp
@@ -93,7 +94,7 @@ target_link_libraries(pang_probe PRIVATE pang_core pang_platform)
 set_target_properties(pang_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 # ui/ : Qt. Janela provisoria ate o M5.
-qt_add_executable(playampng src/ui/app.cpp)
+qt_add_executable(playampng src/ui/app.cpp src/ui/settings.cpp)
 target_link_libraries(playampng PRIVATE Qt6::Widgets pang_core pang_platform)
 target_compile_definitions(playampng PRIVATE PLAYAMPNG_VERSION="${PROJECT_VERSION}")
 
@@ -123,6 +124,23 @@ set_target_properties(pang_playlist_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUT
 add_executable(pang_dsp_tests tests/test_dsp.cpp)
 target_link_libraries(pang_dsp_tests PRIVATE pang_core)
 set_target_properties(pang_dsp_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_gapless_tests tests/test_gapless.cpp)
+target_link_libraries(pang_gapless_tests PRIVATE pang_core)
+target_compile_definitions(pang_gapless_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_gapless_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_realtime_tests tests/test_realtime.cpp)
+target_link_libraries(pang_realtime_tests PRIVATE pang_core)
+target_compile_definitions(pang_realtime_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_realtime_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME realtime COMMAND pang_realtime_tests)
+
+add_test(NAME gapless COMMAND pang_gapless_tests)
+set_tests_properties(gapless PROPERTIES TIMEOUT 120)
 
 add_test(NAME dsp COMMAND pang_dsp_tests)
 set_tests_properties(dsp PROPERTIES TIMEOUT 120)

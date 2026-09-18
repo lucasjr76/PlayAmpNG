@@ -183,8 +183,8 @@ Em 4K é um selo postal. A escala inteira resolve, mas 2× e 3× são os modos r
 **3. A curva exata do equalizador do Winamp nunca foi publicada.**
 As dez frequências são conhecidas, o Q e o tipo de filtro não. A versão 0.2 fixa fórmula, tabela de valores e shelving nas extremidades (`ARCHITECTURE.md §7`) — "estreitado proporcionalmente" não era implementável. O limite de Q em 4.0 causa sobreposição entre as bandas agudas; é comportamento normal de equalizador gráfico e está declarado.
 
-**4. Gapless é uma promessa por formato, não uma promessa global.**
-FLAC, WAV, Vorbis e Opus funcionam. MP3 depende da tag LAME/Xing — sem ela haverá lacuna audível, e isso não é corrigível do lado do player. AAC/M4A depende dos átomos de edição. AU-14 mede em vez de prometer.
+**4. Gapless é uma promessa por formato — e a medição corrigiu a previsão.**
+O risco original dizia que MP3 seria o caso frágil e Ogg Vorbis o caso garantido. Medido no M3, é o inverso: WAV, FLAC, MP3 e AAC fecham exatos; Opus erra 1 quadro; **Ogg Vorbis perde 256 quadros (5,8 ms)** ao ser cortado em fronteira de página. A tabela está em `ARCHITECTURE.md §5`. O que o arquivo não contém nenhum player recupera — a limitação é do material, não da emenda.
 
 **5. Disponibilidade de formato é propriedade do pacote, não do código.**
 Um AppImage com FFmpeg completo toca os seis; um Flatpak sobre runtime enxuto pode não ter AAC. AU-08 exige medir no artefato distribuído.

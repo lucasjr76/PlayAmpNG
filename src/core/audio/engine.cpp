@@ -36,16 +36,20 @@ Engine::~Engine() { join_decoder(); }
 
 // ---------------------------------------------------------------- controle
 
-void Engine::load(const std::string& url, State desired) {
+void Engine::load(const std::string& url, State desired, std::uint64_t token) {
     join_decoder();
     decoder_.close();
     ring_.reset();
 
     // AR-03 — toda carga tem geracao propria. Resposta assincrona carimbada
     // com geracao antiga e descartada em vez de sobrescrever o estado atual.
-    generation_.fetch_add(1, std::memory_order_relaxed);
+    const std::uint64_t generation = generation_seq_.fetch_add(1, std::memory_order_relaxed) + 1;
+    generation_.store(generation, std::memory_order_relaxed);
 
-    position_frames_.store(0, std::memory_order_relaxed);
+    consumed_frames_.store(0, std::memory_order_relaxed);
+    track_origin_ = 0;
+    position_base_ = 0;
+    segments_.clear();
     eof_.store(false, std::memory_order_relaxed);
     ended_.store(false, std::memory_order_release);
     duration_frames_.store(-1, std::memory_order_relaxed);
@@ -58,6 +62,7 @@ void Engine::load(const std::string& url, State desired) {
         last_error_.clear();
     }
     pub_.store(AudioPublication{});
+    current_token_.store(token, std::memory_order_release);
     state_.store(State::Loading, std::memory_order_relaxed);
 
     start_decoder(url, desired);
@@ -66,8 +71,11 @@ void Engine::load(const std::string& url, State desired) {
 void Engine::stop() {
     join_decoder();
     ring_.reset();
+    segments_.clear();
     // PL-03 — parar volta a posicao 0 e mantem a faixa carregada.
-    position_frames_.store(0, std::memory_order_relaxed);
+    consumed_frames_.store(0, std::memory_order_relaxed);
+    track_origin_ = 0;
+    position_base_ = 0;
     eof_.store(false, std::memory_order_relaxed);
     ended_.store(false, std::memory_order_release);
     state_.store(State::Stopped, std::memory_order_relaxed);
@@ -84,10 +92,13 @@ bool Engine::seek(double seconds) {
     if (!decoder_.is_open() || !decoder_.seek(seconds)) return false;
 
     ring_.reset();
+    segments_.clear();
     eof_.store(false, std::memory_order_relaxed);
     ended_.store(false, std::memory_order_release);
     const std::int64_t target = static_cast<std::int64_t>(seconds * sample_rate_);
-    position_frames_.store(target, std::memory_order_relaxed);
+    consumed_frames_.store(0, std::memory_order_relaxed);
+    track_origin_ = 0;
+    position_base_ = target;
 
     // Publica ja: sem isso a interface so veria a nova posicao no primeiro
     // render, e uma busca com o audio suspenso pareceria nao ter acontecido.
@@ -118,6 +129,30 @@ void Engine::pause() {
 void Engine::set_volume(float linear) { volume_balance_.set_volume(linear); }
 
 void Engine::set_balance(float balance) { volume_balance_.set_balance(balance); }
+
+void Engine::publish_track_info(const ProbeResult& info) {
+    duration_frames_.store(info.duration_us
+                               ? static_cast<std::int64_t>(double(*info.duration_us) *
+                                                           sample_rate_ / 1e6)
+                               : -1,
+                           std::memory_order_relaxed);
+    bitrate_bps_.store(info.bitrate_bps ? *info.bitrate_bps : -1, std::memory_order_relaxed);
+    source_rate_.store(info.sample_rate, std::memory_order_relaxed);
+    source_channels_.store(info.channels, std::memory_order_relaxed);
+    seekable_.store(info.seekable, std::memory_order_relaxed);
+}
+
+void Engine::set_next(std::string url, std::uint64_t token) {
+    std::lock_guard<std::mutex> lock(next_mutex_);
+    next_url_ = std::move(url);
+    next_token_ = token;
+}
+
+void Engine::clear_next() {
+    std::lock_guard<std::mutex> lock(next_mutex_);
+    next_url_.clear();
+    next_token_ = 0;
+}
 
 void Engine::set_replaygain_mode(ReplayGainMode mode) {
     replaygain_mode_ = mode;
@@ -173,17 +208,13 @@ void Engine::decode_loop(std::string url, State desired) {
             return;
         }
 
-        const ProbeResult& info = decoder_.info();
-        duration_frames_.store(decoder_.duration_frames(), std::memory_order_relaxed);
-        bitrate_bps_.store(info.bitrate_bps ? *info.bitrate_bps : -1, std::memory_order_relaxed);
-        source_rate_.store(info.sample_rate, std::memory_order_relaxed);
-        source_channels_.store(info.channels, std::memory_order_relaxed);
-        seekable_.store(info.seekable, std::memory_order_relaxed);
-        apply_replaygain(info);
+        publish_track_info(decoder_.info());
+        apply_replaygain(decoder_.info());
     }
 
     std::vector<float> chunk(kDecodeChunkFrames * channels_);
     bool announced = url.empty();  // no seek o estado ja foi definido
+    std::int64_t written_frames = 0;
 
     while (!thread_quit_.load(std::memory_order_relaxed)) {
         const std::size_t room_frames = ring_.writable() / channels_;
@@ -197,10 +228,62 @@ void Engine::decode_loop(std::string url, State desired) {
         const std::size_t want = std::min(room_frames, kDecodeChunkFrames);
         const std::size_t got = decoder_.read(chunk.data(), want);
         if (got == 0) {
-            eof_.store(true, std::memory_order_release);
-            break;
+            // AU-13 — fim da faixa. Se ha proxima, emenda aqui: o decodificador
+            // e reaberto e continua escrevendo NO MESMO ring, sem esvaziar. O
+            // thread de audio nem percebe, e e por isso que nao ha lacuna.
+            //
+            // ponytail: a proxima faixa e aberta so agora, nao 5 s antes. Os
+            // ~2 s ja bufferizados no ring cobrem de sobra o tempo de abrir um
+            // arquivo local. Para fonte de rede, pre-abrir antes do fim.
+            std::string next;
+            std::uint64_t token = 0;
+            {
+                std::lock_guard<std::mutex> lock(next_mutex_);
+                next = next_url_;
+                token = next_token_;
+                next_url_.clear();
+                next_token_ = 0;
+            }
+            if (next.empty()) {
+                eof_.store(true, std::memory_order_release);
+                break;
+            }
+
+            std::string error;
+            if (!decoder_.open(next, sample_rate_, channels_, error)) {
+                log::error(error + " (" + log::redact(next) + ")");
+                eof_.store(true, std::memory_order_release);
+                break;
+            }
+
+            TrackSegment segment;
+            segment.generation = generation_seq_.fetch_add(1, std::memory_order_relaxed) + 1;
+            segment.token = token;
+            segment.start_frame = written_frames;
+            segment.duration_frames = decoder_.duration_frames();
+            const ProbeResult& info = decoder_.info();
+            segment.bitrate_bps = info.bitrate_bps ? *info.bitrate_bps : -1;
+            segment.sample_rate = info.sample_rate;
+            segment.channels = info.channels;
+            segment.seekable = info.seekable;
+            segment.replaygain_db = 0.0f;
+            segment.replaygain_present = false;
+            if (replaygain_mode_ != ReplayGainMode::Off) {
+                const auto gain = replaygain_mode_ == ReplayGainMode::Track
+                                      ? (info.replaygain_track_db ? info.replaygain_track_db
+                                                                  : info.replaygain_album_db)
+                                      : (info.replaygain_album_db ? info.replaygain_album_db
+                                                                  : info.replaygain_track_db);
+                if (gain) {
+                    segment.replaygain_db = std::min(*gain, replaygain_max_boost_db_);
+                    segment.replaygain_present = true;
+                }
+            }
+            segments_.push(segment);
+            continue;
         }
         ring_.write(chunk.data(), got * channels_);
+        written_frames += static_cast<std::int64_t>(got);
 
         // AR-04 — so sai de Loading depois que ha audio de verdade no buffer.
         if (!announced) {
@@ -277,8 +360,22 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     for (std::size_t i = 0; i < wanted; ++i) peak = std::max(peak, std::fabs(out[i]));
 
     const std::int64_t advanced = static_cast<std::int64_t>(got / channels_);
-    const std::int64_t position =
-        position_frames_.fetch_add(advanced, std::memory_order_relaxed) + advanced;
+    const std::int64_t consumed =
+        consumed_frames_.fetch_add(advanced, std::memory_order_relaxed) + advanced;
+
+    // AU-13 — cruzou a marca de uma faixa emendada: troca os metadados
+    // publicados e reinicia a contagem de posicao, sem tocar no fluxo de audio.
+    //
+    // ponytail: a troca acontece na granularidade do bloco de render, nao da
+    // amostra. O erro maximo e um bloco (~10 ms) na posicao exibida; o audio
+    // nao e afetado, que e o que gapless significa.
+    while (const TrackSegment* segment = segments_.peek()) {
+        if (segment->start_frame > consumed) break;
+        apply_segment(*segment);
+        segments_.pop();
+    }
+
+    const std::int64_t position = position_base_ + (consumed - track_origin_);
 
     AudioPublication pub;
     pub.position_frames = position;
@@ -286,6 +383,23 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     pub.underruns = underruns_.load(std::memory_order_relaxed);
     pub.clamp_hits = limiter_.clamp_hits();
     pub_.store(pub);
+}
+
+void Engine::apply_segment(const TrackSegment& segment) noexcept {
+    // So aqui a faixa emendada passa a ser "a que esta tocando": este ponto e o
+    // instante em que o audio dela alcanca a saida.
+    generation_.store(segment.generation, std::memory_order_relaxed);
+    track_origin_ = segment.start_frame;
+    position_base_ = 0;
+    duration_frames_.store(segment.duration_frames, std::memory_order_relaxed);
+    bitrate_bps_.store(segment.bitrate_bps, std::memory_order_relaxed);
+    source_rate_.store(segment.sample_rate, std::memory_order_relaxed);
+    source_channels_.store(segment.channels, std::memory_order_relaxed);
+    seekable_.store(segment.seekable, std::memory_order_relaxed);
+    replaygain_db_.store(segment.replaygain_db, std::memory_order_relaxed);
+    replaygain_present_.store(segment.replaygain_present, std::memory_order_relaxed);
+    replaygain_.set_db(segment.replaygain_db);
+    current_token_.store(segment.token, std::memory_order_release);
 }
 
 }  // namespace pang::core

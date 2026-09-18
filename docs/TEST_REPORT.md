@@ -201,3 +201,114 @@ Interface definitiva (M5), streaming (M6), Windows e macOS. `LI-05` (seleção m
 ### Requisitos atendidos
 
 31 em `OK (M2)`. Total acumulado: 60 de 175 com estado diferente de `PENDENTE`.
+
+---
+
+## M3 — Processamento de áudio
+
+Data: 2026-09-18
+
+Suíte: `ctest` 7/7 verdes (`core`, `audio`, `dsp`, `realtime`, `gapless`, `playlist`, `m0_headless`), ~4,2 s.
+
+### EQ-03 — resposta do equalizador, banda por banda
+
+Medida com senoide na frequência de medição, comparando RMS de saída e de entrada. Limite definido antes: **±1 dB**.
+
+| Banda | Pedido −12 dB | −6 dB | +6 dB | +12 dB |
+|---|---|---|---|---|
+| 170 Hz a 14 kHz (peaking) | −12,00 | −6,00 | +6,00 | +12,00 |
+| 60 Hz (low-shelf, medido a 20 Hz) | −11,17 | −5,65 | +5,65 | +11,17 |
+| 16 kHz (high-shelf, medido a 20 kHz) | −11,24 | −5,68 | +5,68 | +11,24 |
+
+As oito bandas peaking acertam o ganho pedido **exatamente**. As duas shelving ficam a 0,83 dB do pedido, dentro do limite — e a razão é estrutural, não defeito: num shelf RBJ o ganho pedido é o do platô, e com slope 0,7 o platô do shelf de 16 kHz só se completa acima de 25 kHz, além de Nyquist a 44,1 kHz. Medir em f0 daria metade do ganho e reprovaria por engano; isso está anotado no teste.
+
+### Q por banda (EQ-13)
+
+```
+1.18  1.56  1.68  1.21  1.08  1.41  2.34  4.00
+```
+
+Bate com a tabela de `ARCHITECTURE.md §7`. O valor de 14 kHz é o teto de 4,00, e não os 6,94 que a fórmula produziria.
+
+### EQ-04, EQ-14, EQ-15 — bypass
+
+| Verificação | Resultado |
+|---|---|
+| Saída bit a bit igual à entrada após o crossfade, preamp incluído | **Passou** |
+| Maior salto por amostra: controle 0,3441 · durante a transição 0,3354 | **Passou** — a transição não introduz salto maior que o do próprio sinal |
+| Pico da cauda após o bypass: 0,3000, com entrada 0,3 | **Passou** |
+
+### AU-16, AU-22, AU-23 — limitador
+
+| Medição | Resultado |
+|---|---|
+| Senoide a +12 dBFS → pico de saída | **0,8913 = −1,00 dBFS**, exatamente o teto |
+| Atuações do clamp rígido | **0** |
+| Transiente de uma amostra a 0 dBFS em silêncio → pico | 0,8913, clamp **0** |
+| Latência | 66 quadros = **1,50 ms** |
+| Sinal abaixo do teto | transparente (< 0,05 dB) |
+
+O clamp rígido em zero é o resultado que importa: o lookahead conteve tudo sozinho, e a rede de segurança nunca precisou entrar. Um valor diferente de zero aqui seria falha.
+
+### PL-09, PL-10, AU-10 — ganhos
+
+| Medição | Resultado |
+|---|---|
+| Volume 0,5 | **−6,02 dB** |
+| Canais no centro | dentro de 0,1 dB um do outro |
+| Balanço extremo | canal oposto silenciado; o escolhido **não** é amplificado |
+| Maior salto por amostra na rampa de volume | 0,000567, limite 0,001134 |
+
+### AU-13 — gapless, contagem exata de amostras
+
+```
+esperadas 88200 amostras, produzidas 89088, divergentes 0
+```
+
+Sinal de rampa cortado em dois arquivos, tocado com emenda, comparado amostra a amostra com a concatenação do original. **Nenhuma divergência**: a emenda não insere nem remove uma única amostra. O alinhamento desconta o atraso do limitador de propósito, sem correlação cruzada — correlação mascararia justamente o defeito procurado.
+
+Há contraprova: sem informar a próxima faixa, a reprodução para no fim da primeira. Sem ela, o teste principal poderia estar medindo nada.
+
+### AU-14 — disponibilidade por formato, e uma previsão errada
+
+Soma das partes contra o original de 44100 quadros:
+
+```
+WAV          24576 + 19524 = 44100  (+0 quadros)
+FLAC         24576 + 19524 = 44100  (+0 quadros)
+MP3          24576 + 19524 = 44100  (+0 quadros)
+AAC/M4A      24576 + 19524 = 44100  (+0 quadros)
+Opus         24576 + 19525 = 44101  (+1 quadro, +0,0 ms)
+Ogg Vorbis   24448 + 19396 = 43844  (-256 quadros, -5,8 ms)
+```
+
+**Isso contradiz o que eu havia documentado.** O risco #4 do plano dizia que MP3 seria o caso frágil, por depender da tag LAME/Xing, e que Ogg Vorbis funcionaria sempre. É o inverso: o LAME grava a tag por padrão e o libavcodec a aplica, então MP3 fecha exato; o Ogg Vorbis cortado em fronteira de página perde 256 quadros no próprio material. `ARCHITECTURE.md §5` e `PLAN.md` foram corrigidos.
+
+Esse desvio explica a observação solta do M1, quando o tom de 0,5 s em Ogg reproduziu 0,497 s.
+
+### AU-21 — o callback não aloca
+
+```
+alocacoes em 200 chamadas de render(): 0
+```
+
+Verificado por interposição de `operator new` num binário de teste próprio, exercitando também mudança de banda, preamp, volume, balanço e ativação de bypass durante a reprodução — que é onde uma alocação descuidada costuma se esconder. Limite conhecido: a interposição pega `operator new`, não `malloc` cru; serve porque `render()` só executa código nosso, com o libav do outro lado do ring.
+
+### Defeitos encontrados e corrigidos
+
+1. **Bypass só valia para o primeiro sub-bloco.** Quando o crossfade terminava no meio de uma chamada de `process()`, o retorno antecipado protegia apenas o início da chamada: os sub-blocos seguintes voltavam a sair processados. Com entrada de amplitude 0,3, a cauda media **2,38**. O teste pegou; a inspeção não teria.
+
+2. **A geração subia na decodificação, não na reprodução.** Com gapless, o decodificador abre a faixa seguinte enquanto ainda há ~2 s de áudio da anterior no buffer. Publicar a geração ali fazia a interface trocar de faixa segundos antes de o som trocar. Separado em `generation_seq_` (atribuição) e `generation_` (publicação, no instante em que o áudio da nova faixa alcança a saída).
+
+3. **Um teste meu com premissa errada.** A transição de bypass era medida contra um limite absoluto de 0,2, calculado sobre a amplitude de entrada — mas com dez bandas em +12 dB o sinal processado fica várias vezes maior, e o declive da própria senoide já produz saltos de 0,34. O limite passou a sair do sinal: a mesma passagem sem trocar o bypass serve de controle.
+
+### Não verificado
+
+- **EQ-07** (criar, editar, salvar e excluir presets do usuário) está implementado e conferido a olho; a verificação formal é do M5.
+- **IN-09/IN-10** (gravação atômica e recuperação de configuração inválida) estão implementados com `QSaveFile` e renomeação para `.bad`; verificação formal no M5.
+- Detecção de true peak: **não implementada e não prometida**, por decisão registrada em `ARCHITECTURE.md §5`.
+- Windows e macOS.
+
+### Requisitos atendidos
+
+23 em `OK (M3)`. Total acumulado: 83 de 175 com estado diferente de `PENDENTE`.

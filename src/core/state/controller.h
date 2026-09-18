@@ -60,8 +60,10 @@ public:
 
 private:
     void start(int index, State desired);
-    int step_forward();   // -1 quando nao ha proxima
-    int step_backward();  // -1 quando nao ha anterior
+    int step_forward();          // -1 quando nao ha proxima; AVANCA o shuffle
+    int peek_forward() const;    // mesma decisao, sem mexer no ciclo
+    int step_backward();         // -1 quando nao ha anterior
+    void queue_next();           // informa ao engine a faixa a emendar
     void guarded(const std::function<void()>& action);
 
     Engine& engine_;

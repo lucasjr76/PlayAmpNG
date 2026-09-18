@@ -246,7 +246,18 @@ Definido em amostras, não em impressão auditiva.
 
 **Invalidar a pré-carga.** A pré-carga carrega a geração do item que se pretendia tocar em seguida. Qualquer coisa que mude quem é o próximo — reordenar, remover, limpar, alternar shuffle ou repeat, pular manualmente — incrementa a geração. Na transição, pré-carga com geração diferente da esperada é descartada e a faixa é aberta pelo caminho normal.
 
-**Disponibilidade por formato.** FLAC, WAV, Ogg Vorbis e Opus sempre; MP3 conforme exista tag LAME/Xing; AAC/M4A conforme os átomos de edição. Medido em AU-14, não presumido.
+**Disponibilidade por formato — medido no M3, e diferente do previsto.** Cortando um sinal de 44100 quadros em dois arquivos e somando as partes:
+
+| Formato | Soma das partes | Diferença |
+|---|---|---|
+| WAV | 44100 | 0 |
+| FLAC | 44100 | 0 |
+| MP3 | 44100 | 0 |
+| AAC/M4A | 44100 | 0 |
+| Opus | 44101 | +1 quadro (+0,02 ms) |
+| Ogg Vorbis | 43844 | **−256 quadros (−5,8 ms)** |
+
+A previsão da versão 0.1 era o contrário: MP3 constava como caso condicional e Ogg Vorbis como caso garantido. Na prática o LAME grava a tag Xing/LAME por padrão e o libavcodec a usa, então MP3 fecha exato; já o corte de Ogg Vorbis em fronteira de página perde 256 quadros no material, e o que o arquivo não contém nenhum player recupera. É o mesmo desvio observado no M1, quando o tom de 0,5 s em Ogg reproduziu 0,497 s.
 
 ### Perda do dispositivo
 

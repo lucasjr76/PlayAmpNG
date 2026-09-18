@@ -35,6 +35,11 @@ int ShuffleOrder::next() {
     return current();
 }
 
+int ShuffleOrder::peek_next() const {
+    if (order_.empty() || cursor_ + 1 >= size()) return -1;
+    return order_[static_cast<std::size_t>(cursor_ + 1)];
+}
+
 int ShuffleOrder::previous() {
     if (order_.empty() || cursor_ <= 0) return -1;
     --cursor_;

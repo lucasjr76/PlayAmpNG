@@ -15,7 +15,11 @@ int Controller::current_index() const {
     return current_id_ == 0 ? -1 : playlist_.index_of(current_id_);
 }
 
-void Controller::playlist_changed() { shuffle_.invalidate(); }
+void Controller::playlist_changed() {
+    shuffle_.invalidate();
+    // A pre-carga aponta para uma faixa que talvez nao seja mais a proxima.
+    queue_next();
+}
 
 void Controller::set_shuffle(bool on) {
     shuffle_on_ = on;
@@ -35,7 +39,9 @@ void Controller::start(int index, State desired) {
         shuffle_.reset(playlist_.size(), index, shuffle_seed_++);
 
     const std::string path = playlist_.at(index).path;
-    guarded([&] { engine_.load(path, desired); });
+    const std::uint64_t id = playlist_.at(index).id;
+    guarded([&] { engine_.load(path, desired, id); });
+    queue_next();
 }
 
 void Controller::play_index(int index) { start(index, State::Playing); }
@@ -76,6 +82,39 @@ int Controller::step_forward() {
     if (index < 0) return 0;
     if (index + 1 < count) return index + 1;
     return repeat_ == Repeat::All ? 0 : -1;
+}
+
+// Mesma decisao de step_forward, sem efeito colateral.
+//
+// No fim de um ciclo de shuffle com repeat=all seria preciso reembaralhar para
+// saber a proxima, e reembaralhar e mutacao. Nesse caso devolvemos -1: nao ha
+// pre-carga, a troca acontece pelo caminho normal e o gapless perde essa
+// transicao — uma por ciclo inteiro.
+int Controller::peek_forward() const {
+    const int count = playlist_.size();
+    if (count == 0) return -1;
+
+    if (repeat_ == Repeat::Track) return current_index();
+
+    if (shuffle_on_) {
+        if (!shuffle_.valid_for(count)) return -1;
+        return shuffle_.peek_next();
+    }
+
+    const int index = current_index();
+    if (index < 0) return 0;
+    if (index + 1 < count) return index + 1;
+    return repeat_ == Repeat::All ? 0 : -1;
+}
+
+// AU-13 — entrega ao engine a faixa seguinte para ele emendar sem lacuna.
+void Controller::queue_next() {
+    const int index = peek_forward();
+    if (index < 0) {
+        engine_.clear_next();
+        return;
+    }
+    engine_.set_next(playlist_.at(index).path, playlist_.at(index).id);
 }
 
 int Controller::step_backward() {
@@ -125,6 +164,17 @@ bool Controller::seek(double seconds) {
 }
 
 void Controller::poll() {
+    // AU-13 — o engine emendou sozinho: o token publicado passou a ser o da
+    // faixa seguinte. Aqui apenas acompanhamos a mudanca e ja preparamos a
+    // proxima emenda.
+    const std::uint64_t token = engine_.current_token();
+    if (token != 0 && token != current_id_ && playlist_.index_of(token) >= 0) {
+        if (shuffle_on_ && repeat_ != Repeat::Track) shuffle_.next();  // consome o ciclo
+        current_id_ = token;
+        queue_next();
+        return;
+    }
+
     if (!engine_.ended()) return;
 
     // PL-24 — repeticao da faixa recomeca a mesma; caso contrario, avanca.
