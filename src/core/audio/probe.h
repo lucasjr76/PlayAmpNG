@@ -20,6 +20,11 @@ struct ProbeResult {
     std::optional<std::int64_t> duration_us;
     std::optional<std::int64_t> bitrate_bps;
     bool seekable = false;  // false desabilita a busca temporal (PL-23)
+
+    // AU-15 — lidos das tags. Ausentes quando a fonte nao traz: o projeto le
+    // ReplayGain, nao calcula (calcular seria um scanner, fora de escopo).
+    std::optional<float> replaygain_track_db;
+    std::optional<float> replaygain_album_db;
 };
 
 // Abre url (caminho local ou HTTP/HTTPS) e le as propriedades do melhor fluxo

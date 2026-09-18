@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <optional>
 
 #include "core/util/log.h"
 
@@ -24,7 +25,12 @@ constexpr double kVolumeRampSeconds = 0.020;  // AU-10
 Engine::Engine(int sample_rate, int channels)
     : sample_rate_(sample_rate),
       channels_(channels),
-      ring_(static_cast<std::size_t>(sample_rate * kRingSeconds) * channels) {}
+      ring_(static_cast<std::size_t>(sample_rate * kRingSeconds) * channels) {
+    replaygain_.configure(sample_rate, kVolumeRampSeconds);
+    equalizer_.configure(sample_rate, channels);
+    volume_balance_.configure(sample_rate, channels);
+    limiter_.configure(sample_rate, channels);
+}
 
 Engine::~Engine() { join_decoder(); }
 
@@ -109,8 +115,31 @@ void Engine::pause() {
     if (state_.load(std::memory_order_relaxed) == State::Playing) state_.store(State::Paused);
 }
 
-void Engine::set_volume(float linear) {
-    volume_target_.store(std::clamp(linear, 0.0f, 1.0f), std::memory_order_relaxed);
+void Engine::set_volume(float linear) { volume_balance_.set_volume(linear); }
+
+void Engine::set_balance(float balance) { volume_balance_.set_balance(balance); }
+
+void Engine::set_replaygain_mode(ReplayGainMode mode) {
+    replaygain_mode_ = mode;
+    if (decoder_.is_open()) apply_replaygain(decoder_.info());
+}
+
+// AU-15 — escolhe o ganho conforme o modo e limita o reforco positivo.
+//
+// Sem esse teto, uma faixa com ReplayGain positivo entraria na cadeia ja acima
+// de 0 dBFS e obrigaria o limitador a trabalhar o tempo todo. A primeira defesa
+// contra clipping e nao criar o problema.
+void Engine::apply_replaygain(const ProbeResult& info) {
+    std::optional<float> gain;
+    if (replaygain_mode_ == ReplayGainMode::Track)
+        gain = info.replaygain_track_db ? info.replaygain_track_db : info.replaygain_album_db;
+    else if (replaygain_mode_ == ReplayGainMode::Album)
+        gain = info.replaygain_album_db ? info.replaygain_album_db : info.replaygain_track_db;
+
+    const float db = gain ? std::min(*gain, replaygain_max_boost_db_) : 0.0f;
+    replaygain_db_.store(db, std::memory_order_relaxed);
+    replaygain_present_.store(gain.has_value(), std::memory_order_relaxed);
+    replaygain_.set_db(db);
 }
 
 // ------------------------------------------------------ thread de decodificacao
@@ -150,6 +179,7 @@ void Engine::decode_loop(std::string url, State desired) {
         source_rate_.store(info.sample_rate, std::memory_order_relaxed);
         source_channels_.store(info.channels, std::memory_order_relaxed);
         seekable_.store(info.seekable, std::memory_order_relaxed);
+        apply_replaygain(info);
     }
 
     std::vector<float> chunk(kDecodeChunkFrames * channels_);
@@ -195,6 +225,9 @@ Snapshot Engine::snapshot() const {
     s.bitrate_bps = bitrate_bps_.load(std::memory_order_relaxed);
     s.peak = pub.peak;
     s.underruns = pub.underruns;
+    s.clamp_hits = pub.clamp_hits;
+    s.replaygain_db = replaygain_db_.load(std::memory_order_relaxed);
+    s.replaygain_present = replaygain_present_.load(std::memory_order_relaxed);
     return s;
 }
 
@@ -230,25 +263,18 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
         std::memset(out, 0, wanted * sizeof(float));
     }
 
-    // AU-10 — rampa de volume. Sem ela, mudanca de ganho vira degrau e estala.
-    float v = volume_current_.load(std::memory_order_relaxed);
-    const float target = volume_target_.load(std::memory_order_relaxed);
-    const float step = 1.0f / (kVolumeRampSeconds * static_cast<float>(sample_rate_));
+    // Cadeia de processamento — ARCHITECTURE.md secao 5. A ordem importa: o
+    // ReplayGain entra antes do equalizador para que o preamp opere sobre um
+    // nivel ja normalizado, e o limitador fica por ultimo para ver o sinal
+    // exatamente como ele sairia para o dispositivo.
+    replaygain_.process(out, frames, channels_);   // 1
+    equalizer_.process(out, frames);               // 2 (preamp) e 3 (cascata)
+    // [M4: ponto de captura da visualizacao entra aqui]
+    volume_balance_.process(out, frames);          // 4 e 5
+    limiter_.process(out, frames);                 // 6 e 7
 
     float peak = 0.0f;
-    for (std::uint32_t f = 0; f < frames; ++f) {
-        if (v < target)
-            v = std::min(target, v + step);
-        else if (v > target)
-            v = std::max(target, v - step);
-
-        float* frame = out + static_cast<std::size_t>(f) * channels_;
-        for (int c = 0; c < channels_; ++c) {
-            frame[c] *= v;
-            peak = std::max(peak, std::fabs(frame[c]));
-        }
-    }
-    volume_current_.store(v, std::memory_order_relaxed);
+    for (std::size_t i = 0; i < wanted; ++i) peak = std::max(peak, std::fabs(out[i]));
 
     const std::int64_t advanced = static_cast<std::int64_t>(got / channels_);
     const std::int64_t position =
@@ -258,6 +284,7 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     pub.position_frames = position;
     pub.peak = peak;
     pub.underruns = underruns_.load(std::memory_order_relaxed);
+    pub.clamp_hits = limiter_.clamp_hits();
     pub_.store(pub);
 }
 

@@ -10,6 +10,9 @@
 #include "core/audio/decoder.h"
 #include "core/audio/ring.h"
 #include "core/audio/seqlock.h"
+#include "core/dsp/equalizer.h"
+#include "core/dsp/gain.h"
+#include "core/dsp/limiter.h"
 #include "core/state/player.h"
 
 namespace pang::core {
@@ -56,7 +59,26 @@ public:
     void play();
     void pause();
     void set_volume(float linear);  // 0.0 a 1.0
-    float volume() const { return volume_target_.load(std::memory_order_relaxed); }
+    float volume() const { return volume_balance_.volume(); }
+    void set_balance(float balance);  // -1 esquerda, 0 centro, +1 direita
+    float balance() const { return volume_balance_.balance(); }
+
+    dsp::Equalizer& equalizer() { return equalizer_; }
+    const dsp::Equalizer& equalizer() const { return equalizer_; }
+
+    // AU-15 — modo de ReplayGain. A alteracao vale para a proxima carga e, se
+    // ja houver faixa aberta, tambem para ela.
+    void set_replaygain_mode(ReplayGainMode mode);
+    ReplayGainMode replaygain_mode() const { return replaygain_mode_; }
+
+    // Ganho positivo do ReplayGain e limitado a isto. O padrao 0 dB significa
+    // "so atenua", que e a primeira das tres defesas contra clipping.
+    void set_replaygain_max_boost_db(float db) { replaygain_max_boost_db_ = db; }
+
+    // AU-22/AU-23 — atuacoes do clamp rigido e latencia introduzida pelo
+    // lookahead do limitador, em quadros.
+    std::uint32_t clamp_hits() const { return limiter_.clamp_hits(); }
+    int latency_frames() const { return limiter_.latency_frames(); }
 
     // --- leitura
     Snapshot snapshot() const;
@@ -73,6 +95,7 @@ public:
     int channels() const { return channels_; }
 
 private:
+    void apply_replaygain(const ProbeResult& info);
     void start_decoder(const std::string& url, State desired);
     void join_decoder();
     void decode_loop(std::string url, State desired);
@@ -93,8 +116,16 @@ private:
     std::atomic<std::int64_t> position_frames_{0};
     std::atomic<std::uint32_t> underruns_{0};
 
-    std::atomic<float> volume_target_{1.0f};
-    std::atomic<float> volume_current_{1.0f};
+    // Cadeia de processamento, na ordem de ARCHITECTURE.md secao 5.
+    dsp::RampedGain replaygain_;
+    dsp::Equalizer equalizer_;
+    dsp::VolumeBalance volume_balance_;
+    dsp::Limiter limiter_;
+
+    ReplayGainMode replaygain_mode_ = ReplayGainMode::Off;
+    float replaygain_max_boost_db_ = 0.0f;
+    std::atomic<float> replaygain_db_{0.0f};
+    std::atomic<bool> replaygain_present_{false};
 
     // Preenchidos pelo thread de decodificacao depois de abrir a fonte.
     std::atomic<std::int64_t> duration_frames_{-1};

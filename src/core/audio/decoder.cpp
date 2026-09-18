@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 
 #include "core/util/log.h"
 
@@ -15,6 +16,41 @@ extern "C" {
 
 namespace pang::core {
 namespace {
+
+// "-6.54 dB" -> -6.54. Texto invalido devolve nullopt.
+std::optional<float> parse_replaygain(const char* text) {
+    if (!text) return std::nullopt;
+    try {
+        return std::stof(text);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+// Le ReplayGain das tags do conteiner e do fluxo.
+//
+// Dois formatos convivem: as tags replaygain_* classicas, em dB relativos a
+// -18 LUFS, e R128_*_GAIN do Opus, em Q7.8 relativo a -23 LUFS. A diferenca de
+// referencia entre os dois padroes e de 5 dB, e ignora-la deixaria faixas Opus
+// 5 dB mais baixas que o resto da biblioteca.
+void read_replaygain(AVDictionary* dict, std::optional<float>& track,
+                     std::optional<float>& album) {
+    if (!dict) return;
+    if (const AVDictionaryEntry* e = av_dict_get(dict, "replaygain_track_gain", nullptr, 0))
+        if (auto v = parse_replaygain(e->value)) track = v;
+    if (const AVDictionaryEntry* e = av_dict_get(dict, "replaygain_album_gain", nullptr, 0))
+        if (auto v = parse_replaygain(e->value)) album = v;
+
+    constexpr float kR128ToReplayGainDb = 5.0f;
+    if (!track)
+        if (const AVDictionaryEntry* e = av_dict_get(dict, "R128_TRACK_GAIN", nullptr, 0))
+            if (auto v = parse_replaygain(e->value))
+                track = *v / 256.0f + kR128ToReplayGainDb;
+    if (!album)
+        if (const AVDictionaryEntry* e = av_dict_get(dict, "R128_ALBUM_GAIN", nullptr, 0))
+            if (auto v = parse_replaygain(e->value))
+                album = *v / 256.0f + kR128ToReplayGainDb;
+}
 
 std::string av_error(int code) {
     char buf[AV_ERROR_MAX_STRING_SIZE] = {};
@@ -133,6 +169,10 @@ bool Decoder::open(const std::string& url, int target_rate, int target_channels,
     else if (fmt_->bit_rate > 0)
         info_.bitrate_bps = fmt_->bit_rate;
     info_.seekable = fmt_->pb && (fmt_->pb->seekable & AVIO_SEEKABLE_NORMAL);
+
+    read_replaygain(fmt_->metadata, info_.replaygain_track_db, info_.replaygain_album_db);
+    read_replaygain(fmt_->streams[stream_index_]->metadata, info_.replaygain_track_db,
+                    info_.replaygain_album_db);
 
     source_eof_ = false;
     drained_ = false;

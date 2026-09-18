@@ -27,6 +27,9 @@ constexpr const char* to_string(State s) {
     return "?";
 }
 
+// AU-15 — modos de ReplayGain.
+enum class ReplayGainMode : std::uint8_t { Off, Track, Album };
+
 // Grupo publicado pelo thread de audio via Seqlock. Trivialmente copiavel.
 //
 // Os campos precisam ser mutuamente consistentes: posicao e contadores lidos
@@ -52,6 +55,9 @@ struct Snapshot {
     std::int64_t bitrate_bps = -1;  // -1 = a fonte nao informa
     float peak = 0.0f;
     std::uint32_t underruns = 0;
+    float replaygain_db = 0.0f;   // 0 quando desligado ou ausente na fonte
+    bool replaygain_present = false;
+    std::uint32_t clamp_hits = 0;
 };
 
 }  // namespace pang::core

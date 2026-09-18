@@ -53,6 +53,10 @@ add_library(pang_core STATIC
   src/core/audio/probe.cpp
   src/core/audio/decoder.cpp
   src/core/audio/engine.cpp
+  src/core/dsp/biquad.cpp
+  src/core/dsp/equalizer.cpp
+  src/core/dsp/gain.cpp
+  src/core/dsp/limiter.cpp
   src/core/meta/scanner.cpp
   src/core/meta/tags.cpp
   src/core/playlist/m3u.cpp
@@ -115,6 +119,13 @@ target_link_libraries(pang_playlist_tests PRIVATE pang_core)
 target_compile_definitions(pang_playlist_tests PRIVATE
   PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
 set_target_properties(pang_playlist_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_dsp_tests tests/test_dsp.cpp)
+target_link_libraries(pang_dsp_tests PRIVATE pang_core)
+set_target_properties(pang_dsp_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME dsp COMMAND pang_dsp_tests)
+set_tests_properties(dsp PROPERTIES TIMEOUT 120)
 
 add_test(NAME playlist COMMAND pang_playlist_tests)
 set_tests_properties(playlist PROPERTIES TIMEOUT 120)
