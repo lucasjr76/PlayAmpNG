@@ -60,7 +60,8 @@ protected:
 private:
     enum class Hit {
         None, Titlebar, Previous, Play, Pause, Stop, Next, Eject,
-        Shuffle, Repeat, Equalizer, Playlist, Volume, Balance, Position, Time, Vis
+        Shuffle, Repeat, Equalizer, Playlist, Volume, Balance, Position, Time, Vis,
+        Minimize, Shade, Close
     };
 
     Hit hit_test(const QPoint& logical) const;

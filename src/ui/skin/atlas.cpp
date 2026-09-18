@@ -69,8 +69,13 @@ bool Atlas::load(const QString& directory, QString& error) {
     glyph_width_ = glyph[QStringLiteral("width")].toInt(5);
     glyph_height_ = glyph[QStringLiteral("height")].toInt(7);
     const QJsonObject digit = root[QStringLiteral("digit")].toObject();
-    digit_width_ = digit[QStringLiteral("width")].toInt(9);
     digit_height_ = digit[QStringLiteral("height")].toInt(13);
+
+    spectrum_.clear();
+    for (const QJsonValue& value : root[QStringLiteral("spectrum")].toArray())
+        spectrum_.append(color_from(value.toArray(), QColor(0, 237, 0)));
+    if (spectrum_.isEmpty()) spectrum_.append(QColor(0, 237, 0));
+    peak_ = color_from(root[QStringLiteral("peak")].toArray(), QColor(200, 200, 200));
 
     rescale();
     return true;
@@ -153,11 +158,25 @@ void Atlas::draw_text(QPainter& painter, const QString& text, int x, int y,
     }
 }
 
-void Atlas::draw_time(QPainter& painter, const QString& text, int x, int y) const {
+int Atlas::time_width(const QString& text) const {
+    int total = 0;
     for (int i = 0; i < text.size(); ++i) {
         const QString name =
             QStringLiteral("digit/%1").arg(static_cast<int>(text.at(i).unicode()));
-        if (sprites_.contains(name)) draw_raw(painter, name, x + i * digit_width_, y, QColor());
+        total += sprite_size(name).width();
+    }
+    return total;
+}
+
+void Atlas::draw_time(QPainter& painter, const QString& text, int x, int y) const {
+    int cursor = x;
+    for (int i = 0; i < text.size(); ++i) {
+        const QString name =
+            QStringLiteral("digit/%1").arg(static_cast<int>(text.at(i).unicode()));
+        const QSize piece = sprite_size(name);
+        if (piece.isEmpty()) continue;
+        draw_raw(painter, name, cursor, y, QColor());
+        cursor += piece.width();
     }
 }
 

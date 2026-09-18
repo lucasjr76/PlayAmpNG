@@ -5,26 +5,33 @@
 #include <QPainter>
 
 #include <algorithm>
+#include <cmath>
 
 namespace pang::ui {
 namespace {
 
 using core::dsp::Equalizer;
 
+// Layout do Winamp Classic: ON a esquerda, mostrador de curva no meio,
+// PRESETS a direita, preamp isolado em 21 e as dez bandas a partir de 78 com
+// passo de 18 px.
 constexpr QRect kTitlebar{0, 0, 275, 14};
-constexpr QRect kBypass{8, 17, 28, 13};
-constexpr QRect kReset{40, 17, 28, 13};
-constexpr QRect kPreset{72, 17, 28, 13};
-constexpr QRect kPresetName{106, 19, 160, 7};
+constexpr QRect kBypass{14, 18, 26, 12};
+constexpr QRect kReset{44, 18, 26, 12};
+constexpr QRect kCurve{87, 17, 113, 19};
+constexpr QRect kPreset{206, 18, 44, 12};
 
-constexpr int kSliderTop = 36;
-constexpr int kSliderHeight = 58;
-constexpr int kSliderWidth = 20;
-constexpr int kPreampX = 8;
-constexpr int kBandX = 36;
-constexpr int kBandSpacing = 23;
+constexpr int kSliderTop = 40;
+constexpr int kSliderHeight = 56;
+constexpr int kSliderWidth = 14;
+constexpr int kPreampX = 21;
+// Passo de 20 px, e nao os 18 do classico: o Winamp nao rotula as bandas, e sem
+// rotulo 18 basta. Com "170" e "310" embaixo, 18 px faz as legendas colarem
+// umas nas outras — foi o que aconteceu, virou "1703106001K".
+constexpr int kBandX = 70;
+constexpr int kBandSpacing = 20;
 constexpr int kThumbHeight = 11;
-constexpr int kLabelY = 98;
+constexpr int kLabelY = 100;
 
 QString band_label(int band) {
     const float hz = Equalizer::frequencies()[static_cast<std::size_t>(band)];
@@ -40,7 +47,7 @@ EqualizerPanel::EqualizerPanel(core::dsp::Equalizer& equalizer,
     : QWidget(parent), equalizer_(equalizer), user_presets_(user_presets), atlas_(atlas) {
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_OpaquePaintEvent, true);
-    preset_name_ = QStringLiteral("PERSONALIZADO");
+    preset_name_ = QStringLiteral("PRESETS");
     set_scale(atlas.scale());
 }
 
@@ -83,7 +90,7 @@ void EqualizerPanel::apply_slider(int index, int logical_y) {
     else
         equalizer_.set_band_db(index, db);
 
-    preset_name_ = QStringLiteral("PERSONALIZADO");
+    preset_name_ = QStringLiteral("PRESETS");
     update();
 }
 
@@ -97,36 +104,74 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
     const QString caption = QStringLiteral("EQUALIZADOR");
     atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
 
-    // Botao sem rotulo assado no sprite: o texto e desenhado por cima, e nao
-    // sobrepoe nada.
     const auto labeled = [&](const QRect& area, const QString& label, bool active) {
         atlas_.draw(painter,
                     QStringLiteral("toggle/blank/%1")
                         .arg(QLatin1String(active ? "active" : "normal")),
                     area.x(), area.y());
         atlas_.draw_text(painter, label,
-                         area.x() + (area.width() - atlas_.text_width(label)) / 2, area.y() + 3);
+                         area.x() + (area.width() - atlas_.text_width(label)) / 2,
+                         area.y() + (area.height() - atlas_.glyph_height()) / 2);
     };
     labeled(kBypass, equalizer_.bypass() ? QStringLiteral("OFF") : QStringLiteral("ON"),
             !equalizer_.bypass());
     labeled(kReset, QStringLiteral("RST"), false);
-    labeled(kPreset, QStringLiteral("PRE"), false);
-    atlas_.draw_text(painter, preset_name_, kPresetName.x(), kPresetName.y());
+    labeled(kPreset, preset_name_.left(7), false);
+
+    // Mostrador da curva de resposta: poco escuro com a linha ligando os ganhos
+    // das bandas. E o retorno que falta quando os sliders nao tem numero.
+    painter.fillRect(kCurve.x() * s, kCurve.y() * s, kCurve.width() * s, kCurve.height() * s,
+                     atlas_.color(QStringLiteral("well")));
+    painter.fillRect(kCurve.x() * s, kCurve.y() * s, kCurve.width() * s, s,
+                     atlas_.color(QStringLiteral("bevel_dark")));
+    painter.fillRect(kCurve.x() * s, kCurve.bottom() * s, kCurve.width() * s, s,
+                     atlas_.color(QStringLiteral("bevel_light")));
+
+    const int middle_y = kCurve.y() + kCurve.height() / 2;
+    painter.fillRect((kCurve.x() + 2) * s, middle_y * s, (kCurve.width() - 4) * s, s,
+                     atlas_.color(QStringLiteral("green_dim")));
+
+    if (!equalizer_.bypass()) {
+        painter.setPen(atlas_.color(QStringLiteral("green")));
+        const int span = kCurve.width() - 6;
+        const int half = kCurve.height() / 2 - 2;
+        QPointF previous;
+        for (int x = 0; x <= span; ++x) {
+            // Interpolacao linear entre as dez bandas.
+            const float position =
+                static_cast<float>(x) / span * (Equalizer::kBands - 1);
+            const int left = std::clamp(static_cast<int>(position), 0, Equalizer::kBands - 1);
+            const int right = std::min(left + 1, Equalizer::kBands - 1);
+            const float blend = position - left;
+            const float db = equalizer_.band_db(left) * (1.0f - blend) +
+                             equalizer_.band_db(right) * blend;
+
+            const qreal y = (middle_y - db / Equalizer::kRangeDb * half) * s;
+            const QPointF point((kCurve.x() + 3 + x) * s, y);
+            if (x > 0) painter.drawLine(previous, point);
+            previous = point;
+        }
+    }
 
     // Sliders.
     for (int index = -1; index < Equalizer::kBands; ++index) {
         const QRect area = slider_rect(index);
         const bool active = index < 0 || equalizer_.band_active(index);
 
-        // Trilho: poco escuro estreito no centro da area clicavel.
-        const QRect groove(area.x() + area.width() / 2 - 1, area.y(), 3, area.height());
-        painter.fillRect(groove.x() * s, groove.y() * s, groove.width() * s, groove.height() * s,
+        // Fenda rebaixada de 2 px, com aresta clara a direita: le-se como um
+        // rasgo no painel, e nao como uma barra preta desenhada por cima.
+        const int groove_x = area.x() + area.width() / 2 - 1;
+        painter.fillRect(groove_x * s, area.y() * s, 2 * s, area.height() * s,
                          atlas_.color(QStringLiteral("well")));
-
-        // Marca do zero, para o usuario achar a resposta plana sem contar pixel.
-        const int middle = area.y() + (area.height() - kThumbHeight) / 2 + kThumbHeight / 2;
-        painter.fillRect(area.x() * s, middle * s, area.width() * s, s,
+        painter.fillRect((groove_x + 2) * s, area.y() * s, s, area.height() * s,
                          atlas_.color(QStringLiteral("bevel_light")));
+
+        // Entalhe do zero dentro da propria fenda. As marcas laterais da versao
+        // anterior se alinhavam entre sliders e viravam uma regua tracejada
+        // atravessando o painel.
+        const int middle = area.y() + (area.height() - kThumbHeight) / 2 + kThumbHeight / 2;
+        painter.fillRect((groove_x - 1) * s, middle * s, 4 * s, s,
+                         atlas_.color(QStringLiteral("green_dim")));
 
         const float db = index < 0 ? equalizer_.preamp_db() : equalizer_.band_db(index);
         const float fraction = 0.5f - db / (2.0f * Equalizer::kRangeDb);
@@ -142,15 +187,15 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
     }
 
     // Rotulos de frequencia.
-    atlas_.draw_text(painter, QStringLiteral("PRE"), kPreampX + 1, kLabelY);
-    for (int band = 0; band < Equalizer::kBands; ++band) {
-        const QString label = band_label(band);
-        const QRect area = slider_rect(band);
-        const int x = area.x() + (area.width() - atlas_.text_width(label)) / 2;
-        atlas_.draw_text(painter, label, x, kLabelY,
-                         equalizer_.band_active(band) ? QColor()
-                                                      : atlas_.color(QStringLiteral("green_dim")));
-    }
+    const auto centered = [&](const QString& label, const QRect& area, const QColor& tint) {
+        atlas_.draw_text(painter, label,
+                         area.x() + (area.width() - atlas_.text_width(label)) / 2, kLabelY, tint);
+    };
+    centered(QStringLiteral("PRE"), slider_rect(-1), QColor());
+    for (int band = 0; band < Equalizer::kBands; ++band)
+        centered(band_label(band), slider_rect(band),
+                 equalizer_.band_active(band) ? QColor()
+                                              : atlas_.color(QStringLiteral("green_dim")));
 }
 
 void EqualizerPanel::open_preset_menu() {
@@ -198,7 +243,7 @@ void EqualizerPanel::mousePressEvent(QMouseEvent* event) {
         update();
         return;
     }
-    if (kPreset.contains(p)) {
+    if (kPreset.contains(p) || kCurve.contains(p)) {
         open_preset_menu();
         return;
     }

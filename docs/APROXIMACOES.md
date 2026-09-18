@@ -13,6 +13,8 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 | Item | Valor |
 |---|---|
 | Dimensão do painel principal | 275 × 116 px, como o clássico |
+| **Coordenadas dos controles** | As do Winamp Classic: tempo em 36,26; visualização em 24,43 (76 × 16); título em 111; volume em 107,57 (68 × 13); balanço em 177,57 (38 × 13); EQ/PL em 219 e 242; barra de posição em 16,72 (248 × 10); transporte em 16,88 com botões de 23 × 18; eject 22 × 16; shuffle 46 × 15; repeat 28 × 15 |
+| Botões da barra de título | Minimizar, compactar e fechar, 9 × 9, em 244/254/264 |
 | Densidade e organização | Mostrador de tempo à esquerda, visualização ao lado, transporte embaixo |
 | Linguagem visual | Cinza escuro, bordas chanfradas com luz no topo-esquerda, mostradores e texto em verde |
 | Estados de botão | Normal, pressionado, ativo, desabilitado e foco — os cinco exigidos |
@@ -25,7 +27,9 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 | Divergência | Razão |
 |---|---|
 | **Coordenadas exatas dos controles** são nossas | Sem a referência original disponível, as posições foram escolhidas para caber em 275 × 116 com a mesma densidade. As proporções e a leitura são equivalentes; os pixels, não. |
-| **Paleta** é própria | Verde `#00FF7F` sobre cinza `#2A2A2A`, com chanfros em `#606060` e `#101010`. Escolhida para o mesmo contraste do original, não amostrada dele. |
+| **Paleta** é própria | Verde `#00ED00` sobre cinza `#3A3A3A`, poços em preto puro, chanfros em `#626262` e `#1A1A1A`. A primeira versão usava verde-primavera `#00FF7F`, que puxa para o azul; o mostrador clássico é verde puro, e a diferença salta aos olhos na tela ainda que suma numa captura pequena. |
+| **Degradê do espectro** é próprio | Verde na base, amarelo no meio, vermelho no pico, em 16 passos. A progressão perceptiva segue a referência; os valores RGB são nossos. A primeira versão variava o matiz por **barra**, produzindo um arco-íris horizontal que o Winamp nunca teve — o clássico varia a cor com a **altura**. |
+| **Rótulos das bandas do equalizador** | O Winamp não rotula as bandas. Mantivemos os rótulos por legibilidade, o que obrigou a alargar o passo de 18 para 20 px. |
 | **Desenho dos glifos** é próprio | A fonte do Winamp é um bitmap protegido. A nossa tem a mesma altura de 7 px e o mesmo espírito compacto. |
 | **Espectro com 19 barras, verde a amarelo** | O número de barras é o do clássico; a rampa de cor é nossa. |
 | **Apenas escala inteira** (1×, 2×, 3×) | Escala fracionária borraria pixel art e desalinharia os mostradores de sete segmentos. O preço é não haver ajuste fino de tamanho. |
@@ -34,7 +38,7 @@ O atlas é gerado por `tools/make_skin.py`, e a arte vive em código: qualquer a
 
 ## Pendências conhecidas de aparência
 
-- Os painéis de **equalizador e playlist** ainda usam widgets Qt estilizados em vez de sprites. Só o painel principal está desenhado com o atlas.
-- **Modo compacto** (barra) não implementado.
+- O acabamento ainda não está no nível do original: espaçamentos internos, proporção dos botões e tratamento das superfícies pedem mais uma passada.
+- Em compositor que aplica opacidade a janelas sem foco — o caso do Hyprland nesta máquina — o conteúdo atrás aparece através do painel. É configuração do ambiente, não do aplicativo.
 - **Encaixe magnético entre janelas destacadas** indisponível no Wayland, por restrição do protocolo — ver `ARCHITECTURE.md §8`.
 - Em compositor de modo *tiling*, a janela precisa da dica de flutuante. O aplicativo já a envia (`Qt::Dialog`), mas a decisão final é do compositor; no Hyprland pode ser necessária uma regra de janela.

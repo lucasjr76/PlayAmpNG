@@ -6,35 +6,57 @@
 #include <QWindow>
 
 #include <algorithm>
+#include <string_view>
+#include <utility>
 
 namespace pang::ui {
 namespace {
 
 using core::State;
 
-// Geometria em coordenadas logicas (escala 1x). Aproximacao documentada do
-// layout classico: as proporcoes e a densidade sao as mesmas, as coordenadas
-// exatas sao nossas — ver docs/APROXIMACOES.md.
+// Geometria em coordenadas logicas (escala 1x).
+//
+// As posicoes seguem o layout do Winamp Classic, que e a referencia declarada:
+// mostrador de tempo em 36,26; visualizacao em 24,43 com 76x16; titulo da faixa
+// em 111,27; volume em 107,57; barra de posicao em 16,72; transporte em 16,88.
+// A primeira versao usava coordenadas inventadas que cabiam em 275x116 mas nao
+// tinham a densidade nem o ritmo do original.
 constexpr QRect kTitlebar{0, 0, 275, 14};
-constexpr QRect kTime{12, 24, 45, 13};
-constexpr QRect kVis{66, 24, 76, 16};
-constexpr QRect kInfo{150, 27, 113, 7};
-constexpr QRect kTitle{12, 44, 251, 7};
-constexpr QRect kVolume{12, 57, 90, 11};
-constexpr QRect kBalance{110, 57, 50, 11};
-constexpr QRect kEqualizer{170, 57, 28, 13};
-constexpr QRect kPlaylist{200, 57, 28, 13};
-constexpr QRect kPosition{12, 74, 251, 11};
-constexpr QRect kPrevious{12, 90, 23, 18};
-constexpr QRect kPlay{36, 90, 23, 18};
-constexpr QRect kPause{60, 90, 23, 18};
-constexpr QRect kStop{84, 90, 23, 18};
-constexpr QRect kNext{108, 90, 23, 18};
-constexpr QRect kEject{134, 90, 23, 18};
-constexpr QRect kShuffle{170, 92, 28, 13};
-constexpr QRect kRepeat{202, 92, 28, 13};
+constexpr QRect kMinimize{244, 3, 9, 9};
+constexpr QRect kShade{254, 3, 9, 9};
+constexpr QRect kClose{264, 3, 9, 9};
+// O poco acomoda o caso mais largo, "-99:99" com 50 px, e nao mais que isso:
+// sobra demais a direita deixava o mostrador desequilibrado.
+constexpr QRect kTimeWell{30, 23, 62, 17};
+constexpr QRect kTime{35, 25, 50, 13};
+constexpr QRect kTitleWell{108, 22, 158, 12};
+constexpr QRect kTitle{111, 25, 152, 7};
+constexpr QRect kVis{24, 43, 76, 16};
+// Numeros alinhados A DIREITA das suas posicoes, para que 3 e 4 digitos nao
+// empurrem o rotulo seguinte — foi assim que "128 KBPS" colidiu com "44 KHZ".
+constexpr int kBitrateRight = 129;
+constexpr int kBitrateLabel = 133;
+constexpr int kSampleRateRight = 172;
+constexpr int kSampleRateLabel = 176;
+constexpr int kMono = 200;
+constexpr int kStereo = 228;
+constexpr int kInfoY = 43;
+constexpr QRect kVolume{107, 57, 68, 13};
+constexpr QRect kBalance{177, 57, 38, 13};
+constexpr QRect kEqualizer{219, 58, 23, 12};
+constexpr QRect kPlaylist{242, 58, 23, 12};
+constexpr QRect kPosition{16, 72, 248, 10};
+constexpr QRect kPrevious{16, 88, 23, 18};
+constexpr QRect kPlay{39, 88, 23, 18};
+constexpr QRect kPause{62, 88, 23, 18};
+constexpr QRect kStop{85, 88, 23, 18};
+constexpr QRect kNext{108, 88, 23, 18};
+constexpr QRect kEject{136, 89, 22, 16};
+constexpr QRect kShuffle{164, 89, 46, 15};
+constexpr QRect kRepeat{212, 89, 28, 15};
 
 constexpr int kThumbWidth = 11;
+constexpr int kPositionThumbWidth = 29;
 constexpr float kScrollInterval = 0.18f;  // segundos por pixel de rolagem
 
 QString format_time(std::int64_t frames, int rate) {
@@ -155,15 +177,83 @@ void MainPanel::paint_frame(QPainter& painter) {
     const QString caption = QStringLiteral("PLAYAMPNG");
     atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
 
-    // Pocos escuros dos mostradores: aresta escura em cima, clara embaixo.
-    for (const QRect& well : {kTime, kVis, kPosition, kVolume, kBalance}) {
-        painter.fillRect(QRect(well.x() * s, well.y() * s, well.width() * s, well.height() * s),
-                         atlas_.color(QStringLiteral("well")));
-        painter.setPen(atlas_.color(QStringLiteral("bevel_dark")));
-        painter.drawLine(well.left() * s, well.top() * s, well.right() * s, well.top() * s);
-        painter.setPen(atlas_.color(QStringLiteral("bevel_light")));
-        painter.drawLine(well.left() * s, well.bottom() * s, well.right() * s, well.bottom() * s);
+    for (const auto& button : {std::pair{"minimize", kMinimize}, std::pair{"shade", kShade},
+                               std::pair{"close", kClose}}) {
+        const Hit hit = button.first == std::string_view("minimize") ? Hit::Minimize
+                        : button.first == std::string_view("shade")  ? Hit::Shade
+                                                                     : Hit::Close;
+        atlas_.draw(painter,
+                    QStringLiteral("title/%1/%2")
+                        .arg(QLatin1String(button.first),
+                             QLatin1String(pressed_ == hit ? "pressed" : "normal")),
+                    button.second.x(), button.second.y());
     }
+
+    // Poco escuro: fundo preto com aresta escura em cima e clara embaixo, que e
+    // o que da a impressao de rebaixo.
+    const auto well = [&](const QRect& area) {
+        painter.fillRect(area.x() * s, area.y() * s, area.width() * s, area.height() * s,
+                         atlas_.color(QStringLiteral("well")));
+        painter.fillRect(area.x() * s, area.y() * s, area.width() * s, s,
+                         atlas_.color(QStringLiteral("bevel_dark")));
+        painter.fillRect(area.x() * s, area.y() * s, s, area.height() * s,
+                         atlas_.color(QStringLiteral("bevel_dark")));
+        painter.fillRect(area.x() * s, (area.bottom()) * s, area.width() * s, s,
+                         atlas_.color(QStringLiteral("bevel_light")));
+        painter.fillRect((area.right()) * s, area.y() * s, s, area.height() * s,
+                         atlas_.color(QStringLiteral("bevel_light")));
+    };
+
+    for (const QRect& area : {kTimeWell, kTitleWell, kVis, kPosition, kVolume, kBalance})
+        well(area);
+
+    // Textura do trilho de posicao: duas linhas discretas no lugar de um
+    // retangulo preto chapado, que pesava demais em 248 px de largura.
+    painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + 4) * s,
+                     (kPosition.width() - 2) * s, s, atlas_.color(QStringLiteral("bevel_dark")));
+    painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + 5) * s,
+                     (kPosition.width() - 2) * s, s, QColor(52, 52, 52));
+
+    // O trilho do volume carrega o degrade do espectro na horizontal: o proprio
+    // trilho diz o nivel, sem precisar de numero. Vem do classico.
+    const QVector<QColor>& gradient = atlas_.spectrum();
+    if (!gradient.isEmpty()) {
+        const int inner_x = kVolume.x() + 1;
+        const int inner_w = kVolume.width() - 2;
+        for (int i = 0; i < inner_w; ++i) {
+            const int index = i * (static_cast<int>(gradient.size()) - 1) / std::max(1, inner_w - 1);
+            painter.fillRect((inner_x + i) * s, (kVolume.y() + 4) * s, s, 5 * s,
+                             gradient[static_cast<std::size_t>(index)].darker(160));
+        }
+        const int filled = static_cast<int>(engine_.volume() * inner_w);
+        for (int i = 0; i < filled; ++i) {
+            const int index = i * (static_cast<int>(gradient.size()) - 1) / std::max(1, inner_w - 1);
+            painter.fillRect((inner_x + i) * s, (kVolume.y() + 4) * s, s, 5 * s,
+                             gradient[static_cast<std::size_t>(index)]);
+        }
+    }
+
+    // O trilho do balanco espelha o degrade a partir do centro: o desvio para
+    // um lado aparece como cor, e o centro fica verde.
+    if (!gradient.isEmpty()) {
+        const int inner_x = kBalance.x() + 1;
+        const int inner_w = kBalance.width() - 2;
+        for (int i = 0; i < inner_w; ++i) {
+            const float offset =
+                std::fabs(static_cast<float>(i) / std::max(1, inner_w - 1) * 2.0f - 1.0f);
+            const int index = static_cast<int>(offset * (gradient.size() - 1));
+            painter.fillRect((inner_x + i) * s, (kBalance.y() + 4) * s, s, 5 * s,
+                             gradient[static_cast<std::size_t>(std::clamp<int>(
+                                 index, 0, static_cast<int>(gradient.size()) - 1))]);
+        }
+    }
+
+    // Borda externa do painel, de um pixel: sem ela a janela sem moldura do
+    // sistema fica sem limite visivel contra um fundo escuro.
+    painter.fillRect(0, 0, width(), s, atlas_.color(QStringLiteral("bevel_light")));
+    painter.fillRect(0, 0, s, height(), atlas_.color(QStringLiteral("bevel_light")));
+    painter.fillRect(0, height() - s, width(), s, atlas_.color(QStringLiteral("bevel_dark")));
+    painter.fillRect(width() - s, 0, s, height(), atlas_.color(QStringLiteral("bevel_dark")));
 }
 
 void MainPanel::paint_display(QPainter& painter) {
@@ -174,22 +264,33 @@ void MainPanel::paint_display(QPainter& painter) {
         frames = snapshot_.duration_frames - snapshot_.position_frames;
         prefix = QStringLiteral("-");
     }
-    const QString time = format_time(frames, engine_.sample_rate());
-    atlas_.draw_time(painter, prefix.isEmpty() ? time : prefix + time.mid(1), kTime.x(),
-                     kTime.y());
+    const QString time = prefix + format_time(frames, engine_.sample_rate());
+    atlas_.draw_time(painter, time, kTime.x(), kTime.y());
 
     // PL-17, PL-18, PL-19 — ausencia nao vira numero plausivel.
-    QString info;
-    info += snapshot_.bitrate_bps > 0 ? QStringLiteral("%1K").arg(snapshot_.bitrate_bps / 1000)
-                                      : QStringLiteral("---K");
-    info += QStringLiteral(" ");
-    info += snapshot_.sample_rate > 0 ? QStringLiteral("%1H").arg(snapshot_.sample_rate / 1000)
-                                      : QStringLiteral("--H");
-    info += QStringLiteral(" ");
-    info += snapshot_.channels == 1 ? QStringLiteral("MONO")
-            : snapshot_.channels > 1 ? QStringLiteral("STEREO")
-                                     : QStringLiteral("------");
-    atlas_.draw_text(painter, info, kInfo.x(), kInfo.y());
+    const QColor dim = atlas_.color(QStringLiteral("green_dim"));
+    const auto right_aligned = [&](const QString& text, int right, const QColor& tint) {
+        atlas_.draw_text(painter, text, right - atlas_.text_width(text), kInfoY, tint);
+    };
+
+    const bool has_bitrate = snapshot_.bitrate_bps > 0;
+    right_aligned(has_bitrate ? QStringLiteral("%1").arg(snapshot_.bitrate_bps / 1000)
+                              : QStringLiteral("---"),
+                  kBitrateRight, has_bitrate ? QColor() : dim);
+    atlas_.draw_text(painter, QStringLiteral("KBPS"), kBitrateLabel, kInfoY, dim);
+
+    const bool has_rate = snapshot_.sample_rate > 0;
+    right_aligned(has_rate ? QStringLiteral("%1").arg(snapshot_.sample_rate / 1000)
+                           : QStringLiteral("--"),
+                  kSampleRateRight, has_rate ? QColor() : dim);
+    atlas_.draw_text(painter, QStringLiteral("KHZ"), kSampleRateLabel, kInfoY, dim);
+
+    // Mono e estereo como dois rotulos fixos, com o inativo esmaecido: le-se o
+    // estado sem precisar lembrar qual palavra apareceria ali.
+    atlas_.draw_text(painter, QStringLiteral("MONO"), kMono, kInfoY,
+                     snapshot_.channels == 1 ? QColor() : dim);
+    atlas_.draw_text(painter, QStringLiteral("STEREO"), kStereo, kInfoY,
+                     snapshot_.channels > 1 ? QColor() : dim);
 
     // PL-20 e PL-14 — posicao na playlist e titulo com rolagem.
     const int index = controller_.current_index();
@@ -245,23 +346,35 @@ void MainPanel::paint_visualization(QPainter& painter) {
         return;
     }
 
+    // VI-10 — degrade VERTICAL: verde na base, amarelo no meio, vermelho no
+    // pico. A cor diz a altura da barra, nao a posicao dela no espectro.
     const int bars = core::dsp::SpectrumAnalyzer::kBars;
-    const int bar_width = std::max(1, kVis.width() / bars);
+    const QVector<QColor>& gradient = atlas_.spectrum();
+    const int rows = kVis.height();
+
+    // 19 barras de 3 px com 1 px de intervalo ocupam exatamente os 76 px do
+    // poco. Largura e espacamento constantes, sem sobra a distribuir.
+    constexpr int kBarWidth = 3;
+    constexpr int kBarPitch = 4;
+
     for (int bar = 0; bar < bars; ++bar) {
+        const int x = (kVis.x() + bar * kBarPitch) * s;
         const float value = analyzer_.bars()[static_cast<std::size_t>(bar)];
-        const int height = static_cast<int>(value * kVis.height());
-        const int x = (kVis.x() + bar * bar_width) * s;
+        const int filled = static_cast<int>(value * rows);
 
-        // VI-10 — verde no grave passando a amarelo no agudo, na paleta classica.
-        const int hue = 120 - 60 * bar / bars;
-        painter.fillRect(x, (kVis.y() + kVis.height() - height) * s, (bar_width - 1) * s,
-                         height * s, QColor::fromHsv(hue, 255, 230));
+        for (int row = 0; row < filled; ++row) {
+            // row 0 e a base da barra.
+            const int index = gradient.size() > 1
+                                  ? row * (static_cast<int>(gradient.size()) - 1) / (rows - 1)
+                                  : 0;
+            painter.fillRect(x, (kVis.y() + rows - 1 - row) * s, kBarWidth * s, s,
+                             gradient[std::clamp<int>(index, 0, static_cast<int>(gradient.size()) - 1)]);
+        }
 
-        const int peak = static_cast<int>(analyzer_.peaks()[static_cast<std::size_t>(bar)] *
-                                          kVis.height());
+        const int peak = static_cast<int>(analyzer_.peaks()[static_cast<std::size_t>(bar)] * rows);
         if (peak > 0)
-            painter.fillRect(x, (kVis.y() + kVis.height() - peak) * s, (bar_width - 1) * s, s,
-                             QColor(220, 220, 220));
+            painter.fillRect(x, (kVis.y() + rows - peak) * s, kBarWidth * s, s,
+                             atlas_.peak_color());
     }
 }
 
@@ -278,12 +391,17 @@ void MainPanel::paint_sliders(QPainter& painter) {
     thumb(kBalance, (engine_.balance() + 1.0f) / 2.0f, Hit::Balance);
 
     // PL-21/PL-23 — a barra acompanha a posicao real, e so aparece quando a
-    // fonte permite busca e informa duracao.
+    // fonte permite busca e informa duracao. O cursor e largo, como no
+    // classico: um cursor de 11 px numa barra de 248 px some.
     if (snapshot_.seekable && snapshot_.duration_frames > 0) {
         const float fraction =
             std::clamp(static_cast<float>(snapshot_.position_frames) / snapshot_.duration_frames,
                        0.0f, 1.0f);
-        thumb(kPosition, fraction, Hit::Position);
+        const int travel = kPosition.width() - kPositionThumbWidth;
+        atlas_.draw(painter,
+                    QStringLiteral("slider/position/%1")
+                        .arg(QLatin1String(dragging_ == Hit::Position ? "pressed" : "normal")),
+                    kPosition.x() + static_cast<int>(fraction * travel), kPosition.y());
     }
 }
 
@@ -337,6 +455,7 @@ MainPanel::Hit MainPanel::hit_test(const QPoint& p) const {
         {kShuffle, Hit::Shuffle},   {kRepeat, Hit::Repeat},     {kEqualizer, Hit::Equalizer},
         {kPlaylist, Hit::Playlist}, {kVolume, Hit::Volume},     {kBalance, Hit::Balance},
         {kPosition, Hit::Position}, {kTime, Hit::Time},         {kVis, Hit::Vis},
+        {kMinimize, Hit::Minimize}, {kShade, Hit::Shade},       {kClose, Hit::Close},
         {kTitlebar, Hit::Titlebar},
     };
     for (const auto& region : regions)
@@ -404,9 +523,10 @@ void MainPanel::mouseReleaseEvent(QMouseEvent* event) {
     const QPoint p = to_logical(event->pos());
 
     if (dragging_ == Hit::Position) {
-        const int travel = kPosition.width() - kThumbWidth;
+        const int travel = kPosition.width() - kPositionThumbWidth;
         const float fraction = std::clamp(
-            static_cast<float>(p.x() - kPosition.x() - kThumbWidth / 2) / travel, 0.0f, 1.0f);
+            static_cast<float>(p.x() - kPosition.x() - kPositionThumbWidth / 2) / travel, 0.0f,
+            1.0f);
         controller_.seek(static_cast<double>(fraction) * snapshot_.duration_frames /
                          engine_.sample_rate());
         dragging_ = Hit::None;
@@ -448,6 +568,9 @@ void MainPanel::mouseReleaseEvent(QMouseEvent* event) {
                               : visualization_ == Visualization::Scope  ? Visualization::Off
                                                                         : Visualization::Spectrum);
             break;
+        case Hit::Minimize: window()->showMinimized(); break;
+        case Hit::Shade:    if (on_toggle_compact) on_toggle_compact(); break;
+        case Hit::Close:    window()->close(); break;
         default: break;
     }
     pressed_ = Hit::None;

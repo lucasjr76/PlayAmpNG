@@ -5,6 +5,7 @@
 #include <QPixmap>
 #include <QRect>
 #include <QString>
+#include <QVector>
 
 class QPainter;
 
@@ -43,12 +44,20 @@ public:
     void draw_text(QPainter& painter, const QString& text, int x, int y,
                    const QColor& tint = QColor()) const;
 
-    // --- digitos 9x13 do mostrador de tempo
-    int digit_width() const { return digit_width_; }
+    // --- digitos do mostrador de tempo
+    //
+    // A largura varia por caractere: o dois-pontos e mais estreito que um
+    // digito, como no classico. draw_time avanca pela largura real de cada
+    // peca, e time_width devolve o total.
     int digit_height() const { return digit_height_; }
+    int time_width(const QString& text) const;
     void draw_time(QPainter& painter, const QString& text, int x, int y) const;
 
     QColor color(const QString& key) const;
+
+    // Degrade vertical do espectro, da base para o topo.
+    const QVector<QColor>& spectrum() const { return spectrum_; }
+    QColor peak_color() const { return peak_; }
 
 private:
     void rescale();
@@ -62,8 +71,9 @@ private:
     int scale_ = 1;
     int glyph_width_ = 5;
     int glyph_height_ = 7;
-    int digit_width_ = 9;
     int digit_height_ = 13;
+    QVector<QColor> spectrum_;
+    QColor peak_{200, 200, 200};
 };
 
 }  // namespace pang::ui::skin

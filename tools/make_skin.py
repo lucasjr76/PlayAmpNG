@@ -23,19 +23,39 @@ import zlib
 
 # --------------------------------------------------------------------- paleta
 
-BG          = (42, 42, 42)     # fundo geral
-BG_DARK     = (24, 24, 24)     # poco de mostrador e de visualizacao
-BEVEL_LIGHT = (96, 96, 96)     # aresta iluminada (topo-esquerda)
-BEVEL_DARK  = (16, 16, 16)     # aresta sombreada (baixo-direita)
-FACE        = (58, 58, 58)     # face de botao em repouso
-FACE_HOT    = (72, 72, 72)     # botao ativo
-FACE_DOWN   = (34, 34, 34)     # botao pressionado
-DISABLED    = (48, 48, 48)
-GREEN       = (0, 255, 127)    # mostradores e texto
-GREEN_DIM   = (0, 120, 60)     # texto desabilitado
-FOCUS       = (0, 190, 100)    # contorno de foco
-GRAY_TEXT   = (150, 150, 150)
+# Paleta.
+#
+# O verde da primeira versao era verde-primavera (0,255,127), que puxa para o
+# azul. O mostrador classico e verde puro. A diferenca some numa captura pequena
+# e salta aos olhos na tela.
+BG          = (58, 58, 58)     # cinza base do painel
+BG_DARK     = (0, 0, 0)        # poco de mostrador: preto, como no classico
+BEVEL_LIGHT = (98, 98, 98)     # aresta iluminada (topo-esquerda)
+BEVEL_DARK  = (26, 26, 26)     # aresta sombreada (baixo-direita)
+FACE        = (70, 70, 70)     # face de botao em repouso
+FACE_HOT    = (86, 86, 86)     # botao ativo
+FACE_DOWN   = (44, 44, 44)     # botao pressionado
+DISABLED    = (62, 62, 62)
+GREEN       = (0, 237, 0)      # mostradores e texto
+GREEN_DIM   = (0, 96, 0)       # texto desabilitado
+FOCUS       = (0, 180, 0)      # contorno de foco
+GRAY_TEXT   = (168, 168, 168)
 TRANSPARENT = (255, 0, 255)    # cor-chave, nunca desenhada
+
+# Degrade vertical do espectro, da base para o topo.
+#
+# O classico varia a cor com a ALTURA da barra, nao com a posicao dela: verde na
+# base, amarelo no meio, vermelho no pico. A primeira versao variava o matiz por
+# barra, o que dava um arco-iris horizontal que o Winamp nunca teve.
+#
+# Os valores sao nossos; a progressao perceptiva e que segue a referencia.
+SPECTRUM = [
+    (16, 206, 16), (24, 200, 16), (41, 194, 16), (57, 190, 16),
+    (74, 186, 16), (98, 180, 16), (116, 174, 16), (132, 166, 16),
+    (140, 150, 16), (144, 132, 16), (148, 112, 16), (150, 92, 16),
+    (160, 74, 16), (186, 62, 16), (214, 54, 16), (239, 49, 16),
+]
+PEAK        = (200, 200, 200)  # marcador de pico
 
 
 class Canvas:
@@ -213,10 +233,18 @@ DIGIT_WIDTH = 9
 DIGIT_HEIGHT = 13
 
 
+def digit_cell_width(character):
+    # O dois-pontos ocupa menos que um digito. Dar a ele a largura cheia de 9 px
+    # empurrava "00:26" ate encostar nas bordas do poco.
+    return 5 if character == ':' else DIGIT_WIDTH
+
+
 def draw_digit(canvas, character, color):
     if character == ':':
-        canvas.rect(3, 3, 2, 2, color)
-        canvas.rect(3, 8, 2, 2, color)
+        # Centrado na celula de 5 px: encostado a esquerda, abria um vao grande
+        # antes do digito seguinte.
+        canvas.rect(2, 3, 2, 2, color)
+        canvas.rect(2, 8, 2, 2, color)
         return
     if character == '-':
         canvas.rect(2, 6, 5, 2, color)
@@ -256,22 +284,22 @@ def draw_glyph_shape(canvas, name, color, width, height):
                 canvas.set(x0 + direction * i, cy + j, color)
 
     if name == 'play':
-        triangle(cx - 3, 1, 5)
+        triangle(cx - 2, 1, 4)
     elif name == 'pause':
-        canvas.rect(cx - 3, cy - 4, 2, 9, color)
-        canvas.rect(cx + 1, cy - 4, 2, 9, color)
+        canvas.rect(cx - 3, cy - 3, 2, 7, color)
+        canvas.rect(cx + 1, cy - 3, 2, 7, color)
     elif name == 'stop':
-        canvas.rect(cx - 4, cy - 4, 8, 9, color)
+        canvas.rect(cx - 3, cy - 3, 7, 7, color)
     elif name == 'previous':
-        canvas.rect(cx - 5, cy - 4, 2, 9, color)
-        triangle(cx + 3, -1, 5)
+        canvas.rect(cx - 4, cy - 3, 2, 7, color)
+        triangle(cx + 2, -1, 4)
     elif name == 'next':
-        canvas.rect(cx + 4, cy - 4, 2, 9, color)
-        triangle(cx - 3, 1, 5)
+        canvas.rect(cx + 3, cy - 3, 2, 7, color)
+        triangle(cx - 2, 1, 4)
     elif name == 'eject':
-        for i in range(4):
+        for i in range(3):
             canvas.hline(cx - i, cy - 3 + i, 1 + i * 2, color)
-        canvas.rect(cx - 4, cy + 3, 9, 2, color)
+        canvas.rect(cx - 3, cy + 2, 7, 2, color)
 
 
 def build_atlas():
@@ -313,45 +341,53 @@ def build_atlas():
 
     # --- digitos do mostrador
     for character in list('0123456789') + [':', '-']:
-        cell = Canvas(DIGIT_WIDTH, DIGIT_HEIGHT)
+        cell = Canvas(digit_cell_width(character), DIGIT_HEIGHT)
         draw_digit(cell, character, GREEN)
         place('digit/%d' % ord(character), cell)
 
     # --- botoes de transporte, cinco estados cada
     for name in ('previous', 'play', 'pause', 'stop', 'next', 'eject'):
+        width, height = (22, 16) if name == 'eject' else (23, 18)
         for state, face, raised, focus in BUTTON_STATES:
-            cell = Canvas(23, 18)
-            cell.bevel(0, 0, 23, 18, face, raised)
+            cell = Canvas(width, height)
+            cell.bevel(0, 0, width, height, face, raised)
             symbol = GREEN_DIM if state == 'disabled' else GREEN
-            offset = Canvas(23, 18)
-            draw_glyph_shape(offset, name, symbol, 23, 18)
+            offset = Canvas(width, height)
+            draw_glyph_shape(offset, name, symbol, width, height)
             if state == 'pressed':
                 cell.blit(offset, 1, 1)
             else:
                 cell.blit(offset, 0, 0)
             if focus:
-                for i in range(0, 23, 2):
+                for i in range(0, width, 2):
                     cell.set(i, 1, FOCUS)
-                    cell.set(i, 16, FOCUS)
-                for j in range(0, 18, 2):
+                    cell.set(i, height - 2, FOCUS)
+                for j in range(0, height, 2):
                     cell.set(1, j, FOCUS)
-                    cell.set(21, j, FOCUS)
+                    cell.set(width - 2, j, FOCUS)
             place('button/%s/%s' % (name, state), cell)
 
-    # --- botoes de alternancia (shuffle, repeat, eq, pl)
-    for name in ('shuffle', 'repeat', 'eq', 'playlist'):
+    # --- botoes de alternancia, nas medidas do layout classico
+    TOGGLES = (
+        ('eq', 'EQ', 23, 12),
+        ('playlist', 'PL', 23, 12),
+        ('shuffle', 'SHUFFLE', 46, 15),
+        ('repeat', 'REP', 28, 15),
+    )
+    for name, label, width, height in TOGGLES:
         for state, face, raised, focus in BUTTON_STATES:
-            cell = Canvas(28, 13)
-            cell.bevel(0, 0, 28, 13, face, raised)
+            cell = Canvas(width, height)
+            cell.bevel(0, 0, width, height, face, raised)
             colour = GREEN_DIM if state == 'disabled' else GREEN
-            label = {'shuffle': 'SHUF', 'repeat': 'REP', 'eq': 'EQ', 'playlist': 'PL'}[name]
-            x = (28 - (len(label) * (GLYPH_WIDTH + 1) - 1)) // 2
+            text_width = len(label) * (GLYPH_WIDTH + 1) - 1
+            x = (width - text_width) // 2
+            y = (height - GLYPH_HEIGHT) // 2
             for index, character in enumerate(label):
                 bits = normalize(GLYPHS_5X7.get(character, FALLBACK))
                 for j in range(GLYPH_HEIGHT):
                     for i in range(GLYPH_WIDTH):
                         if bits[j * GLYPH_WIDTH + i] == '#':
-                            cell.set(x + index * (GLYPH_WIDTH + 1) + i, 3 + j, colour)
+                            cell.set(x + index * (GLYPH_WIDTH + 1) + i, y + j, colour)
             place('toggle/%s/%s' % (name, state), cell)
 
     # --- botao sem rotulo, para quem desenha o proprio texto por cima
@@ -375,6 +411,13 @@ def build_atlas():
         cell.vline(5, 2, 7, BEVEL_LIGHT if raised else BEVEL_DARK)
         place('slider/thumb/%s' % state, cell)
 
+    for state, face, raised, _ in BUTTON_STATES[:3]:
+        cell = Canvas(29, 10)
+        cell.bevel(0, 0, 29, 10, face, raised)
+        for i in (12, 14, 16):
+            cell.vline(i, 2, 6, BEVEL_LIGHT if raised else BEVEL_DARK)
+        place('slider/position/%s' % state, cell)
+
     groove = Canvas(8, 8)
     groove.bevel(0, 3, 8, 3, BG_DARK, False)
     place('slider/groove', groove)
@@ -384,6 +427,27 @@ def build_atlas():
         cell = Canvas(width, height)
         cell.bevel(0, 0, width, height, BG_DARK if dark else BG, not dark)
         place('frame/%s' % name, cell)
+
+    # --- botoes da barra de titulo (minimizar, compactar, fechar)
+    #
+    # A janela nao tem moldura do sistema, entao sem estes botoes nao ha como
+    # minimizar nem fechar pela interface — so pelo gerenciador de janelas.
+    for name in ('minimize', 'shade', 'close'):
+        for state, face, raised, _ in BUTTON_STATES[:2]:
+            cell = Canvas(9, 9)
+            cell.bevel(0, 0, 9, 9, face, raised)
+            mark = GREEN
+            offset = 1 if state == 'pressed' else 0
+            if name == 'minimize':
+                cell.rect(2 + offset, 6 + offset, 5, 1, mark)
+            elif name == 'shade':
+                cell.rect(2 + offset, 3 + offset, 5, 1, mark)
+                cell.rect(2 + offset, 5 + offset, 5, 1, mark)
+            else:
+                for i in range(5):
+                    cell.set(2 + i + offset, 2 + i + offset, mark)
+                    cell.set(6 - i + offset, 2 + i + offset, mark)
+            place('title/%s/%s' % (name, state), cell)
 
     # --- barra de titulo com faixas, no espirito do classico
     title = Canvas(8, 14)
@@ -412,6 +476,8 @@ def main():
         'transparent': list(TRANSPARENT),
         'glyph': {'width': GLYPH_WIDTH, 'height': GLYPH_HEIGHT},
         'digit': {'width': DIGIT_WIDTH, 'height': DIGIT_HEIGHT},
+        'spectrum': [list(c) for c in SPECTRUM],
+        'peak': list(PEAK),
         'palette': {
             'background': list(BG), 'well': list(BG_DARK),
             'bevel_light': list(BEVEL_LIGHT), 'bevel_dark': list(BEVEL_DARK),
