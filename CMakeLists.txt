@@ -16,6 +16,7 @@ include(FetchContent)
 # ---------------------------------------------------------------- dependencias
 
 find_package(Threads REQUIRED)
+find_package(ZLIB REQUIRED)   # leitor de .wsz; ja vem com o Qt
 
 # Qt entra apenas na camada ui/. Nunca em core/ nem em platform/.
 find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
@@ -101,11 +102,13 @@ qt_add_executable(playampng
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
   src/ui/skin/atlas.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
   src/ui/panel/equalizer_panel.cpp
   src/ui/panel/playlist_panel.cpp
   src/ui/shell/integrated.cpp)
-target_link_libraries(playampng PRIVATE Qt6::Widgets pang_core pang_platform)
+target_link_libraries(playampng PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core pang_platform)
 target_compile_definitions(playampng PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
@@ -116,10 +119,12 @@ qt_add_executable(pang_render
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
   src/ui/skin/atlas.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
   src/ui/panel/equalizer_panel.cpp
   src/ui/panel/playlist_panel.cpp)
-target_link_libraries(pang_render PRIVATE Qt6::Widgets pang_core pang_platform)
+target_link_libraries(pang_render PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core pang_platform)
 target_compile_definitions(pang_render PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
@@ -182,6 +187,20 @@ target_link_libraries(pang_layout_tests PRIVATE Qt6::Core)
 set_target_properties(pang_layout_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME layout COMMAND pang_layout_tests)
+
+add_executable(pang_skin_tests
+  tests/test_skin.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp
+  src/core/util/log.cpp)
+target_include_directories(pang_skin_tests PRIVATE src)
+target_link_libraries(pang_skin_tests PRIVATE Qt6::Gui ZLIB::ZLIB)
+target_compile_definitions(pang_skin_tests PRIVATE
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
+set_target_properties(pang_skin_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME skin COMMAND pang_skin_tests)
+set_tests_properties(skin PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_test(NAME visualization COMMAND pang_vis_tests)
 set_tests_properties(visualization PROPERTIES TIMEOUT 120)
