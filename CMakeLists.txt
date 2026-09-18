@@ -101,7 +101,10 @@ qt_add_executable(playampng
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
   src/ui/skin/atlas.cpp
-  src/ui/panel/main_panel.cpp)
+  src/ui/panel/main_panel.cpp
+  src/ui/panel/equalizer_panel.cpp
+  src/ui/panel/playlist_panel.cpp
+  src/ui/shell/integrated.cpp)
 target_link_libraries(playampng PRIVATE Qt6::Widgets pang_core pang_platform)
 target_compile_definitions(playampng PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"

@@ -62,8 +62,14 @@ void MainPanel::set_scale(int scale) {
     atlas_.set_scale(scale);
     // AP-13 — as areas clicaveis escalam junto: o alvo de toque CRESCE com a
     // escala, em vez de encolher como aconteceria com escala fracionaria.
-    setFixedSize(kWidth * atlas_.scale(), kHeight * atlas_.scale());
+    setFixedSize(kWidth * atlas_.scale(),
+                 (compact_ ? kCompactHeight : kHeight) * atlas_.scale());
     update();
+}
+
+void MainPanel::set_compact(bool compact) {
+    compact_ = compact;
+    set_scale(atlas_.scale());
 }
 
 void MainPanel::set_visualization(Visualization mode) {
@@ -113,6 +119,26 @@ void MainPanel::tick(float dt_seconds) {
 void MainPanel::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
+
+    if (compact_) {
+        // AP-11 — a barra mostra o essencial: tempo e titulo. Sem controles,
+        // porque nao ha onde clicar em 14 px sem alvo pequeno demais.
+        atlas_.draw_tiled(painter, QStringLiteral("frame/titlebar"), kTitlebar);
+        const QString time = format_time(snapshot_.position_frames, engine_.sample_rate());
+        atlas_.draw_text(painter, time, 6, 4);
+
+        const int index = controller_.current_index();
+        const QString title =
+            index >= 0 ? QString::fromStdString(controller_.playlist().at(index).display_title())
+                       : QStringLiteral("PLAYAMPNG");
+        painter.save();
+        const int s = atlas_.scale();
+        painter.setClipRect(46 * s, 0, (kWidth - 52) * s, kCompactHeight * s);
+        atlas_.draw_text(painter, title, 46, 4);
+        painter.restore();
+        return;
+    }
+
     paint_frame(painter);
     paint_display(painter);
     paint_visualization(painter);
@@ -427,9 +453,11 @@ void MainPanel::keyPressEvent(QKeyEvent* event) {
     // em monitor de alta densidade.
     if (event->modifiers() & Qt::ControlModifier) {
         switch (event->key()) {
-            case Qt::Key_1: set_scale(1); return;
-            case Qt::Key_2: set_scale(2); return;
-            case Qt::Key_3: set_scale(3); return;
+            case Qt::Key_1: if (on_scale_changed) on_scale_changed(1); return;
+            case Qt::Key_2: if (on_scale_changed) on_scale_changed(2); return;
+            case Qt::Key_3: if (on_scale_changed) on_scale_changed(3); return;
+            // AP-11 — alterna o modo compacto.
+            case Qt::Key_W: if (on_toggle_compact) on_toggle_compact(); return;
             default: break;
         }
     }

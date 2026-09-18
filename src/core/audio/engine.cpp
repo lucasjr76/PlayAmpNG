@@ -365,7 +365,12 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     // balanco e volume. O espectro reage ao equalizador — que e o retorno que o
     // usuario espera — e nao encolhe quando o volume baixa, o que deixaria a
     // visualizacao morta em volume zero.
-    if (capture_enabled_.load(std::memory_order_relaxed)) {
+    //
+    // So captura tocando: em pausa o consumidor para de ler (congela o quadro,
+    // VI-15), e continuar escrevendo silencio encheria o ring e inflaria o
+    // contador de descartes sem nada de errado ter acontecido. Medido: 500
+    // descartes em meio segundo de pausa.
+    if (st == State::Playing && capture_enabled_.load(std::memory_order_relaxed)) {
         // VI-21 — descarte, nunca sobrescrita. Sobrescrever dado nao consumido
         // e corrida: o consumidor pode estar lendo exatamente aquela regiao.
         // O callback nao espera e nao escreve por cima; o bloco novo se perde e

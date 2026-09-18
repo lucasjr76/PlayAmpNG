@@ -19,6 +19,7 @@ class MainPanel : public QWidget {
 public:
     static constexpr int kWidth = 275;
     static constexpr int kHeight = 116;
+    static constexpr int kCompactHeight = 14;
 
     enum class Visualization { Off, Spectrum, Scope };
 
@@ -27,6 +28,11 @@ public:
 
     void set_scale(int scale);
     int scale() const { return atlas_.scale(); }
+
+    // AP-11 — modo compacto: so a faixa de titulo, com o tempo e o titulo da
+    // faixa. Os controles somem; a janela vira uma barra.
+    void set_compact(bool compact);
+    bool compact() const { return compact_; }
 
     void set_visualization(Visualization mode);
     Visualization visualization() const { return visualization_; }
@@ -40,6 +46,8 @@ public:
     std::function<void()> on_toggle_playlist;
     std::function<bool()> equalizer_visible;
     std::function<bool()> playlist_visible;
+    std::function<void(int)> on_scale_changed;
+    std::function<void()> on_toggle_compact;
 
 protected:
     void paintEvent(QPaintEvent*) override;
@@ -78,6 +86,7 @@ private:
     Hit dragging_ = Hit::None;
     QPoint drag_origin_;
 
+    bool compact_ = false;
     bool show_remaining_ = false;   // PL-15
     int title_offset_ = 0;          // PL-14 — rolagem
     float title_timer_ = 0.0f;

@@ -43,6 +43,7 @@ private:
     int channels_ = 2;
     int lookahead_ = 0;
     float ceiling_ = 1.0f;
+    float report_threshold_ = 1.0f;
     float attack_step_ = 1.0f;
     float release_step_ = 0.0f;
 

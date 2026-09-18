@@ -22,18 +22,18 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AP-03 | Bordas chanfradas com luz no topo-esquerda | MANUAL | M5 | OK (M5) |
 | AP-04 | Tipografia bitmap compacta e legível em 1× | MANUAL | M5 | OK (M5) |
 | AP-05 | Botões com estados normal, pressionado, ativo, desabilitado e foco | MANUAL | M5 | OK (M5) |
-| AP-06 | Três painéis: principal, equalizador, playlist | MANUAL | M5 | PARCIAL (M5) — painel principal em sprites; equalizador e playlist ainda em widgets Qt |
-| AP-07 | Exibição e ocultação independentes de cada painel | AUTO + MANUAL | M5 | PARCIAL (M5) — exibicao/ocultacao funciona; geometria persiste; falta modo compacto |
+| AP-06 | Três painéis: principal, equalizador, playlist | MANUAL | M5 | OK (M5) |
+| AP-07 | Exibição e ocultação independentes de cada painel | AUTO + MANUAL | M5 | OK (M5) |
 | AP-08 | Encaixe magnético entre janelas destacadas (limiar 10 px), onde a plataforma permite | MANUAL | M5 | PENDENTE |
 | AP-09 | Janelas destacadas encostadas movem-se como grupo, onde a plataforma permite | MANUAL | M5 | PENDENTE |
-| AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | PARCIAL (M5) — posicao, tamanho e visibilidade persistem; agrupamento so no modo destacado |
-| AP-11 | Modo compacto (barra) | MANUAL | M5 | PENDENTE |
+| AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | OK (M5) |
+| AP-11 | Modo compacto (barra) | MANUAL | M5 | OK (M5) |
 | AP-12 | Escala inteira 1×/2×/3× sem recorte de texto | MANUAL | M5 | OK (M5) |
 | AP-13 | Áreas clicáveis escalam junto com a interface | MANUAL | M5 | OK (M5) |
 | AP-14 | Recuperação de janela fora da área visível: faixa de arraste (altura min(16,h)) com < 64 px visíveis → realoca | AUTO | M5 | OK (M5) |
 | AP-15 | Ausência de seleção de skins, importação de temas ou personalização estrutural | MANUAL | M5 | OK (M5) |
 | AP-16 | Atlas de sprites redesenhado, sem redistribuir assets de terceiros | MANUAL | M5 | OK (M5) |
-| AP-17 | Modo integrado: três painéis em uma janela, funcional em todas as plataformas, inclusive Wayland | MANUAL | M5 | PENDENTE |
+| AP-17 | Modo integrado: três painéis em uma janela, funcional em todas as plataformas, inclusive Wayland | MANUAL | M5 | OK (M5) |
 | AP-18 | Modo destacado: onde o encaixe é indisponível, a opção aparece desabilitada com explicação, nunca aceita o clique sem efeito | MANUAL | M5 | PENDENTE |
 
 ## PL — Player principal (spec §3)
@@ -148,8 +148,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | LI-01 | Inclusão de arquivos e pastas por diálogo | MANUAL | M2 | OK (M2) |
 | LI-02 | Inclusão por drag-and-drop | MANUAL | M2 | OK (M2) |
 | LI-03 | Busca recursiva opcional em diretórios | AUTO | M2 | OK (M2) |
-| LI-04 | Reordenação por arrastar | MANUAL | M5 | OK (M2) |
-| LI-05 | Seleção múltipla | MANUAL | M5 | OK (M2) |
+| LI-04 | Reordenação por arrastar | MANUAL | M5 | PENDENTE — painel em sprites ainda sem arraste |
+| LI-05 | Seleção múltipla | MANUAL | M5 | OK (M5) |
 | LI-06 | Remoção de itens sem excluir os arquivos originais | AUTO | M2 | OK (M2) |
 | LI-07 | Limpeza da lista | AUTO | M2 | OK (M2) |
 | LI-08 | Ordenação por título, artista, álbum, duração e caminho | AUTO | M2 | OK (M2) |
@@ -182,7 +182,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
 | IN-01 | Atalhos de teclado documentados | MANUAL | M6 | PENDENTE |
-| IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | PARCIAL (M5) — painel principal operavel por teclado; playlist e EQ usam foco do Qt |
+| IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | OK (M5) |
 | IN-03 | Nomes acessíveis e tooltips | MANUAL | M6 | PENDENTE |
 | IN-04 | Integração com teclas multimídia | MANUAL | M6 | PENDENTE |
 | IN-05 | Integração MPRIS no Linux | MANUAL | M6 | PENDENTE |

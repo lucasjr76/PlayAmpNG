@@ -670,46 +670,76 @@
    7
   ],
   "frame/panel": [
-   306,
+   451,
    57,
    8,
    8
   ],
   "frame/titlebar": [
-   324,
+   469,
    57,
    8,
    14
   ],
   "frame/well": [
-   315,
+   460,
    57,
    8,
    8
   ],
   "slider/groove": [
-   297,
+   442,
    57,
    8,
    8
   ],
   "slider/thumb/active": [
-   285,
+   430,
    57,
    11,
    11
   ],
   "slider/thumb/normal": [
-   261,
+   406,
    57,
    11,
    11
   ],
   "slider/thumb/pressed": [
-   273,
+   418,
    57,
    11,
    11
+  ],
+  "toggle/blank/active": [
+   319,
+   57,
+   28,
+   13
+  ],
+  "toggle/blank/disabled": [
+   348,
+   57,
+   28,
+   13
+  ],
+  "toggle/blank/focus": [
+   377,
+   57,
+   28,
+   13
+  ],
+  "toggle/blank/normal": [
+   261,
+   57,
+   28,
+   13
+  ],
+  "toggle/blank/pressed": [
+   290,
+   57,
+   28,
+   13
   ],
   "toggle/eq/active": [
    29,

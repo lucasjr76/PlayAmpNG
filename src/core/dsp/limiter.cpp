@@ -9,6 +9,14 @@ void Limiter::configure(int sample_rate, int channels) {
     channels_ = channels;
     lookahead_ = std::max(1, static_cast<int>(kLookaheadSeconds * sample_rate));
     ceiling_ = std::pow(10.0f, kCeilingDb / 20.0f);
+    // Margem de contagem de um milionesimo do teto, cerca de 1e-5 dB.
+    //
+    // O clamp continua valendo bit a bit; o que esta margem muda e o que conta
+    // como ATUACAO. Sem ela, o contador registrava o arredondamento de
+    // ceiling/pico * pico, que em float32 erra por um ULP — 6e-8 acima do teto,
+    // medido em material real. Contar isso como "o lookahead falhou" acendia o
+    // indicador de clipping sem nada de errado ter acontecido.
+    report_threshold_ = ceiling_ * (1.0f + 1e-6f);
 
     delay_.assign(static_cast<std::size_t>(lookahead_) * channels, 0.0f);
     delay_pos_ = 0;
@@ -20,10 +28,12 @@ void Limiter::configure(int sample_rate, int channels) {
     wedge_front_ = wedge_back_ = 0;
     sample_counter_ = 0;
 
-    // Passo de ataque: 1/lookahead por amostra garante alcancar QUALQUER alvo
-    // dentro da janela, porque o ganho vive em [0, 1]. E essa a garantia dura
-    // que o ataque exponencial de um limitador sem lookahead nao da.
-    attack_step_ = 1.0f / static_cast<float>(lookahead_);
+    // Passo de ataque: alcanca qualquer alvo dentro da janela de lookahead,
+    // porque o ganho vive em [0, 1]. Duas amostras de folga em vez do limite
+    // justo — nao porque o limite justo falhe, mas porque depender de uma
+    // desigualdade que fecha no ultimo passo e o tipo de coisa que quebra
+    // quando alguem mudar o tamanho da janela.
+    attack_step_ = 1.0f / static_cast<float>(std::max(1, lookahead_ - 2));
     release_step_ = 1.0f / (kReleaseSeconds * static_cast<float>(sample_rate));
 
     gain_ = 1.0f;
@@ -95,11 +105,11 @@ void Limiter::process(float* interleaved, std::uint32_t frames) noexcept {
             // Clamp rigido: a garantia dura de que o teto vale bit a bit. Se o
             // lookahead estiver correto, nunca atua.
             if (out > ceiling_) {
+                if (out > report_threshold_) clamp_hits_.fetch_add(1, std::memory_order_relaxed);
                 out = ceiling_;
-                clamp_hits_.fetch_add(1, std::memory_order_relaxed);
             } else if (out < -ceiling_) {
+                if (out < -report_threshold_) clamp_hits_.fetch_add(1, std::memory_order_relaxed);
                 out = -ceiling_;
-                clamp_hits_.fetch_add(1, std::memory_order_relaxed);
             }
             frame[c] = out;
         }

@@ -354,6 +354,20 @@ def build_atlas():
                             cell.set(x + index * (GLYPH_WIDTH + 1) + i, 3 + j, colour)
             place('toggle/%s/%s' % (name, state), cell)
 
+    # --- botao sem rotulo, para quem desenha o proprio texto por cima
+    #
+    # Os alternadores tem o rotulo assado no sprite. Reaproveita-los para outros
+    # botoes e escrever por cima sobrepoe os dois textos — foi o que aconteceu
+    # no rodape da playlist e nos botoes do equalizador.
+    for state, face, raised, focus in BUTTON_STATES:
+        cell = Canvas(28, 13)
+        cell.bevel(0, 0, 28, 13, face, raised)
+        if focus:
+            for i in range(0, 28, 2):
+                cell.set(i, 1, FOCUS)
+                cell.set(i, 11, FOCUS)
+        place('toggle/blank/%s' % state, cell)
+
     # --- pecas de slider
     for state, face, raised, _ in BUTTON_STATES[:3]:
         cell = Canvas(11, 11)

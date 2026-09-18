@@ -467,3 +467,48 @@ Registradas em `docs/APROXIMACOES.md`: coordenadas, paleta, desenho dos glifos e
 ### Requisitos atendidos
 
 21 em `OK (M5)`, 4 em `PARCIAL`. Total acumulado: 126 de 175 com estado diferente de `PENDENTE`.
+
+---
+
+## M5, segunda parte — modo integrado e painéis em sprites
+
+Data: 2026-09-18
+
+Suíte: `ctest` 9/9 verdes.
+
+### Defeitos de teste manual corrigidos
+
+Os três problemas que você relatou tinham a mesma causa estrutural — janelas de topo separadas — e o modo integrado os elimina por construção, em vez de remendar cada um:
+
+| # | Observação | Situação |
+|---|---|---|
+| A-1 | Painéis não abrem nem fecham juntos | **Corrigido** — são filhos de uma janela só |
+| A-2 | Larguras diferentes | **Corrigido** — os três têm 275 px |
+| A-3 | **Fechar a principal deixava o app inacessível** | **Corrigido** — existe uma janela só; fechá-la encerra |
+| A-4 | Equalizador e playlist destoavam | **Corrigido** — os dois desenhados com o atlas |
+| A-5 | Compositor *tiling* empilhava e redimensionava | **Corrigido no modo integrado** — janela única, flutuante, 550 × 764 px na escala 2× |
+
+### Verificação visual
+
+Capturada com `grim`, escala 2×, pasta com 155 faixas:
+
+- **Painel principal** — tempo em sete segmentos, espectro com picos, `192K 44H STEREO`, título em rolagem, transporte, EQ/PL/SHUF/REP.
+- **Equalizador** — preamp mais dez bandas com trilho, marca do zero e rótulos de frequência; `ON`, `RST`, `PRE` e o nome do preset corrente.
+- **Playlist** — lista virtualizada com faixa em reprodução em verde e demais em cinza, duração por item, barra de rolagem, rodapé com seis botões e `155  10:20:25`.
+
+### Defeito encontrado na primeira captura
+
+Os rótulos do rodapé saíam **sobrepostos**: eu reaproveitei o sprite `toggle/playlist`, que já tem `PL` desenhado dentro, e escrevi `ARQ` por cima. O mesmo acontecia nos três botões do equalizador. Corrigido acrescentando `toggle/blank/*` ao atlas — um botão sem rótulo assado, para quem desenha o próprio texto.
+
+### Duas correções de leitura
+
+- **Total da playlist** passava de uma hora e saía como `620:25`, que não se lê. Acima de 60 minutos o campo ganha o dígito de hora: `10:20:25`.
+- **LI-09 regrediria.** A caixa de busca era um widget Qt e saiu junto com eles. Em 275 px uma caixa de texto custaria uma linha inteira, então a busca virou **digitação direta na lista**: as teclas acumulam por um segundo, o primeiro resultado é selecionado e centralizado. O núcleo da busca é o mesmo `Playlist::find` já testado.
+
+### Regressão consciente
+
+**LI-04** (reordenação por arrastar) voltou a `PENDENTE`: existia no `QListView` e ainda não foi reimplementada no painel em sprites. Marcar como `OK` porque já funcionou uma vez seria falso.
+
+### Requisitos atendidos
+
+`AP-06`, `AP-07`, `AP-10`, `AP-11`, `AP-17`, `LI-05` e `IN-02` passam a `OK (M5)`.
