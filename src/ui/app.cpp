@@ -82,6 +82,21 @@ const char* repeat_label(Repeat r) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    // O aplicativo faz a PROPRIA escala, em multiplos inteiros e com vizinho
+    // mais proximo. Precisa, portanto, receber pixels fisicos 1:1 do Qt.
+    //
+    // Sem isto, num monitor com escala fracionaria — 1,6 na maquina de
+    // desenvolvimento — o Qt multiplica cada coordenada por 1,6 e reamostra:
+    // uma barra de 3 px vira 4,8 fisicos e alterna entre 4 e 5, uma linha de
+    // 1 px vira 1,6, e todo o trabalho de alinhamento em pixel se perde antes
+    // de chegar a tela. Era essa a causa das barras irregulares e do aspecto
+    // borrado geral.
+    //
+    // Floor leva qualquer fator fracionario a 1. Quem escolhe o tamanho e o
+    // usuario, pelo controle de escala do proprio player.
+    QApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::Floor);
+
     QApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("PlayAmpNG"));
     app.setApplicationVersion(QStringLiteral(PLAYAMPNG_VERSION));
@@ -139,6 +154,39 @@ int main(int argc, char** argv) {
     }
 
     pang::ui::settings::AppState saved = pang::ui::settings::load();
+
+    // Confere que a premissa acima se sustenta: se algum ambiente ainda
+    // entregar ratio diferente de 1, o desenho sai reamostrado e e melhor
+    // dizer do que deixar o usuario achar que o player e borrado.
+    if (const QScreen* screen = QGuiApplication::primaryScreen()) {
+        if (screen->devicePixelRatio() != 1.0)
+            pang::core::log::warn(
+                "o sistema entregou devicePixelRatio != 1; o desenho sera reamostrado");
+
+        // AP-12 — aviso de saida com escala fracionaria.
+        //
+        // O player desenha pixel a pixel e escala por multiplos inteiros. Se a
+        // SAIDA tiver escala fracionaria, o resultado e reamostrado depois do
+        // nosso buffer, e nada no aplicativo alcanca isso: com saida em 1,6 e
+        // arte em 2x, cada pixel de arte vira 3,2 pixels de tela, entao uma
+        // barra de 3 px alterna entre 9 e 10 px e toda aresta borra.
+        //
+        // Medido nesta maquina: janela de 550x232 logicos -> framebuffer de
+        // 880x371. Escalas de arte 1, 2, 3 e 4 dao 1,6 / 3,2 / 4,8 / 6,4.
+        //
+        // Dizer isso em voz alta e melhor que deixar o usuario concluir que o
+        // player e borrado.
+        const QSize logical = screen->geometry().size();
+        const QSize physical = screen->size() * screen->devicePixelRatio();
+        const qreal ratio = logical.width() > 0
+                                ? static_cast<qreal>(physical.width()) / logical.width()
+                                : 1.0;
+        if (std::fabs(ratio - std::round(ratio)) > 0.01)
+            pang::core::log::warn(
+                "a saida usa escala fracionaria; o desenho sera reamostrado e as "
+                "arestas perdem nitidez. Para o player ficar exato, use uma escala "
+                "inteira de monitor (1 ou 2).");
+    }
     atlas.set_scale(saved.scale);
 
     engine->set_volume(saved.volume);
