@@ -49,8 +49,24 @@ bool save(const AppState& state) {
         presets.append(object);
     }
 
+    const auto geometry_to_json = [](const std::array<int, 4>& g) {
+        QJsonArray array;
+        for (int v : g) array.append(v);
+        return array;
+    };
+
+    QJsonObject layout;
+    layout[QStringLiteral("scale")] = state.scale;
+    layout[QStringLiteral("visualization")] = state.visualization;
+    layout[QStringLiteral("playlist_visible")] = state.playlist_visible;
+    layout[QStringLiteral("equalizer_visible")] = state.equalizer_visible;
+    layout[QStringLiteral("main")] = geometry_to_json(state.main_geometry);
+    layout[QStringLiteral("playlist")] = geometry_to_json(state.playlist_geometry);
+    layout[QStringLiteral("equalizer")] = geometry_to_json(state.equalizer_geometry);
+
     QJsonObject root;
     root[QStringLiteral("version")] = 1;
+    root[QStringLiteral("layout")] = layout;
     root[QStringLiteral("volume")] = state.volume;
     root[QStringLiteral("balance")] = state.balance;
     root[QStringLiteral("shuffle")] = state.shuffle;
@@ -111,6 +127,24 @@ AppState load() {
     state.eq.bypass = eq[QStringLiteral("bypass")].toBool(false);
     state.eq.preamp_db = static_cast<float>(eq[QStringLiteral("preamp_db")].toDouble(0.0));
     state.eq.bands = bands_from_json(eq[QStringLiteral("bands")].toArray());
+
+    const auto geometry_from_json = [](const QJsonArray& array, std::array<int, 4> fallback) {
+        if (array.size() != 4) return fallback;
+        return std::array<int, 4>{array[0].toInt(), array[1].toInt(), array[2].toInt(),
+                                  array[3].toInt()};
+    };
+
+    const QJsonObject layout = root[QStringLiteral("layout")].toObject();
+    state.scale = qBound(1, layout[QStringLiteral("scale")].toInt(2), 4);
+    state.visualization = layout[QStringLiteral("visualization")].toInt(0);
+    state.playlist_visible = layout[QStringLiteral("playlist_visible")].toBool(true);
+    state.equalizer_visible = layout[QStringLiteral("equalizer_visible")].toBool(false);
+    state.main_geometry = geometry_from_json(layout[QStringLiteral("main")].toArray(),
+                                             state.main_geometry);
+    state.playlist_geometry = geometry_from_json(layout[QStringLiteral("playlist")].toArray(),
+                                                 state.playlist_geometry);
+    state.equalizer_geometry = geometry_from_json(layout[QStringLiteral("equalizer")].toArray(),
+                                                  state.equalizer_geometry);
 
     for (const QJsonValue& value : root[QStringLiteral("user_presets")].toArray()) {
         const QJsonObject object = value.toObject();

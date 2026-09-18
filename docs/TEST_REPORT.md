@@ -406,3 +406,64 @@ Terceira vez nesta sessão que uma asserção passa por acidente. As três tinha
 ### Requisitos atendidos
 
 18 em `OK (M4)`. Total acumulado: 101 de 175 com estado diferente de `PENDENTE`.
+
+---
+
+## M5, primeira parte — painel principal em sprites
+
+Data: 2026-09-18
+
+Suíte: `ctest` 9/9 verdes (acrescentou `recovery`).
+
+### O atlas
+
+Gerado por `tools/make_skin.py`: **512 × 320 px, 130 sprites, 3,5 KB**. Sem dependências — o escritor de PNG usa só `zlib` da biblioteca padrão, então qualquer máquina com Python regenera a arte.
+
+A decisão de manter a arte em código, e não em binário, se pagou na primeira hora: os dois defeitos abaixo foram encontrados e corrigidos como diff de texto.
+
+### AP-14 — recuperação de janela fora da área visível
+
+Teste próprio (`recovery`), headless, ligado apenas a QtCore:
+
+| Caso | Resultado |
+|---|---|
+| Janela inteiramente na tela | alcançável |
+| **Barra compacta de 275 × 14 px** | **alcançável** — a regra antiga, de interseção 64 × 64 px, a reprovaria |
+| Deslocada para fora pela esquerda | não alcançável |
+| Corpo visível com a faixa de arraste acima do topo | **não alcançável** — não há por onde pegar |
+| 40 px de faixa visível | não alcançável |
+| 120 px de faixa visível | alcançável |
+| Janela no segundo monitor, com o monitor presente | alcançável |
+| O mesmo retângulo, com o monitor removido | não alcançável, e o resgate a traz de volta |
+| Janela já alcançável | não é movida |
+
+### Verificação visual
+
+Capturada com `grim` e conferida no pixel. O painel abre em 550 × 232 px, que é 275 × 116 na escala 2×, com o compositor tratando-o como flutuante.
+
+Confirmado na imagem: barra de título própria com faixas, mostrador de tempo em sete segmentos, espectro de 19 barras com marcadores de pico, `192K 44H STEREO` lido do arquivo real, título da faixa em fonte bitmap, seis botões de transporte com chanfro, alternadores EQ/PL/SHUF/REP, e os poços escuros de volume, balanço e posição.
+
+### Dois defeitos encontrados na inspeção da imagem
+
+1. **Todo texto saía como glifo de fallback.** `QString::arg(character.unicode())` resolve para a sobrecarga de `QChar` e monta `"font/P"` em vez de `"font/80"`. Nenhum nome de sprite batia, e cada letra virava o retângulo de fallback. Corrigido com cast explícito para `int`.
+
+2. **Vários glifos da fonte tinham comprimento errado.** Escritos como uma string contínua de 35 caracteres, alguns saíram com 31 ou 33 — e um glifo curto desloca todas as linhas seguintes, transformando a letra em outra. O sintoma foi `PLAYAMPNG` aparecer como `PLPYPFFNG`. A tabela foi reescrita linha a linha e o gerador passou a **validar a forma e falhar alto**: um glifo com número errado de colunas agora interrompe a geração em vez de desenhar errado em silêncio.
+
+Nenhum dos dois apareceria em teste automatizado de lógica. Apareceram em dois minutos olhando a captura — inspeção visual é o instrumento certo para requisito visual, e está registrada como tal.
+
+### Aproximações
+
+Registradas em `docs/APROXIMACOES.md`: coordenadas, paleta, desenho dos glifos e curvas de preset são próprios; dimensão, densidade, organização e estados de botão seguem o clássico.
+
+### Parcial e não verificado
+
+- **AP-06** `PARCIAL` — só o painel principal está em sprites; equalizador e playlist continuam em widgets Qt estilizados.
+- **AP-07** `PARCIAL` — exibir e ocultar funciona e a geometria persiste; falta o modo compacto.
+- **AP-10** `PARCIAL` — posição, tamanho e visibilidade persistem; agrupamento depende do modo destacado.
+- **IN-02** `PARCIAL` — o painel principal é inteiramente operável por teclado; playlist e EQ usam a navegação padrão do Qt.
+- **AP-08, AP-09, AP-11, AP-17, AP-18** seguem `PENDENTE`.
+- **IN-11** (restaurar sessão sem iniciar áudio) ainda não se aplica: a playlist da sessão não é restaurada.
+
+### Requisitos atendidos
+
+21 em `OK (M5)`, 4 em `PARCIAL`. Total acumulado: 126 de 175 com estado diferente de `PENDENTE`.

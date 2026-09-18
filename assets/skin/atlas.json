@@ -1,0 +1,841 @@
+{
+ "digit": {
+  "height": 13,
+  "width": 9
+ },
+ "glyph": {
+  "height": 7,
+  "width": 5
+ },
+ "note": "Gerado por tools/make_skin.py. Arte propria; nenhum bitmap de terceiros e redistribuido.",
+ "palette": {
+  "background": [
+   42,
+   42,
+   42
+  ],
+  "bevel_dark": [
+   16,
+   16,
+   16
+  ],
+  "bevel_light": [
+   96,
+   96,
+   96
+  ],
+  "focus": [
+   0,
+   190,
+   100
+  ],
+  "gray_text": [
+   150,
+   150,
+   150
+  ],
+  "green": [
+   0,
+   255,
+   127
+  ],
+  "green_dim": [
+   0,
+   120,
+   60
+  ],
+  "well": [
+   24,
+   24,
+   24
+  ]
+ },
+ "sprites": {
+  "button/eject/active": [
+   120,
+   38,
+   23,
+   18
+  ],
+  "button/eject/disabled": [
+   144,
+   38,
+   23,
+   18
+  ],
+  "button/eject/focus": [
+   168,
+   38,
+   23,
+   18
+  ],
+  "button/eject/normal": [
+   72,
+   38,
+   23,
+   18
+  ],
+  "button/eject/pressed": [
+   96,
+   38,
+   23,
+   18
+  ],
+  "button/next/active": [
+   0,
+   38,
+   23,
+   18
+  ],
+  "button/next/disabled": [
+   24,
+   38,
+   23,
+   18
+  ],
+  "button/next/focus": [
+   48,
+   38,
+   23,
+   18
+  ],
+  "button/next/normal": [
+   456,
+   19,
+   23,
+   18
+  ],
+  "button/next/pressed": [
+   480,
+   19,
+   23,
+   18
+  ],
+  "button/pause/active": [
+   264,
+   19,
+   23,
+   18
+  ],
+  "button/pause/disabled": [
+   288,
+   19,
+   23,
+   18
+  ],
+  "button/pause/focus": [
+   312,
+   19,
+   23,
+   18
+  ],
+  "button/pause/normal": [
+   216,
+   19,
+   23,
+   18
+  ],
+  "button/pause/pressed": [
+   240,
+   19,
+   23,
+   18
+  ],
+  "button/play/active": [
+   144,
+   19,
+   23,
+   18
+  ],
+  "button/play/disabled": [
+   168,
+   19,
+   23,
+   18
+  ],
+  "button/play/focus": [
+   192,
+   19,
+   23,
+   18
+  ],
+  "button/play/normal": [
+   96,
+   19,
+   23,
+   18
+  ],
+  "button/play/pressed": [
+   120,
+   19,
+   23,
+   18
+  ],
+  "button/previous/active": [
+   24,
+   19,
+   23,
+   18
+  ],
+  "button/previous/disabled": [
+   48,
+   19,
+   23,
+   18
+  ],
+  "button/previous/focus": [
+   72,
+   19,
+   23,
+   18
+  ],
+  "button/previous/normal": [
+   486,
+   0,
+   23,
+   18
+  ],
+  "button/previous/pressed": [
+   0,
+   19,
+   23,
+   18
+  ],
+  "button/stop/active": [
+   384,
+   19,
+   23,
+   18
+  ],
+  "button/stop/disabled": [
+   408,
+   19,
+   23,
+   18
+  ],
+  "button/stop/focus": [
+   432,
+   19,
+   23,
+   18
+  ],
+  "button/stop/normal": [
+   336,
+   19,
+   23,
+   18
+  ],
+  "button/stop/pressed": [
+   360,
+   19,
+   23,
+   18
+  ],
+  "digit/45": [
+   476,
+   0,
+   9,
+   13
+  ],
+  "digit/48": [
+   366,
+   0,
+   9,
+   13
+  ],
+  "digit/49": [
+   376,
+   0,
+   9,
+   13
+  ],
+  "digit/50": [
+   386,
+   0,
+   9,
+   13
+  ],
+  "digit/51": [
+   396,
+   0,
+   9,
+   13
+  ],
+  "digit/52": [
+   406,
+   0,
+   9,
+   13
+  ],
+  "digit/53": [
+   416,
+   0,
+   9,
+   13
+  ],
+  "digit/54": [
+   426,
+   0,
+   9,
+   13
+  ],
+  "digit/55": [
+   436,
+   0,
+   9,
+   13
+  ],
+  "digit/56": [
+   446,
+   0,
+   9,
+   13
+  ],
+  "digit/57": [
+   456,
+   0,
+   9,
+   13
+  ],
+  "digit/58": [
+   466,
+   0,
+   9,
+   13
+  ],
+  "font/32": [
+   216,
+   0,
+   5,
+   7
+  ],
+  "font/33": [
+   306,
+   0,
+   5,
+   7
+  ],
+  "font/34": [
+   336,
+   0,
+   5,
+   7
+  ],
+  "font/35": [
+   330,
+   0,
+   5,
+   7
+  ],
+  "font/37": [
+   300,
+   0,
+   5,
+   7
+  ],
+  "font/38": [
+   294,
+   0,
+   5,
+   7
+  ],
+  "font/39": [
+   282,
+   0,
+   5,
+   7
+  ],
+  "font/40": [
+   258,
+   0,
+   5,
+   7
+  ],
+  "font/41": [
+   264,
+   0,
+   5,
+   7
+  ],
+  "font/42": [
+   318,
+   0,
+   5,
+   7
+  ],
+  "font/43": [
+   288,
+   0,
+   5,
+   7
+  ],
+  "font/44": [
+   228,
+   0,
+   5,
+   7
+  ],
+  "font/45": [
+   240,
+   0,
+   5,
+   7
+  ],
+  "font/46": [
+   222,
+   0,
+   5,
+   7
+  ],
+  "font/47": [
+   252,
+   0,
+   5,
+   7
+  ],
+  "font/48": [
+   156,
+   0,
+   5,
+   7
+  ],
+  "font/49": [
+   162,
+   0,
+   5,
+   7
+  ],
+  "font/50": [
+   168,
+   0,
+   5,
+   7
+  ],
+  "font/51": [
+   174,
+   0,
+   5,
+   7
+  ],
+  "font/52": [
+   180,
+   0,
+   5,
+   7
+  ],
+  "font/53": [
+   186,
+   0,
+   5,
+   7
+  ],
+  "font/54": [
+   192,
+   0,
+   5,
+   7
+  ],
+  "font/55": [
+   198,
+   0,
+   5,
+   7
+  ],
+  "font/56": [
+   204,
+   0,
+   5,
+   7
+  ],
+  "font/57": [
+   210,
+   0,
+   5,
+   7
+  ],
+  "font/58": [
+   234,
+   0,
+   5,
+   7
+  ],
+  "font/60": [
+   342,
+   0,
+   5,
+   7
+  ],
+  "font/61": [
+   324,
+   0,
+   5,
+   7
+  ],
+  "font/62": [
+   348,
+   0,
+   5,
+   7
+  ],
+  "font/63": [
+   312,
+   0,
+   5,
+   7
+  ],
+  "font/64": [
+   354,
+   0,
+   5,
+   7
+  ],
+  "font/65": [
+   0,
+   0,
+   5,
+   7
+  ],
+  "font/66": [
+   6,
+   0,
+   5,
+   7
+  ],
+  "font/67": [
+   12,
+   0,
+   5,
+   7
+  ],
+  "font/68": [
+   18,
+   0,
+   5,
+   7
+  ],
+  "font/69": [
+   24,
+   0,
+   5,
+   7
+  ],
+  "font/70": [
+   30,
+   0,
+   5,
+   7
+  ],
+  "font/71": [
+   36,
+   0,
+   5,
+   7
+  ],
+  "font/72": [
+   42,
+   0,
+   5,
+   7
+  ],
+  "font/73": [
+   48,
+   0,
+   5,
+   7
+  ],
+  "font/74": [
+   54,
+   0,
+   5,
+   7
+  ],
+  "font/75": [
+   60,
+   0,
+   5,
+   7
+  ],
+  "font/76": [
+   66,
+   0,
+   5,
+   7
+  ],
+  "font/77": [
+   72,
+   0,
+   5,
+   7
+  ],
+  "font/78": [
+   78,
+   0,
+   5,
+   7
+  ],
+  "font/79": [
+   84,
+   0,
+   5,
+   7
+  ],
+  "font/80": [
+   90,
+   0,
+   5,
+   7
+  ],
+  "font/81": [
+   96,
+   0,
+   5,
+   7
+  ],
+  "font/82": [
+   102,
+   0,
+   5,
+   7
+  ],
+  "font/83": [
+   108,
+   0,
+   5,
+   7
+  ],
+  "font/84": [
+   114,
+   0,
+   5,
+   7
+  ],
+  "font/85": [
+   120,
+   0,
+   5,
+   7
+  ],
+  "font/86": [
+   126,
+   0,
+   5,
+   7
+  ],
+  "font/87": [
+   132,
+   0,
+   5,
+   7
+  ],
+  "font/88": [
+   138,
+   0,
+   5,
+   7
+  ],
+  "font/89": [
+   144,
+   0,
+   5,
+   7
+  ],
+  "font/90": [
+   150,
+   0,
+   5,
+   7
+  ],
+  "font/91": [
+   270,
+   0,
+   5,
+   7
+  ],
+  "font/93": [
+   276,
+   0,
+   5,
+   7
+  ],
+  "font/95": [
+   246,
+   0,
+   5,
+   7
+  ],
+  "font/fallback": [
+   360,
+   0,
+   5,
+   7
+  ],
+  "frame/panel": [
+   306,
+   57,
+   8,
+   8
+  ],
+  "frame/titlebar": [
+   324,
+   57,
+   8,
+   14
+  ],
+  "frame/well": [
+   315,
+   57,
+   8,
+   8
+  ],
+  "slider/groove": [
+   297,
+   57,
+   8,
+   8
+  ],
+  "slider/thumb/active": [
+   285,
+   57,
+   11,
+   11
+  ],
+  "slider/thumb/normal": [
+   261,
+   57,
+   11,
+   11
+  ],
+  "slider/thumb/pressed": [
+   273,
+   57,
+   11,
+   11
+  ],
+  "toggle/eq/active": [
+   29,
+   57,
+   28,
+   13
+  ],
+  "toggle/eq/disabled": [
+   58,
+   57,
+   28,
+   13
+  ],
+  "toggle/eq/focus": [
+   87,
+   57,
+   28,
+   13
+  ],
+  "toggle/eq/normal": [
+   482,
+   38,
+   28,
+   13
+  ],
+  "toggle/eq/pressed": [
+   0,
+   57,
+   28,
+   13
+  ],
+  "toggle/playlist/active": [
+   174,
+   57,
+   28,
+   13
+  ],
+  "toggle/playlist/disabled": [
+   203,
+   57,
+   28,
+   13
+  ],
+  "toggle/playlist/focus": [
+   232,
+   57,
+   28,
+   13
+  ],
+  "toggle/playlist/normal": [
+   116,
+   57,
+   28,
+   13
+  ],
+  "toggle/playlist/pressed": [
+   145,
+   57,
+   28,
+   13
+  ],
+  "toggle/repeat/active": [
+   395,
+   38,
+   28,
+   13
+  ],
+  "toggle/repeat/disabled": [
+   424,
+   38,
+   28,
+   13
+  ],
+  "toggle/repeat/focus": [
+   453,
+   38,
+   28,
+   13
+  ],
+  "toggle/repeat/normal": [
+   337,
+   38,
+   28,
+   13
+  ],
+  "toggle/repeat/pressed": [
+   366,
+   38,
+   28,
+   13
+  ],
+  "toggle/shuffle/active": [
+   250,
+   38,
+   28,
+   13
+  ],
+  "toggle/shuffle/disabled": [
+   279,
+   38,
+   28,
+   13
+  ],
+  "toggle/shuffle/focus": [
+   308,
+   38,
+   28,
+   13
+  ],
+  "toggle/shuffle/normal": [
+   192,
+   38,
+   28,
+   13
+  ],
+  "toggle/shuffle/pressed": [
+   221,
+   38,
+   28,
+   13
+  ]
+ },
+ "transparent": [
+  255,
+  0,
+  255
+ ],
+ "version": 1
+}

@@ -1,8 +1,8 @@
-// Interface provisoria do M2.
+// Montagem da aplicacao.
 //
-// Nao tenta parecer com o Winamp: a aparencia definitiva depende do atlas de
-// sprites e chega no M5. O que esta janela entrega e reproducao real com
-// playlist de verdade, para exercitar a mao o que os testes ja cobrem headless.
+// O painel principal (275x116) e desenhado com sprites do atlas e e a janela
+// primaria. Os paineis de playlist e de equalizador ainda usam widgets Qt
+// estilizados: o tratamento em sprite deles vem na segunda parte do M5.
 
 #include <QAbstractListModel>
 #include <QApplication>
@@ -16,14 +16,14 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QInputDialog>
-#include <QPainter>
-#include <QPaintEvent>
 #include <QLineEdit>
 #include <QListView>
 #include <QMimeData>
 #include <QPushButton>
 #include <QSlider>
 #include <QTimer>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QWidget>
 
 #include <cstring>
@@ -35,13 +35,16 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-#include "core/dsp/analyzer.h"
 #include "core/dsp/presets.h"
+#include "core/util/log.h"
 #include "core/meta/scanner.h"
 #include "core/playlist/m3u.h"
 #include "core/state/controller.h"
 #include "platform/audio_device.h"
+#include "ui/panel/main_panel.h"
 #include "ui/settings.h"
+#include "ui/shell/recovery.h"
+#include "ui/skin/atlas.h"
 
 using pang::core::Repeat;
 using pang::core::State;
@@ -135,117 +138,6 @@ protected:
         if (!paths.isEmpty() && on_drop) on_drop(paths);
         event->acceptProposedAction();
     }
-};
-
-// Visualizacao: espectro e osciloscopio.
-//
-// Provisoria como o resto, mas ja alimentada pelo sinal real: o que ela desenha
-// sai do ponto de captura do engine, pos-equalizador. Nao ha numero aleatorio,
-// animacao pronta nem dado de demonstracao em lugar nenhum (VI-20).
-class VisualizationWidget : public QWidget {
-public:
-    enum class Mode { Off, Spectrum, Scope };
-
-    explicit VisualizationWidget(pang::core::Engine& engine) : engine_(engine) {
-        setMinimumHeight(76);
-        analyzer_.configure(engine.sample_rate(), engine.channels());
-        buffer_.resize(8192);
-    }
-
-    void set_mode(Mode mode) {
-        mode_ = mode;
-        // VI-17 — desligar desliga a captura na origem, e nao so o desenho.
-        engine_.set_capture_enabled(mode != Mode::Off);
-        if (mode == Mode::Off) analyzer_.reset();
-        update();
-    }
-    Mode mode() const { return mode_; }
-
-    // Chamado pelo temporizador da visualizacao, independente do resto da
-    // interface (VI-18).
-    void tick(float dt_seconds, pang::core::State state, int source_rate) {
-        if (mode_ == Mode::Off) return;
-
-        if (source_rate > 0)
-            analyzer_.set_source_nyquist(static_cast<float>(source_rate) / 2.0f);
-
-        // VI-15 — tocando desenha, pausado congela, parado vai a zero.
-        if (state == pang::core::State::Stopped || state == pang::core::State::Error) {
-            analyzer_.reset();
-            update();
-            return;
-        }
-        if (state == pang::core::State::Paused) {
-            analyzer_.hold();
-            update();
-            return;
-        }
-
-        for (;;) {
-            const std::size_t got = engine_.read_visualization(buffer_.data(), buffer_.size());
-            if (got == 0) break;
-            analyzer_.feed(buffer_.data(), got / engine_.channels());
-            if (got < buffer_.size()) break;
-        }
-        analyzer_.advance_peaks(dt_seconds);
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override {
-        QPainter painter(this);
-        painter.fillRect(rect(), QColor(0, 0, 0));
-        if (mode_ == Mode::Off) return;
-
-        if (mode_ == Mode::Scope) {
-            paint_scope(painter);
-            return;
-        }
-        paint_spectrum(painter);
-    }
-
-private:
-    void paint_spectrum(QPainter& painter) {
-        const int bars = pang::core::dsp::SpectrumAnalyzer::kBars;
-        const qreal bar_width = qreal(width()) / bars;
-
-        for (int bar = 0; bar < bars; ++bar) {
-            const qreal x = bar * bar_width;
-            const float value = analyzer_.bars()[static_cast<std::size_t>(bar)];
-            const int bar_height = int(value * height());
-
-            // Verde no grave passando a amarelo no agudo, na linha do classico.
-            const int hue = 120 - 120 * bar / bars / 2;
-            painter.fillRect(QRectF(x + 1, height() - bar_height, bar_width - 2, bar_height),
-                             QColor::fromHsv(hue, 255, 220));
-
-            const int peak_y = height() - int(analyzer_.peaks()[static_cast<std::size_t>(bar)] *
-                                              height());
-            painter.fillRect(QRectF(x + 1, peak_y, bar_width - 2, 2), QColor(200, 200, 200));
-        }
-    }
-
-    void paint_scope(QPainter& painter) {
-        const std::vector<float>& scope = analyzer_.scope();
-        if (scope.empty()) return;
-
-        painter.setPen(QColor(0, 255, 127));
-        const qreal middle = height() / 2.0;
-        const qreal scale = height() / 2.0;
-        QPointF previous(0, middle);
-        for (int x = 0; x < width(); ++x) {
-            const std::size_t index = static_cast<std::size_t>(
-                qreal(x) / width() * (scope.size() - 1));
-            const QPointF point(x, middle - scope[index] * scale);
-            painter.drawLine(previous, point);
-            previous = point;
-        }
-    }
-
-    pang::core::Engine& engine_;
-    pang::core::dsp::SpectrumAnalyzer analyzer_;
-    std::vector<float> buffer_;
-    Mode mode_ = Mode::Spectrum;
 };
 
 // Painel do equalizador. Provisorio como o resto: no M5 vira sprite.
@@ -442,167 +334,103 @@ int main(int argc, char** argv) {
     };
 
     std::string device_error;
-    const bool device_ok =
-        output.start(kPreferredRate, kChannels, render, &bridge, device_error);
-    if (device_ok) {
-        engine = std::make_unique<pang::core::Engine>(output.sample_rate(), output.channels());
-        bridge.engine = engine.get();
-        bridge.channels = output.channels();
-        controller = std::make_unique<pang::core::Controller>(
-            *engine, [&output] { output.suspend(); }, [&output] { output.resume(); });
+    const bool device_ok = output.start(kPreferredRate, kChannels, render, &bridge, device_error);
+    if (!device_ok) {
+        QWidget failure;
+        failure.setWindowTitle(QStringLiteral("PlayAmpNG"));
+        failure.setStyleSheet(QStringLiteral("background:#2a2a2a; color:#00ff7f;"));
+        auto* layout = new QVBoxLayout(&failure);
+        layout->addWidget(new QLabel(QStringLiteral("Sem dispositivo de audio:\n%1")
+                                         .arg(QString::fromStdString(device_error))));
+        failure.show();
+        return app.exec();
     }
 
-    // ------------------------------------------------------------ janela
+    engine = std::make_unique<pang::core::Engine>(output.sample_rate(), output.channels());
+    bridge.engine = engine.get();
+    bridge.channels = output.channels();
+    controller = std::make_unique<pang::core::Controller>(
+        *engine, [&output] { output.suspend(); }, [&output] { output.resume(); });
 
-    Window window;
-    window.setAcceptDrops(true);
-    window.setWindowTitle(QStringLiteral("PlayAmpNG (provisorio — M2)"));
-    window.resize(720, 520);
-    window.setStyleSheet(QStringLiteral(
-        "background:#2b2b2b; color:#00ff7f;"
-        "QListView{background:#1e1e1e;} QLineEdit{background:#1e1e1e;color:#00ff7f;}"));
+    // -------------------------------------------------------------- skin
 
-    auto* status = new QLabel;
-    auto* totals = new QLabel;
-    auto* elapsed = new QLabel(QStringLiteral("--:--"));
-    auto* duration = new QLabel(QStringLiteral("--:--"));
-    auto* position = new QSlider(Qt::Horizontal);
-    auto* volume = new QSlider(Qt::Horizontal);
-    auto* search = new QLineEdit;
+    pang::ui::skin::Atlas atlas;
+    QString atlas_error;
+    if (!atlas.load(QStringLiteral(PLAYAMPNG_SKIN_DIR), atlas_error)) {
+        pang::core::log::error(atlas_error.toStdString());
+        return 1;
+    }
+
+    pang::ui::settings::AppState saved = pang::ui::settings::load();
+    atlas.set_scale(saved.scale);
+
+    engine->set_volume(saved.volume);
+    engine->set_balance(saved.balance);
+    engine->set_replaygain_mode(static_cast<pang::core::ReplayGainMode>(saved.replaygain_mode));
+    pang::core::dsp::apply(engine->equalizer(), saved.eq);  // EQ-09
+    controller->set_shuffle(saved.shuffle);
+    controller->set_repeat(static_cast<Repeat>(saved.repeat));
+
+    // ------------------------------------------------------------ paineis
+
+    pang::ui::MainPanel main_panel(*controller, *engine, atlas);
+    main_panel.setWindowTitle(QStringLiteral("PlayAmpNG"));
+    // A barra de titulo e desenhada pelo proprio painel, como no classico —
+    // por isso a moldura do sistema sai. O sinalizador de dialogo e a dica que
+    // faz compositores em modo tiling tratarem a janela como flutuante.
+    main_panel.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    main_panel.set_visualization(
+        saved.visualization == 1   ? pang::ui::MainPanel::Visualization::Scope
+        : saved.visualization == 2 ? pang::ui::MainPanel::Visualization::Off
+                                   : pang::ui::MainPanel::Visualization::Spectrum);
+
+    auto* eq_panel = new EqualizerPanel(engine->equalizer(), saved.user_presets);
+
+    // --- painel de playlist
+    Window playlist_window;
+    playlist_window.setAcceptDrops(true);
+    playlist_window.setWindowTitle(QStringLiteral("PlayAmpNG — Playlist"));
+    playlist_window.resize(520, 380);
+    playlist_window.setStyleSheet(QStringLiteral(
+        "background:#2a2a2a; color:#00ff7f;"
+        "QListView{background:#181818;} QLineEdit{background:#181818;color:#00ff7f;}"));
+
     auto* list = new QListView;
-
+    auto* search = new QLineEdit;
+    auto* totals = new QLabel;
+    auto* status = new QLabel;
     search->setPlaceholderText(QStringLiteral("buscar..."));
-    volume->setRange(0, 100);
-    volume->setValue(100);
-    position->setRange(0, 1000);
-    position->setEnabled(false);
     list->setSelectionMode(QAbstractItemView::ExtendedSelection);  // LI-05
-    list->setUniformItemSizes(true);
+    list->setUniformItemSizes(true);                               // LI-17
 
-    auto* previous = new QPushButton(QStringLiteral("|<"));
-    auto* play = new QPushButton(QStringLiteral("Tocar"));
-    auto* pause = new QPushButton(QStringLiteral("Pausar"));
-    auto* stop = new QPushButton(QStringLiteral("Parar"));
-    auto* next = new QPushButton(QStringLiteral(">|"));
-    auto* shuffle = new QPushButton(QStringLiteral("Shuffle"));
-    auto* repeat = new QPushButton(QStringLiteral("Repetir: nao"));
     auto* add_files = new QPushButton(QStringLiteral("+ Arquivos"));
     auto* add_dir = new QPushButton(QStringLiteral("+ Pasta"));
     auto* remove_sel = new QPushButton(QStringLiteral("Remover"));
     auto* clear_all = new QPushButton(QStringLiteral("Limpar"));
     auto* import_list = new QPushButton(QStringLiteral("Importar"));
     auto* export_list = new QPushButton(QStringLiteral("Exportar"));
-    auto* eq_button = new QPushButton(QStringLiteral("EQ"));
-    auto* vis_mode = new QComboBox;
-    vis_mode->addItems({QStringLiteral("Espectro"), QStringLiteral("Osciloscopio"),
-                        QStringLiteral("Visualizacao: nao")});
-    auto* balance = new QSlider(Qt::Horizontal);
     auto* replaygain = new QComboBox;
-    shuffle->setCheckable(true);
-    balance->setRange(-100, 100);
-    balance->setValue(0);
     replaygain->addItems({QStringLiteral("ReplayGain: nao"), QStringLiteral("ReplayGain: faixa"),
                           QStringLiteral("ReplayGain: album")});
+    replaygain->setCurrentIndex(saved.replaygain_mode);
 
-    auto* grid = new QGridLayout(&window);
-    int row = 0;
-    grid->addWidget(status, row++, 0, 1, 6);
-    // O widget de visualizacao so existe com dispositivo aberto; a linha fica
-    // reservada aqui e preenchida adiante.
-    const int visualization_row = row++;
-    grid->addWidget(elapsed, row, 0);
-    grid->addWidget(position, row, 1, 1, 4);
-    grid->addWidget(duration, row++, 5);
-    grid->addWidget(new QLabel(QStringLiteral("Vol")), row, 0);
-    grid->addWidget(volume, row++, 1, 1, 5);
-    grid->addWidget(new QLabel(QStringLiteral("Bal")), row, 0);
-    grid->addWidget(balance, row, 1, 1, 3);
-    grid->addWidget(replaygain, row, 4);
-    grid->addWidget(eq_button, row++, 5);
-    grid->addWidget(vis_mode, row++, 0, 1, 6);
-    grid->addWidget(previous, row, 0);
-    grid->addWidget(play, row, 1);
-    grid->addWidget(pause, row, 2);
-    grid->addWidget(stop, row, 3);
-    grid->addWidget(next, row, 4);
-    grid->addWidget(shuffle, row++, 5);
-    grid->addWidget(repeat, row, 0);
-    grid->addWidget(add_files, row, 1);
-    grid->addWidget(add_dir, row, 2);
-    grid->addWidget(remove_sel, row, 3);
-    grid->addWidget(clear_all, row, 4);
-    grid->addWidget(import_list, row++, 5);
-    grid->addWidget(export_list, row, 0);
-    grid->addWidget(search, row++, 1, 1, 5);
-    grid->addWidget(list, row++, 0, 1, 6);
-    grid->addWidget(totals, row, 0, 1, 6);
-    grid->setRowStretch(row - 1, 1);
+    auto* buttons = new QHBoxLayout;
+    for (QPushButton* button : {add_files, add_dir, remove_sel, clear_all, import_list, export_list})
+        buttons->addWidget(button);
 
-    if (!device_ok) {
-        status->setText(QStringLiteral("sem dispositivo de audio: %1")
-                            .arg(QString::fromStdString(device_error)));
-        window.show();
-        return app.exec();
-    }
+    auto* playlist_layout = new QVBoxLayout(&playlist_window);
+    playlist_layout->addWidget(status);
+    playlist_layout->addLayout(buttons);
+    playlist_layout->addWidget(search);
+    playlist_layout->addWidget(list, 1);
+    playlist_layout->addWidget(replaygain);
+    playlist_layout->addWidget(totals);
 
     auto* model = new PlaylistModel(controller->playlist());
     list->setModel(model);
 
-    // --------------------------------------------------- configuracao salva
-    pang::ui::settings::AppState saved = pang::ui::settings::load();
-    engine->set_volume(saved.volume);
-    engine->set_balance(saved.balance);
-    engine->set_replaygain_mode(static_cast<pang::core::ReplayGainMode>(saved.replaygain_mode));
-    pang::core::dsp::apply(engine->equalizer(), saved.eq);   // EQ-09
-    controller->set_shuffle(saved.shuffle);
-    controller->set_repeat(static_cast<Repeat>(saved.repeat));
-    volume->setValue(static_cast<int>(saved.volume * 100.0f));
-    balance->setValue(static_cast<int>(saved.balance * 100.0f));
-    shuffle->setChecked(saved.shuffle);
-    repeat->setText(QString::fromLatin1(repeat_label(controller->repeat())));
-    replaygain->setCurrentIndex(saved.replaygain_mode);
-
-    auto* visualization = new VisualizationWidget(*engine);
-    grid->addWidget(visualization, visualization_row, 0, 1, 6);
-    visualization->set_mode(VisualizationWidget::Mode::Spectrum);
-
-    QObject::connect(vis_mode, &QComboBox::currentIndexChanged, [visualization](int index) {
-        visualization->set_mode(index == 0   ? VisualizationWidget::Mode::Spectrum
-                                : index == 1 ? VisualizationWidget::Mode::Scope
-                                             : VisualizationWidget::Mode::Off);
-    });
-
-    // VI-18 — a visualizacao tem temporizador proprio, a 60 Hz, independente do
-    // de 10 Hz que atualiza textos e barra de progresso.
-    auto* vis_timer = new QTimer(&window);
-    QObject::connect(vis_timer, &QTimer::timeout, [&, visualization] {
-        const auto snap = engine->snapshot();
-        visualization->tick(0.016f, snap.state, snap.sample_rate);
-    });
-    vis_timer->start(16);
-
-    auto* eq_panel = new EqualizerPanel(engine->equalizer(), saved.user_presets);
-    QObject::connect(eq_button, &QPushButton::clicked, [eq_panel] {
-        eq_panel->setVisible(!eq_panel->isVisible());
-    });
-
-    // IN-09 — grava ao sair, atomicamente.
-    QObject::connect(&app, &QApplication::aboutToQuit, [&] {
-        saved.volume = engine->volume();
-        saved.balance = engine->balance();
-        saved.shuffle = controller->shuffle();
-        saved.repeat = static_cast<int>(controller->repeat());
-        saved.replaygain_mode = static_cast<int>(engine->replaygain_mode());
-        saved.eq = pang::core::dsp::capture(engine->equalizer());
-        pang::ui::settings::save(saved);
-        eq_panel->close();
-    });
-
     // ------------------------------------------------- metadados assincronos
-    //
-    // O callback roda no thread do scanner. Os resultados sao acumulados aqui e
-    // aplicados pelo temporizador, no thread da interface — a playlist tem um
-    // dono so.
+
     std::mutex pending_mutex;
     std::vector<pang::core::meta::Scanner::Result> pending;
     pang::core::meta::Scanner scanner([&](const pang::core::meta::Scanner::Result& result) {
@@ -630,19 +458,32 @@ int main(int argc, char** argv) {
         model->refresh();
         scan_missing();
     };
+    playlist_window.on_drop = add_paths;  // LI-02
 
-    window.on_drop = add_paths;  // LI-02
-
-    // ------------------------------------------------------------- acoes
-
-    QObject::connect(add_files, &QPushButton::clicked, [&] {
+    const auto open_files = [&] {
         const QStringList paths =
-            QFileDialog::getOpenFileNames(&window, QStringLiteral("Adicionar arquivos"));
-        if (!paths.isEmpty()) add_paths(paths);
-    });
+            QFileDialog::getOpenFileNames(&main_panel, QStringLiteral("Abrir"));
+        if (!paths.isEmpty()) {
+            const bool was_empty = controller->playlist().empty();
+            add_paths(paths);
+            if (was_empty) controller->play_index(0);
+        }
+    };
+
+    // ------------------------------------------------------------- ligacoes
+
+    main_panel.on_open = open_files;
+    main_panel.on_toggle_equalizer = [eq_panel] { eq_panel->setVisible(!eq_panel->isVisible()); };
+    main_panel.on_toggle_playlist = [&playlist_window] {
+        playlist_window.setVisible(!playlist_window.isVisible());
+    };
+    main_panel.equalizer_visible = [eq_panel] { return eq_panel->isVisible(); };
+    main_panel.playlist_visible = [&playlist_window] { return playlist_window.isVisible(); };
+
+    QObject::connect(add_files, &QPushButton::clicked, open_files);
     QObject::connect(add_dir, &QPushButton::clicked, [&] {
         const QString dir =
-            QFileDialog::getExistingDirectory(&window, QStringLiteral("Adicionar pasta"));
+            QFileDialog::getExistingDirectory(&playlist_window, QStringLiteral("Adicionar pasta"));
         if (!dir.isEmpty()) add_paths({dir});
     });
     QObject::connect(remove_sel, &QPushButton::clicked, [&] {
@@ -660,17 +501,15 @@ int main(int argc, char** argv) {
         scanner.drop_pending();
         model->refresh();
     });
-
     QObject::connect(import_list, &QPushButton::clicked, [&] {
         const QString file = QFileDialog::getOpenFileName(
-            &window, QStringLiteral("Importar playlist"), {},
+            &playlist_window, QStringLiteral("Importar playlist"), {},
             QStringLiteral("Playlists (*.m3u *.m3u8 *.pls)"));
         if (file.isEmpty()) return;
         std::string error;
         const auto tracks = pang::core::playlist_io::load(file.toStdString(), error);
         for (const pang::core::Track& t : tracks) {
             const int index = controller->playlist().add(t.path);
-            // Aproveita titulo e duracao vindos do arquivo; o scanner refina.
             pang::core::Track seed = t;
             seed.metadata_loaded = false;
             controller->playlist().apply_metadata(controller->playlist().at(index).id, seed);
@@ -682,7 +521,7 @@ int main(int argc, char** argv) {
     });
     QObject::connect(export_list, &QPushButton::clicked, [&] {
         const QString file = QFileDialog::getSaveFileName(
-            &window, QStringLiteral("Exportar playlist"), QStringLiteral("playlist.m3u8"),
+            &playlist_window, QStringLiteral("Exportar playlist"), QStringLiteral("playlist.m3u8"),
             QStringLiteral("Playlists (*.m3u8 *.m3u *.pls)"));
         if (file.isEmpty()) return;
         std::string error;
@@ -690,59 +529,32 @@ int main(int argc, char** argv) {
                                            error))
             status->setText(QString::fromStdString(error));
     });
-
     QObject::connect(list, &QListView::doubleClicked,
                      [&](const QModelIndex& index) { controller->play_index(index.row()); });
-
-    QObject::connect(play, &QPushButton::clicked, [&] { controller->play(); });
-    QObject::connect(pause, &QPushButton::clicked, [&] { controller->pause(); });
-    QObject::connect(stop, &QPushButton::clicked, [&] { controller->stop(); });
-    QObject::connect(next, &QPushButton::clicked, [&] { controller->next(); });
-    QObject::connect(previous, &QPushButton::clicked, [&] { controller->previous(); });
-    QObject::connect(shuffle, &QPushButton::toggled,
-                     [&](bool on) { controller->set_shuffle(on); });
-    QObject::connect(repeat, &QPushButton::clicked, [&] {
-        const Repeat current = controller->repeat();
-        const Repeat cycled = current == Repeat::Off     ? Repeat::All
-                              : current == Repeat::All   ? Repeat::Track
-                                                         : Repeat::Off;
-        controller->set_repeat(cycled);
-        repeat->setText(QString::fromLatin1(repeat_label(cycled)));
-    });
-
-    QObject::connect(volume, &QSlider::valueChanged,
-                     [&](int v) { engine->set_volume(static_cast<float>(v) / 100.0f); });
-    QObject::connect(balance, &QSlider::valueChanged,
-                     [&](int v) { engine->set_balance(static_cast<float>(v) / 100.0f); });
     QObject::connect(replaygain, &QComboBox::currentIndexChanged, [&](int index) {
         engine->set_replaygain_mode(static_cast<pang::core::ReplayGainMode>(index));
     });
-
-    QObject::connect(position, &QSlider::sliderReleased, [&] {
-        const auto snap = engine->snapshot();
-        if (snap.duration_frames <= 0) return;
-        const double seconds = static_cast<double>(position->value()) / 1000.0 *
-                               static_cast<double>(snap.duration_frames) / engine->sample_rate();
-        controller->seek(seconds);
-    });
-
-    // LI-09 — busca textual: seleciona e rola ate o primeiro resultado.
     QObject::connect(search, &QLineEdit::textChanged, [&](const QString& text) {
         if (text.isEmpty()) return;
-        const auto hits = controller->playlist().find(text.toStdString());
+        const auto hits = controller->playlist().find(text.toStdString());  // LI-09
         if (hits.empty()) return;
         const QModelIndex index = model->index(hits.front());
         list->setCurrentIndex(index);
         list->scrollTo(index);
     });
 
-    // ------------------------------------------------------------ atualizacao
+    // ------------------------------------------------------------ temporizadores
 
-    auto* timer = new QTimer(&window);
-    QObject::connect(timer, &QTimer::timeout, [&] {
+    // VI-18 — a visualizacao roda a 60 Hz, independente da atualizacao de
+    // textos e da playlist, que a 10 Hz ja e mais que suficiente.
+    auto* frame_timer = new QTimer(&main_panel);
+    QObject::connect(frame_timer, &QTimer::timeout, [&] { main_panel.tick(0.016f); });
+    frame_timer->start(16);
+
+    auto* slow_timer = new QTimer(&main_panel);
+    QObject::connect(slow_timer, &QTimer::timeout, [&] {
         controller->poll();  // PL-24 — avanco no fim da faixa
 
-        // Aplica os metadados lidos em segundo plano.
         std::vector<pang::core::meta::Scanner::Result> ready;
         {
             std::lock_guard<std::mutex> lock(pending_mutex);
@@ -755,37 +567,18 @@ int main(int argc, char** argv) {
         }
 
         const auto snap = engine->snapshot();
-        const int current = controller->current_index();
-        model->set_current(current);
+        model->set_current(controller->current_index());
 
         QString line = QString::fromLatin1(pang::core::to_string(snap.state));
-        if (current >= 0)
-            line = QStringLiteral("[%1/%2] %3  ·  %4")
-                       .arg(current + 1)
-                       .arg(controller->playlist().size())
-                       .arg(QString::fromStdString(
-                           controller->playlist().at(current).display_title()))
-                       .arg(line);
-        if (snap.sample_rate > 0)
-            line += QStringLiteral("  ·  %1 Hz  ·  %2")
-                        .arg(snap.sample_rate)
-                        .arg(snap.channels == 1 ? QStringLiteral("mono")
-                                                : QStringLiteral("estereo"));
-        // PL-26 — bitrate ausente nao vira numero plausivel.
-        line += QStringLiteral("  ·  %1").arg(
-            snap.bitrate_bps > 0 ? QStringLiteral("%1 kbps").arg(snap.bitrate_bps / 1000)
-                                 : QStringLiteral("bitrate -"));
         if (snap.replaygain_present)
             line += QStringLiteral("  ·  RG %1 dB").arg(snap.replaygain_db, 0, 'f', 1);
-        // AU-17 — o usuario ve que o limitador atuou, em vez de so ouvir.
-        if (snap.clamp_hits > 0) line += QStringLiteral("  ·  CLIP");
+        if (snap.clamp_hits > 0) line += QStringLiteral("  ·  CLIP");   // AU-17
+        if (snap.underruns > 0) line += QStringLiteral("  ·  underruns: %1").arg(snap.underruns);
         if (snap.vis_drops > 0)
             line += QStringLiteral("  ·  vis descartados: %1").arg(snap.vis_drops);
-        if (snap.underruns > 0) line += QStringLiteral("  ·  underruns: %1").arg(snap.underruns);
         if (snap.state == State::Error) line = QString::fromStdString(engine->last_error());
         status->setText(line);
 
-        // LI-11 — soma so as duracoes conhecidas, e diz quantas faltam.
         int unknown = 0;
         const std::int64_t known = controller->playlist().known_duration_ms(&unknown);
         totals->setText(
@@ -794,16 +587,66 @@ int main(int argc, char** argv) {
                 .arg(format_ms(known))
                 .arg(unknown > 0 ? QStringLiteral(" (+%1 de duracao desconhecida)").arg(unknown)
                                  : QString()));
-
-        elapsed->setText(format_frames(snap.position_frames, engine->sample_rate()));
-        duration->setText(format_frames(snap.duration_frames, engine->sample_rate()));
-
-        position->setEnabled(snap.seekable && snap.duration_frames > 0);
-        if (!position->isSliderDown() && snap.duration_frames > 0)
-            position->setValue(static_cast<int>(1000.0 * snap.position_frames /
-                                                static_cast<double>(snap.duration_frames)));
     });
-    timer->start(100);
+    slow_timer->start(100);
+
+    // ------------------------------------------------------ posicao das janelas
+
+    const auto screens = [] {
+        QVector<QRect> rects;
+        for (const QScreen* screen : QGuiApplication::screens())
+            rects.append(screen->availableGeometry());
+        return rects;
+    };
+    const QRect primary = QGuiApplication::primaryScreen()->availableGeometry();
+
+    // AP-14 — geometria salva passa pela regra de recuperacao antes de ser
+    // aplicada. Trocar de monitor entre sessoes nao pode esconder a janela.
+    const auto restore = [&](QWidget& widget, const std::array<int, 4>& geometry) {
+        if (geometry[2] <= 0 || geometry[3] <= 0) return;
+        const QRect wanted(geometry[0], geometry[1], geometry[2], geometry[3]);
+        const QRect safe = pang::ui::shell::recover(wanted, screens(), primary);
+        if (safe != wanted)
+            pang::core::log::warn("janela fora da area visivel; reposicionada");
+        widget.move(safe.topLeft());
+        if (&widget != static_cast<QWidget*>(&main_panel)) widget.resize(safe.size());
+    };
+
+    restore(main_panel, saved.main_geometry);
+    restore(playlist_window, saved.playlist_geometry);
+    restore(*eq_panel, saved.equalizer_geometry);
+
+    playlist_window.setVisible(saved.playlist_visible);
+    eq_panel->setVisible(saved.equalizer_visible);
+
+    // IN-09 — grava ao sair, atomicamente.
+    QObject::connect(&app, &QApplication::aboutToQuit, [&] {
+        const auto capture_geometry = [](const QWidget& widget) {
+            const QRect g = widget.frameGeometry();
+            return std::array<int, 4>{g.x(), g.y(), widget.width(), widget.height()};
+        };
+
+        saved.volume = engine->volume();
+        saved.balance = engine->balance();
+        saved.shuffle = controller->shuffle();
+        saved.repeat = static_cast<int>(controller->repeat());
+        saved.replaygain_mode = static_cast<int>(engine->replaygain_mode());
+        saved.eq = pang::core::dsp::capture(engine->equalizer());
+        saved.scale = main_panel.scale();
+        saved.visualization =
+            main_panel.visualization() == pang::ui::MainPanel::Visualization::Scope   ? 1
+            : main_panel.visualization() == pang::ui::MainPanel::Visualization::Off   ? 2
+                                                                                      : 0;
+        saved.playlist_visible = playlist_window.isVisible();
+        saved.equalizer_visible = eq_panel->isVisible();
+        saved.main_geometry = capture_geometry(main_panel);
+        saved.playlist_geometry = capture_geometry(playlist_window);
+        saved.equalizer_geometry = capture_geometry(*eq_panel);
+        pang::ui::settings::save(saved);
+
+        playlist_window.close();
+        eq_panel->close();
+    });
 
     const QStringList args = parser.positionalArguments();
     if (!args.isEmpty()) {
@@ -811,6 +654,6 @@ int main(int argc, char** argv) {
         controller->play_index(0);
     }
 
-    window.show();
+    main_panel.show();
     return app.exec();
 }

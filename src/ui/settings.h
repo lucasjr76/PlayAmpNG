@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "core/dsp/presets.h"
@@ -23,6 +24,16 @@ struct AppState {
 
     core::dsp::EqState eq;
     std::vector<core::dsp::EqPreset> user_presets;  // EQ-07
+
+    // AP-10 — disposicao dos paineis. Geometria como x,y,w,h; w/h em zero
+    // significa "ainda nao salvo", e o padrao vale.
+    int scale = 2;              // AP-12 — 1x e caso de teste, 2x e o util
+    int visualization = 0;      // 0 espectro, 1 osciloscopio, 2 desligado
+    bool playlist_visible = true;
+    bool equalizer_visible = false;
+    std::array<int, 4> main_geometry{0, 0, 0, 0};
+    std::array<int, 4> playlist_geometry{0, 0, 0, 0};
+    std::array<int, 4> equalizer_geometry{0, 0, 0, 0};
 };
 
 // IN-09 — gravacao atomica (temporario + rename), via QSaveFile.

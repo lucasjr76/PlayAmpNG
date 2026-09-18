@@ -17,22 +17,22 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| AP-01 | Janela principal 275×116 px, retangular e de alta densidade | MANUAL | M5 | PENDENTE |
-| AP-02 | Paleta em tons escuros de cinza, mostradores e texto em verde | MANUAL | M5 | PENDENTE |
-| AP-03 | Bordas chanfradas com luz no topo-esquerda | MANUAL | M5 | PENDENTE |
-| AP-04 | Tipografia bitmap compacta e legível em 1× | MANUAL | M5 | PENDENTE |
-| AP-05 | Botões com estados normal, pressionado, ativo, desabilitado e foco | MANUAL | M5 | PENDENTE |
-| AP-06 | Três painéis: principal, equalizador, playlist | MANUAL | M5 | PENDENTE |
-| AP-07 | Exibição e ocultação independentes de cada painel | AUTO + MANUAL | M5 | PENDENTE |
+| AP-01 | Janela principal 275×116 px, retangular e de alta densidade | MANUAL | M5 | OK (M5) |
+| AP-02 | Paleta em tons escuros de cinza, mostradores e texto em verde | MANUAL | M5 | OK (M5) |
+| AP-03 | Bordas chanfradas com luz no topo-esquerda | MANUAL | M5 | OK (M5) |
+| AP-04 | Tipografia bitmap compacta e legível em 1× | MANUAL | M5 | OK (M5) |
+| AP-05 | Botões com estados normal, pressionado, ativo, desabilitado e foco | MANUAL | M5 | OK (M5) |
+| AP-06 | Três painéis: principal, equalizador, playlist | MANUAL | M5 | PARCIAL (M5) — painel principal em sprites; equalizador e playlist ainda em widgets Qt |
+| AP-07 | Exibição e ocultação independentes de cada painel | AUTO + MANUAL | M5 | PARCIAL (M5) — exibicao/ocultacao funciona; geometria persiste; falta modo compacto |
 | AP-08 | Encaixe magnético entre janelas destacadas (limiar 10 px), onde a plataforma permite | MANUAL | M5 | PENDENTE |
 | AP-09 | Janelas destacadas encostadas movem-se como grupo, onde a plataforma permite | MANUAL | M5 | PENDENTE |
-| AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | PENDENTE |
+| AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | PARCIAL (M5) — posicao, tamanho e visibilidade persistem; agrupamento so no modo destacado |
 | AP-11 | Modo compacto (barra) | MANUAL | M5 | PENDENTE |
-| AP-12 | Escala inteira 1×/2×/3× sem recorte de texto | MANUAL | M5 | PENDENTE |
-| AP-13 | Áreas clicáveis escalam junto com a interface | MANUAL | M5 | PENDENTE |
-| AP-14 | Recuperação de janela fora da área visível: faixa de arraste (altura min(16,h)) com < 64 px visíveis → realoca | AUTO | M5 | PENDENTE |
-| AP-15 | Ausência de seleção de skins, importação de temas ou personalização estrutural | MANUAL | M5 | PENDENTE |
-| AP-16 | Atlas de sprites redesenhado, sem redistribuir assets de terceiros | MANUAL | M5 | PENDENTE |
+| AP-12 | Escala inteira 1×/2×/3× sem recorte de texto | MANUAL | M5 | OK (M5) |
+| AP-13 | Áreas clicáveis escalam junto com a interface | MANUAL | M5 | OK (M5) |
+| AP-14 | Recuperação de janela fora da área visível: faixa de arraste (altura min(16,h)) com < 64 px visíveis → realoca | AUTO | M5 | OK (M5) |
+| AP-15 | Ausência de seleção de skins, importação de temas ou personalização estrutural | MANUAL | M5 | OK (M5) |
+| AP-16 | Atlas de sprites redesenhado, sem redistribuir assets de terceiros | MANUAL | M5 | OK (M5) |
 | AP-17 | Modo integrado: três painéis em uma janela, funcional em todas as plataformas, inclusive Wayland | MANUAL | M5 | PENDENTE |
 | AP-18 | Modo destacado: onde o encaixe é indisponível, a opção aparece desabilitada com explicação, nunca aceita o clique sem efeito | MANUAL | M5 | PENDENTE |
 
@@ -52,14 +52,14 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | OK (M3) |
 | PL-11 | Shuffle ligado/desligado | AUTO | M2 | OK (M2) |
 | PL-12 | Repetição: desligada, da faixa, da playlist | AUTO | M2 | OK (M2) |
-| PL-13 | Exibir/ocultar equalizador e playlist pelo player | MANUAL | M5 | PENDENTE |
-| PL-14 | Display: nome da faixa com rolagem para títulos longos | MANUAL | M5 | PENDENTE |
-| PL-15 | Display: tempo decorrido, alternável para tempo restante | AUTO | M5 | PENDENTE |
-| PL-16 | Display: estado da reprodução | MANUAL | M5 | PENDENTE |
-| PL-17 | Display: bitrate quando disponível, vazio quando não | AUTO | M5 | PENDENTE |
-| PL-18 | Display: frequência de amostragem | AUTO | M5 | PENDENTE |
-| PL-19 | Display: indicação mono/estéreo | AUTO | M5 | PENDENTE |
-| PL-20 | Display: posição da faixa na playlist | AUTO | M5 | PENDENTE |
+| PL-13 | Exibir/ocultar equalizador e playlist pelo player | MANUAL | M5 | OK (M5) |
+| PL-14 | Display: nome da faixa com rolagem para títulos longos | MANUAL | M5 | OK (M5) |
+| PL-15 | Display: tempo decorrido, alternável para tempo restante | AUTO | M5 | OK (M5) |
+| PL-16 | Display: estado da reprodução | MANUAL | M5 | OK (M5) |
+| PL-17 | Display: bitrate quando disponível, vazio quando não | AUTO | M5 | OK (M5) |
+| PL-18 | Display: frequência de amostragem | AUTO | M5 | OK (M5) |
+| PL-19 | Display: indicação mono/estéreo | AUTO | M5 | OK (M5) |
+| PL-20 | Display: posição da faixa na playlist | AUTO | M5 | OK (M5) |
 | PL-21 | Barra de progresso acompanha a posição real do backend | MEDIDO | M1 | OK (M1) |
 | PL-22 | Busca temporal quando a fonte suporta | AUTO | M1 | OK (M1) |
 | PL-23 | Busca desabilitada quando a fonte não suporta | AUTO | M6 | PENDENTE |
@@ -108,7 +108,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | VI-07 | Magnitudes em escala logarítmica de amplitude | AUTO | M4 | OK (M4) |
 | VI-08 | Suavização temporal com subida e queda distintas | MANUAL | M4 | OK (M4) |
 | VI-09 | Retenção e queda de picos | MANUAL | M4 | OK (M4) |
-| VI-10 | Cores coerentes com a aparência clássica | MANUAL | M5 | PENDENTE |
+| VI-10 | Cores coerentes com a aparência clássica | MANUAL | M5 | OK (M5) |
 | VI-11 | Barras acima de Nyquist da fonte permanecem vazias | AUTO | M4 | OK (M4) |
 | VI-12 | Silêncio não gera `NaN` nem `inf` | AUTO | M4 | OK (M4) |
 | VI-13 | Canais em oposição de fase não fazem o espectro desaparecer | AUTO | M4 | OK (M4) |
@@ -182,15 +182,15 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
 | IN-01 | Atalhos de teclado documentados | MANUAL | M6 | PENDENTE |
-| IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | PENDENTE |
+| IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | PARCIAL (M5) — painel principal operavel por teclado; playlist e EQ usam foco do Qt |
 | IN-03 | Nomes acessíveis e tooltips | MANUAL | M6 | PENDENTE |
 | IN-04 | Integração com teclas multimídia | MANUAL | M6 | PENDENTE |
 | IN-05 | Integração MPRIS no Linux | MANUAL | M6 | PENDENTE |
 | IN-06 | Opção de manter a janela acima das demais | MANUAL | M6 | PENDENTE |
 | IN-07 | Abertura de arquivos por argumentos de linha de comando | AUTO | M1 | OK (M1) |
 | IN-08 | Arquivo passado a uma instância já aberta é enfileirado nela | MANUAL | M6 | PENDENTE |
-| IN-09 | Gravação atômica de configuração, playlist, presets e layout | AUTO | M5 | PENDENTE |
-| IN-10 | Configuração inválida → renomeia para `.bad`, carrega padrões, registra log | AUTO | M5 | PENDENTE |
+| IN-09 | Gravação atômica de configuração, playlist, presets e layout | AUTO | M5 | OK (M5) |
+| IN-10 | Configuração inválida → renomeia para `.bad`, carrega padrões, registra log | AUTO | M5 | OK (M5) |
 | IN-11 | Restaurar sessão não inicia áudio, salvo preferência explícita | AUTO | M5 | PENDENTE |
 
 ## AR — Arquitetura e qualidade (spec §10)

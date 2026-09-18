@@ -96,9 +96,16 @@ target_link_libraries(pang_probe PRIVATE pang_core pang_platform)
 set_target_properties(pang_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 # ui/ : Qt. Janela provisoria ate o M5.
-qt_add_executable(playampng src/ui/app.cpp src/ui/settings.cpp)
+qt_add_executable(playampng
+  src/ui/app.cpp
+  src/ui/settings.cpp
+  src/ui/shell/recovery.cpp
+  src/ui/skin/atlas.cpp
+  src/ui/panel/main_panel.cpp)
 target_link_libraries(playampng PRIVATE Qt6::Widgets pang_core pang_platform)
-target_compile_definitions(playampng PRIVATE PLAYAMPNG_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(playampng PRIVATE
+  PLAYAMPNG_VERSION="${PROJECT_VERSION}"
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 
 # ------------------------------------------------------------------- testes
 
@@ -144,6 +151,13 @@ target_link_libraries(pang_vis_tests PRIVATE pang_core)
 target_compile_definitions(pang_vis_tests PRIVATE
   PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
 set_target_properties(pang_vis_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_recovery_tests tests/test_recovery.cpp src/ui/shell/recovery.cpp)
+target_include_directories(pang_recovery_tests PRIVATE src)
+target_link_libraries(pang_recovery_tests PRIVATE Qt6::Core)
+set_target_properties(pang_recovery_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME recovery COMMAND pang_recovery_tests)
 
 add_test(NAME visualization COMMAND pang_vis_tests)
 set_tests_properties(visualization PROPERTIES TIMEOUT 120)
