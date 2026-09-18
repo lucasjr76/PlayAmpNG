@@ -273,10 +273,15 @@ void MainPanel::paint_display(QPainter& painter) {
     else
         title = QStringLiteral("PLAYAMPNG");
 
+    // Centrado na altura do POCO, calculado agora: a altura das maiusculas so
+    // se conhece depois de carregar a fonte, entao fixar o y numa constante
+    // deixava o texto fora de centro — era o caso, 3 px acima.
+    const int title_y = kTitleWell.y() + (kTitleWell.height() - atlas_.glyph_height()) / 2;
+
     const int width = atlas_.text_width(title);
     if (width <= kTitle.width()) {
         title_offset_ = 0;
-        atlas_.draw_text(painter, title, kTitle.x(), kTitle.y());
+        atlas_.draw_text(painter, title, kTitle.x(), title_y);
     } else {
         // Rolagem continua: o texto e emendado consigo mesmo com um separador,
         // entao nao ha salto ao dar a volta.
@@ -286,9 +291,9 @@ void MainPanel::paint_display(QPainter& painter) {
 
         painter.save();
         const int s = atlas_.scale();
-        painter.setClipRect(kTitle.x() * s, kTitle.y() * s, kTitle.width() * s,
-                            kTitle.height() * s);
-        atlas_.draw_text(painter, marquee + marquee, kTitle.x() - title_offset_, kTitle.y());
+        painter.setClipRect(kTitle.x() * s, (kTitleWell.y() + 1) * s, kTitle.width() * s,
+                            (kTitleWell.height() - 2) * s);
+        atlas_.draw_text(painter, marquee + marquee, kTitle.x() - title_offset_, title_y);
         painter.restore();
     }
 }

@@ -151,18 +151,32 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
         painter.setPen(atlas_.color(QStringLiteral("green")));
         const int span = kCurve.width() - 6;
         const int half = kCurve.height() / 2 - 2;
+
+        // Interpolacao de Catmull-Rom entre as dez bandas.
+        //
+        // A interpolacao linear da versao anterior ligava as bandas por
+        // segmentos retos: com ganhos alternados isso vira zigue-zague, e a
+        // curva deixa de parecer resposta de filtro. Catmull-Rom passa por
+        // todos os pontos de controle e tem derivada continua, entao o traco
+        // sai suave sem deixar de bater com os sliders.
+        const auto band = [this](int i) {
+            return equalizer_.band_db(std::clamp(i, 0, Equalizer::kBands - 1));
+        };
+
         QPointF previous;
         for (int x = 0; x <= span; ++x) {
-            // Interpolacao linear entre as dez bandas.
-            const float position =
-                static_cast<float>(x) / span * (Equalizer::kBands - 1);
-            const int left = std::clamp(static_cast<int>(position), 0, Equalizer::kBands - 1);
-            const int right = std::min(left + 1, Equalizer::kBands - 1);
-            const float blend = position - left;
-            const float db = equalizer_.band_db(left) * (1.0f - blend) +
-                             equalizer_.band_db(right) * blend;
+            const float position = static_cast<float>(x) / span * (Equalizer::kBands - 1);
+            const int i = std::clamp(static_cast<int>(position), 0, Equalizer::kBands - 2);
+            const float t = position - i;
 
-            const qreal y = (middle_y - db / Equalizer::kRangeDb * half) * s;
+            const float p0 = band(i - 1), p1 = band(i), p2 = band(i + 1), p3 = band(i + 2);
+            const float db = 0.5f * ((2.0f * p1) + (-p0 + p2) * t +
+                                     (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t * t +
+                                     (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t * t * t);
+
+            const qreal y = (middle_y - std::clamp(db, -Equalizer::kRangeDb,
+                                                   Equalizer::kRangeDb) /
+                                            Equalizer::kRangeDb * half) * s;
             const QPointF point((kCurve.x() + 3 + x) * s, y);
             if (x > 0) painter.drawLine(previous, point);
             previous = point;

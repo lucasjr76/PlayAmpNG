@@ -24,13 +24,18 @@ constexpr int kRightColumnW = kRightEdge - kRightColumnX + 1;   // 171
 constexpr int kContentW = kRightEdge - kMarginX + 1;            // 257
 
 // Linhas da grade.
-constexpr int kRow1Y = 19;                 // mostradores
-constexpr int kDisplayH = 41;              // altura do bloco da esquerda
-constexpr int kTitleH = 19;
-constexpr int kInfoY = 41;
-constexpr int kControlsY = 51, kControlsH = 13;   // volume, balanco, EQ, PL
-constexpr int kPositionY = 68, kPositionH = 11;
-constexpr int kTransportY = 83, kTransportH = 18;
+//
+// O ritmo vertical foi refeito para encostar o transporte na base: antes
+// sobravam 15 px abaixo dos botoes, o que deixava o painel com a impressao de
+// estar cortado pela metade. Agora a margem inferior e de 8 px, igual a
+// folga do topo.
+constexpr int kRow1Y = 18;                 // mostradores
+constexpr int kDisplayH = 41;              // bloco da esquerda: 18..58
+constexpr int kTitleH = 19;                // poco do titulo: 18..36
+constexpr int kInfoY = 43;
+constexpr int kControlsY = 55, kControlsH = 13;   // 55..67
+constexpr int kPositionY = 73, kPositionH = 10;   // 73..82
+constexpr int kTransportY = 90, kTransportH = 18; // 90..107, base em 116
 
 constexpr int centered_in(int row_y, int row_h, int height) {
     return row_y + (row_h - height) / 2;
