@@ -27,9 +27,16 @@ constexpr QRect kPreset{206, 18, 44, 12};
 //
 // A versao anterior deixava 11 px a direita e um vao de 35 px depois do preamp,
 // o que jogava o conjunto para a esquerda e sobrava espaco de um lado so.
+// Largura IMPAR, para trilho, polegar e entalhe compartilharem o mesmo pixel
+// central.
+//
+// Com 14 px e polegar de 11, os tres centros caiam em lugares diferentes:
+// trilho em X+6,5; polegar em X+6; entalhe em X+6,5. Meio pixel de desvio, que
+// em escala 3x vira um pixel e meio bem visivel. Com 13 e 11 tudo cai em X+6.
 constexpr int kSliderTop = 38;
 constexpr int kSliderHeight = 54;
-constexpr int kSliderWidth = 14;
+constexpr int kSliderWidth = 13;
+constexpr int kThumbWidthPx = 11;
 constexpr int kPreampX = 17;
 constexpr int kBandX = 55;
 constexpr int kBandSpacing = 21;
@@ -105,7 +112,11 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
     painter.fillRect(rect(), atlas_.color(QStringLiteral("background")));
     atlas_.draw_tiled(painter, QStringLiteral("frame/titlebar"), kTitlebar);
     const QString caption = QStringLiteral("EQUALIZADOR");
-    atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
+    const int caption_w = atlas_.text_width(caption);
+    const int caption_x = (kWidth - caption_w) / 2;
+    painter.fillRect((caption_x - 5) * s, 2 * s, (caption_w + 10) * s, 10 * s,
+                     atlas_.color(QStringLiteral("background")));
+    atlas_.draw_text(painter, caption, caption_x, (14 - atlas_.glyph_height()) / 2);
 
     const auto labeled = [&](const char* pill, const QRect& area, const QString& label,
                              bool active) {
@@ -162,19 +173,19 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
         const QRect area = slider_rect(index);
         const bool active = index < 0 || equalizer_.band_active(index);
 
-        // Fenda rebaixada de 2 px, com aresta clara a direita: le-se como um
-        // rasgo no painel, e nao como uma barra preta desenhada por cima.
-        const int groove_x = area.x() + area.width() / 2 - 1;
-        painter.fillRect(groove_x * s, area.y() * s, 2 * s, area.height() * s,
+        // Fenda rebaixada de 3 px centrada no pixel do meio, com aresta clara
+        // a direita: le-se como rasgo no painel, nao como barra desenhada.
+        const int center = area.x() + area.width() / 2;   // 13 -> X+6
+        painter.fillRect((center - 1) * s, area.y() * s, 3 * s, area.height() * s,
                          atlas_.color(QStringLiteral("well")));
-        painter.fillRect((groove_x + 2) * s, area.y() * s, s, area.height() * s,
+        painter.fillRect((center + 2) * s, area.y() * s, s, area.height() * s,
                          atlas_.color(QStringLiteral("bevel_light")));
 
         // Entalhe do zero dentro da propria fenda. As marcas laterais da versao
         // anterior se alinhavam entre sliders e viravam uma regua tracejada
         // atravessando o painel.
         const int middle = area.y() + (area.height() - kThumbHeight) / 2 + kThumbHeight / 2;
-        painter.fillRect((groove_x - 1) * s, middle * s, 4 * s, s,
+        painter.fillRect((center - 3) * s, middle * s, 7 * s, s,
                          atlas_.color(QStringLiteral("green_dim")));
 
         const float db = index < 0 ? equalizer_.preamp_db() : equalizer_.band_db(index);
@@ -187,7 +198,7 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
                                   .arg(QLatin1String(dragging_ == index ? "pressed"
                                                      : active           ? "normal"
                                                                         : "active"));
-        atlas_.draw(painter, thumb, area.x() + (area.width() - 11) / 2, y);
+        atlas_.draw(painter, thumb, area.x() + (area.width() - kThumbWidthPx) / 2, y);
     }
 
     // Rotulos de frequencia.

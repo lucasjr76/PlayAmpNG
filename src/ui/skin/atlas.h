@@ -44,9 +44,15 @@ public:
     // rasterizados UMA vez na carga, em 1x e sem suavizacao, para um atlas
     // proprio; dai em diante o desenho e blit, igual aos demais sprites.
     //
+    // O `y` de draw_text e o TOPO DAS MAIUSCULAS, nao o topo da faixa: e essa a
+    // coordenada que quem posiciona tem em mente.
+    //
     // Desenhar 60 glifos a mao foi trabalho jogado fora: o resultado era
     // grosseiro e existem fontes de pixel prontas e bem desenhadas.
-    int glyph_height() const { return text_height_; }
+    // Altura das MAIUSCULAS, que e o que importa para centrar texto numa caixa.
+    // A faixa rasterizada e maior porque inclui ascendentes e descendentes; usar
+    // a faixa inteira para centrar jogava todo texto para baixo.
+    int glyph_height() const { return cap_height_; }
     int text_width(const QString& text) const;
     void draw_text(QPainter& painter, const QString& text, int x, int y,
                    const QColor& tint = QColor()) const;
@@ -83,7 +89,9 @@ private:
     QPixmap text_source_;
     QPixmap text_scaled_;
     QHash<char16_t, Glyph> glyphs_;
-    int text_height_ = 5;
+    int text_height_ = 5;   // faixa inteira, com ascendentes e descendentes
+    int cap_height_ = 5;    // so as maiusculas
+    int cap_offset_ = 0;    // do topo da faixa ao topo das maiusculas
     QHash<QString, QRect> sprites_;
     QHash<QString, QColor> palette_;
     int scale_ = 1;

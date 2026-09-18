@@ -129,7 +129,11 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
     painter.fillRect(rect(), atlas_.color(QStringLiteral("background")));
     atlas_.draw_tiled(painter, QStringLiteral("frame/titlebar"), QRect(0, 0, kWidth, kTitlebarHeight));
     const QString caption = QStringLiteral("PLAYLIST");
-    atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
+    const int caption_w = atlas_.text_width(caption);
+    const int caption_x = (kWidth - caption_w) / 2;
+    painter.fillRect((caption_x - 5) * s, 2 * s, (caption_w + 10) * s, 10 * s,
+                     atlas_.color(QStringLiteral("background")));
+    atlas_.draw_text(painter, caption, caption_x, (14 - atlas_.glyph_height()) / 2);
 
     // Poco da lista.
     const int top = kTitlebarHeight + 4;

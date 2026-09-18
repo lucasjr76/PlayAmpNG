@@ -110,6 +110,20 @@ target_compile_definitions(playampng PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 
+# Renderizador headless dos paineis, para medir alinhamento em pixel.
+qt_add_executable(pang_render
+  tools/render_panels.cpp
+  src/ui/settings.cpp
+  src/ui/shell/recovery.cpp
+  src/ui/skin/atlas.cpp
+  src/ui/panel/main_panel.cpp
+  src/ui/panel/equalizer_panel.cpp
+  src/ui/panel/playlist_panel.cpp)
+target_link_libraries(pang_render PRIVATE Qt6::Widgets pang_core pang_platform)
+target_compile_definitions(pang_render PRIVATE
+  PLAYAMPNG_VERSION="${PROJECT_VERSION}"
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
+
 # ------------------------------------------------------------------- testes
 
 add_executable(pang_tests tests/test_core.cpp)

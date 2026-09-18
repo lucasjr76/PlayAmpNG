@@ -10,12 +10,17 @@
 #include <QFontMetrics>
 #include <QPainter>
 
+#include <algorithm>
+
 namespace pang::ui::skin {
 namespace {
 
 // Tamanho em que a Silkscreen foi desenhada. Fora dele a fonte perde a grade e
 // deixa de ser nitida.
 constexpr int kFontPixelSize = 8;
+
+// Intervalo entre digitos do mostrador de tempo.
+constexpr int kDigitGap = 1;
 
 QColor color_from(const QJsonArray& array, const QColor& fallback = Qt::black) {
     if (array.size() < 3) return fallback;
@@ -151,6 +156,31 @@ bool Atlas::build_text_atlas(const QString& directory, QString& error) {
     }
 
     text_height_ = bottom - top + 1;
+
+    // Faixa das maiusculas e digitos, separada da faixa geral. E ela que define
+    // onde o texto "comeca" aos olhos de quem posiciona.
+    int cap_top = line;
+    int cap_bottom = -1;
+    for (QChar character : QStringLiteral("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) {
+        const char16_t c = character.unicode();
+        const auto it = glyphs_.constFind(c);
+        if (it == glyphs_.constEnd()) continue;
+        const QRect& cell = it.value().cell;
+        for (int y = 0; y < line; ++y)
+            for (int x = cell.x(); x < cell.x() + cell.width(); ++x)
+                if (qAlpha(strip.pixel(x, y)) > 0) {
+                    cap_top = std::min(cap_top, y);
+                    cap_bottom = std::max(cap_bottom, y);
+                    break;
+                }
+    }
+    if (cap_bottom < cap_top) {
+        cap_top = top;
+        cap_bottom = bottom;
+    }
+    cap_height_ = cap_bottom - cap_top + 1;
+    cap_offset_ = cap_top - top;
+
     for (Glyph& glyph : glyphs_) glyph.cell.setRect(glyph.cell.x(), top, glyph.advance,
                                                      text_height_);
     text_source_ = QPixmap::fromImage(strip);
@@ -258,7 +288,8 @@ void Atlas::draw_text(QPainter& painter, const QString& text, int x, int y,
         colorizer.fillRect(piece.rect(), ink);
         colorizer.end();
 
-        painter.drawPixmap(cursor * scale_, y * scale_, piece);
+        // `y` e o topo das maiusculas; a faixa comeca cap_offset_ acima dele.
+        painter.drawPixmap(cursor * scale_, (y - cap_offset_) * scale_, piece);
         cursor += it.value().advance;
     }
 }
@@ -268,9 +299,9 @@ int Atlas::time_width(const QString& text) const {
     for (int i = 0; i < text.size(); ++i) {
         const QString name =
             QStringLiteral("digit/%1").arg(static_cast<int>(text.at(i).unicode()));
-        total += sprite_size(name).width();
+        total += sprite_size(name).width() + kDigitGap;
     }
-    return total;
+    return std::max(0, total - kDigitGap);
 }
 
 void Atlas::draw_time(QPainter& painter, const QString& text, int x, int y) const {
@@ -281,7 +312,9 @@ void Atlas::draw_time(QPainter& painter, const QString& text, int x, int y) cons
         const QSize piece = sprite_size(name);
         if (piece.isEmpty()) continue;
         draw_raw(painter, name, cursor, y, QColor());
-        cursor += piece.width();
+        // Um pixel entre digitos. Sem ele as barras verticais de dois digitos
+        // vizinhos encostam e "00" vira um bloco unico.
+        cursor += piece.width() + kDigitGap;
     }
 }
 

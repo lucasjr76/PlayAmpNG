@@ -29,8 +29,8 @@ constexpr QRect kClose{264, 3, 9, 9};
 // sobra demais a direita deixava o mostrador desequilibrado.
 constexpr QRect kTimeWell{30, 22, 62, 19};
 constexpr QRect kTime{35, 24, 50, 14};
-constexpr QRect kTitleWell{108, 22, 158, 12};
-constexpr QRect kTitle{111, 25, 152, 7};
+constexpr QRect kTitleWell{108, 21, 158, 14};
+constexpr QRect kTitle{111, 24, 152, 10};
 // A moldura e a area util sao retangulos DIFERENTES.
 //
 // Antes eram o mesmo: as barras comecavam em cima da aresta esquerda e a ultima
@@ -182,8 +182,16 @@ void MainPanel::paint_frame(QPainter& painter) {
     painter.fillRect(rect(), atlas_.color(QStringLiteral("background")));
 
     atlas_.draw_tiled(painter, QStringLiteral("frame/titlebar"), kTitlebar);
+
+    // Bloco liso atras do titulo: sobre as listras o texto fica ilegivel, e e
+    // assim que o classico resolve.
     const QString caption = QStringLiteral("PLAYAMPNG");
-    atlas_.draw_text(painter, caption, (kWidth - atlas_.text_width(caption)) / 2, 4);
+    const int caption_w = atlas_.text_width(caption);
+    const int caption_x = (kWidth - caption_w) / 2;
+    const int caption_y = (kTitlebar.height() - atlas_.glyph_height()) / 2;
+    painter.fillRect((caption_x - 5) * s, 2 * s, (caption_w + 10) * s,
+                     (kTitlebar.height() - 4) * s, atlas_.color(QStringLiteral("background")));
+    atlas_.draw_text(painter, caption, caption_x, caption_y);
 
     for (const auto& button : {std::pair{"minimize", kMinimize}, std::pair{"shade", kShade},
                                std::pair{"close", kClose}}) {
@@ -218,12 +226,16 @@ void MainPanel::paint_frame(QPainter& painter) {
     painter.fillRect(kVis.x() * s, kVis.y() * s, kVis.width() * s, kVis.height() * s,
                      atlas_.color(QStringLiteral("well")));
 
-    // Textura do trilho de posicao: duas linhas discretas no lugar de um
-    // retangulo preto chapado, que pesava demais em 248 px de largura.
-    painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + 4) * s,
-                     (kPosition.width() - 2) * s, s, atlas_.color(QStringLiteral("bevel_dark")));
-    painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + 5) * s,
-                     (kPosition.width() - 2) * s, s, QColor(52, 52, 52));
+    // Linha guia do trilho de posicao: DUAS linhas da mesma cor, ocupando as
+    // duas fileiras centrais do interior.
+    //
+    // Antes eram uma escura e uma clara. A escura sumia no fundo preto e so a
+    // clara aparecia, uma fileira abaixo do centro — dai a guia parecer
+    // desalinhada. O interior tem altura par, entao uma linha de 1 px nao tem
+    // como ficar centrada; duas tem.
+    for (int row : {4, 5})
+        painter.fillRect((kPosition.x() + 1) * s, (kPosition.y() + row) * s,
+                         (kPosition.width() - 2) * s, s, QColor(48, 48, 48));
 
     // O trilho do volume carrega o degrade do espectro na horizontal: o proprio
     // trilho diz o nivel, sem precisar de numero. Vem do classico.
@@ -275,8 +287,11 @@ void MainPanel::paint_display(QPainter& painter) {
         frames = snapshot_.duration_frames - snapshot_.position_frames;
         prefix = QStringLiteral("-");
     }
+    // Centrado no poco pela largura MEDIDA do texto. Com posicao fixa, "00:00"
+    // e "-99:99" ficam desalinhados um em relacao ao outro.
     const QString time = prefix + format_time(frames, engine_.sample_rate());
-    atlas_.draw_time(painter, time, kTime.x(), kTime.y());
+    const int time_x = kTimeWell.x() + (kTimeWell.width() - atlas_.time_width(time)) / 2;
+    atlas_.draw_time(painter, time, time_x, kTime.y());
 
     // PL-17, PL-18, PL-19 — ausencia nao vira numero plausivel.
     const QColor dim = atlas_.color(QStringLiteral("green_dim"));
