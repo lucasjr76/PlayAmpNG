@@ -35,9 +35,14 @@ public:
     std::function<void()> on_export;
     std::function<void(const QStringList&)> on_drop;
 
+    // A altura mudou por arraste da aresta inferior; o shell reempilha.
+    std::function<void()> on_height_changed;
+
 protected:
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
+    void mouseMoveEvent(QMouseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void wheelEvent(QWheelEvent*) override;
     void keyPressEvent(QKeyEvent*) override;
@@ -57,6 +62,9 @@ private:
     int logical_height_ = kMinimumHeight;
     int scroll_ = 0;
     int anchor_ = -1;
+    bool resizing_ = false;
+    int resize_origin_ = 0;
+    int resize_start_height_ = 0;
     std::set<int> selected_;
 
     // LI-09 — busca por digitacao; o texto expira depois de um segundo parado.

@@ -6,19 +6,26 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Abertos
 
-| # | Observação | Origem | Destino |
+| # | Observação | Origem | Situação |
 |---|---|---|---|
-| A-1 | Os três painéis não abrem nem fecham juntos | Teste manual do usuário | M5 parte 2 — modo integrado |
-| A-2 | Os painéis têm larguras diferentes entre si | Teste manual do usuário | M5 parte 2 — todos em 275 px |
-| A-3 | **Fechar o painel principal deixa os outros abertos e o aplicativo inacessível** | Teste manual do usuário | M5 parte 2 — bloqueador |
-| A-4 | Equalizador e playlist ainda usam widgets Qt, destoando do painel principal | Teste manual do usuário ("feia") | M5 parte 2 — sprites |
-| A-5 | Em compositor *tiling*, os painéis destacados aparecem empilhados e redimensionados pelo gerenciador | Observado nas capturas | Modo integrado resolve; destacado permanece melhor esforço |
-
-O item **A-3** é o mais grave: fechar a janela primária sem encerrar o processo deixa o usuário sem nenhuma forma de voltar. Vira bloqueador do M5 parte 2.
+| A-10 | A aparência ainda é tosca — proporções, espaçamento e acabamento | Teste manual do usuário | Passe estético pendente; a estrutura já está no lugar |
+| A-11 | Encaixe magnético entre painéis destacados | — | Indisponível no Wayland por restrição de protocolo (`ARCHITECTURE.md §8`) |
+| A-12 | `LI-04` — reordenar a playlist arrastando | Regressão consciente do M5 | A reimplementar no painel em sprites |
 
 ---
 
 ## Corrigidos
+
+### C-3 a C-6 — observações do segundo teste manual
+
+| # | Observação | Causa | Correção |
+|---|---|---|---|
+| C-3 | **`W` e `Ctrl+1/2/3` não funcionavam** | As teclas eram tratadas no painel principal, mas o evento vai para o widget **com foco**. Com a playlist focada, `Ctrl+1` não era texto imprimível, caía no tratador padrão e morria. Pior: `W` sozinho era engolido pela busca por digitação da playlist. | Viraram `QShortcut` com `Qt::ApplicationShortcut`, que dispara independente do foco. `W` virou `Ctrl+W`, mais duplo clique na barra de título — o gesto clássico. **Verificado medindo a janela:** `Ctrl+3` → 825×798, `Ctrl+1` → 275×266, `Ctrl+E` → 550×764, `Ctrl+W` → 550×28. |
+| C-4 | **Sem como separar os painéis** | O modo integrado foi implementado sem o destacado. | `Ctrl+D` alterna. No Wayland o compositor posiciona e não há encaixe — está documentado e é o comportamento previsto. |
+| C-5 | **Sem como aumentar a playlist** | O painel tinha altura fixa. | Arrastar a aresta inferior redimensiona; o cursor muda ao passar por cima; a altura persiste. |
+| C-6 | **Texto saindo das caixas** | O corte do título dividia a largura disponível pela largura do glifo e ainda deixava encostar na duração. O total passava de uma hora e saía `620:25`. | O corte reserva 8 px de folga e marca a supressão com `.`; o total ganha o dígito de hora: `10:20:25`. |
+
+Os quatro apareceram só em uso real. `C-3` em particular é do tipo que nenhum teste automatizado meu pegaria: o código estava correto, o **foco** é que nunca chegava nele.
 
 ### C-1 — O clamp rígido do limitador acendia o indicador de clipping sem falha real
 

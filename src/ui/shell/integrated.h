@@ -2,6 +2,8 @@
 
 #include <QWidget>
 
+#include <functional>
+
 #include "ui/panel/equalizer_panel.h"
 #include "ui/panel/main_panel.h"
 #include "ui/panel/playlist_panel.h"
@@ -37,6 +39,14 @@ public:
     void set_scale(int scale);
     void relayout();
 
+    // AP-08/AP-09 — modo destacado: cada painel vira janela de topo. Onde o
+    // sistema de janelas permite, da para posicionar livremente; no Wayland o
+    // compositor decide, e nao ha encaixe magnetico. Ver ARCHITECTURE.md 8.
+    void set_detached(bool detached);
+    bool detached() const { return detached_; }
+
+    std::function<void()> on_layout_changed;
+
 private:
     MainPanel* main_;
     EqualizerPanel* equalizer_;
@@ -46,6 +56,7 @@ private:
     bool equalizer_visible_ = false;
     bool playlist_visible_ = true;
     bool compact_ = false;
+    bool detached_ = false;
 };
 
 }  // namespace pang::ui::shell

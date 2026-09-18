@@ -30,6 +30,8 @@ struct AppState {
     int scale = 2;              // AP-12 — 1x e caso de teste, 2x e o util
     int visualization = 0;      // 0 espectro, 1 osciloscopio, 2 desligado
     bool playlist_visible = true;
+    bool detached = false;   // AP-08 — melhor esforco, por plataforma
+    bool compact = false;    // AP-11
     bool equalizer_visible = false;
     std::array<int, 4> main_geometry{0, 0, 0, 0};
     std::array<int, 4> playlist_geometry{0, 0, 0, 0};

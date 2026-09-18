@@ -59,6 +59,8 @@ bool save(const AppState& state) {
     layout[QStringLiteral("scale")] = state.scale;
     layout[QStringLiteral("visualization")] = state.visualization;
     layout[QStringLiteral("playlist_visible")] = state.playlist_visible;
+    layout[QStringLiteral("detached")] = state.detached;
+    layout[QStringLiteral("compact")] = state.compact;
     layout[QStringLiteral("equalizer_visible")] = state.equalizer_visible;
     layout[QStringLiteral("main")] = geometry_to_json(state.main_geometry);
     layout[QStringLiteral("playlist")] = geometry_to_json(state.playlist_geometry);
@@ -138,6 +140,8 @@ AppState load() {
     state.scale = qBound(1, layout[QStringLiteral("scale")].toInt(2), 4);
     state.visualization = layout[QStringLiteral("visualization")].toInt(0);
     state.playlist_visible = layout[QStringLiteral("playlist_visible")].toBool(true);
+    state.detached = layout[QStringLiteral("detached")].toBool(false);
+    state.compact = layout[QStringLiteral("compact")].toBool(false);
     state.equalizer_visible = layout[QStringLiteral("equalizer_visible")].toBool(false);
     state.main_geometry = geometry_from_json(layout[QStringLiteral("main")].toArray(),
                                              state.main_geometry);

@@ -23,6 +23,10 @@ constexpr int kButtonWidth = 28;
 constexpr int kButtonHeight = 13;
 constexpr int kButtonSpacing = 30;
 
+// Faixa de arraste da aresta inferior. Quatro pixels logicos viram oito ou doze
+// na escala util, que e alvo suficiente.
+constexpr int kResizeGrip = 4;
+
 struct Button {
     const char* label;
     const char* tooltip;
@@ -60,6 +64,9 @@ PlaylistPanel::PlaylistPanel(core::Controller& controller, skin::Atlas& atlas, Q
     : QWidget(parent), controller_(controller), atlas_(atlas) {
     setFocusPolicy(Qt::StrongFocus);
     setAcceptDrops(true);  // LI-02
+    setMouseTracking(true);
+    // Fundo opaco: sem isso o widget pode deixar passar o que estiver atras.
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
     set_scale(atlas.scale());
 }
 
@@ -157,14 +164,20 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
         atlas_.draw_text(painter, number, kListMargin, y,
                          index == current ? green : dim);
 
-        // Reserva a direita para a duracao e corta o titulo no que sobrar.
+        // Reserva a direita para a duracao, mais a folga da barra de rolagem,
+        // e corta o titulo no que REALMENTE sobrar. A conta anterior dividia
+        // pela largura do glifo e ainda deixava o titulo encostar na duracao.
         const int duration_width = atlas_.text_width(duration);
         const int title_x = kListMargin + atlas_.text_width(number) + 4;
-        const int available = kWidth - kListMargin - duration_width - 4 - title_x;
+        const int reserved = kListMargin + duration_width + 8;
+        const int available = std::max(0, kWidth - reserved - title_x);
+
         QString title = QString::fromStdString(track.display_title());
-        const int per_glyph = atlas_.glyph_width() + 1;
-        if (atlas_.text_width(title) > available)
-            title = title.left(std::max(0, available / per_glyph));
+        if (atlas_.text_width(title) > available) {
+            const int per_glyph = atlas_.glyph_width() + 1;
+            const int fits = std::max(0, (available + 1) / per_glyph - 1);
+            title = title.left(fits) + QStringLiteral(".");
+        }
 
         atlas_.draw_text(painter, title, title_x, y, index == current ? green : dim);
         atlas_.draw_text(painter, duration, kWidth - kListMargin - duration_width, y,
@@ -204,6 +217,15 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
 
 void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
     const QPoint p = to_logical(event->pos());
+
+    // Aresta inferior: arrastar redimensiona a lista. Sem isso nao ha como ver
+    // mais que as linhas que couberam na altura inicial.
+    if (p.y() >= logical_height_ - kResizeGrip) {
+        resizing_ = true;
+        resize_origin_ = event->globalPosition().toPoint().y();
+        resize_start_height_ = logical_height_;
+        return;
+    }
 
     for (int i = 0; i < kButtonCount; ++i) {
         if (!button_rect(i).contains(p)) continue;
@@ -258,6 +280,21 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
     update();
 }
 
+void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
+    if (!resizing_) {
+        setCursor(to_logical(event->pos()).y() >= logical_height_ - kResizeGrip
+                      ? Qt::SizeVerCursor
+                      : Qt::ArrowCursor);
+        return;
+    }
+    const int delta = (event->globalPosition().toPoint().y() - resize_origin_) /
+                      std::max(1, atlas_.scale());
+    set_logical_height(resize_start_height_ + delta);
+    if (on_height_changed) on_height_changed();
+}
+
+void PlaylistPanel::mouseReleaseEvent(QMouseEvent*) { resizing_ = false; }
+
 void PlaylistPanel::mouseDoubleClickEvent(QMouseEvent* event) {
     const int row = row_at(to_logical(event->pos()));
     if (row >= 0) controller_.play_index(row);
@@ -293,7 +330,8 @@ void PlaylistPanel::keyPressEvent(QKeyEvent* event) {
             // 275 px ela custaria uma linha inteira, e digitar direto na lista
             // e o gesto que o formato compacto pede.
             const QString text = event->text();
-            if (text.isEmpty() || !text.at(0).isPrint()) {
+            if ((event->modifiers() & Qt::ControlModifier) || text.isEmpty() ||
+                !text.at(0).isPrint()) {
                 QWidget::keyPressEvent(event);
                 return;
             }

@@ -170,6 +170,8 @@ int main(int argc, char** argv) {
     shell.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     shell.set_equalizer_visible(saved.equalizer_visible);
     shell.set_playlist_visible(saved.playlist_visible);
+    if (saved.detached) shell.set_detached(true);
+    if (saved.compact) shell.set_compact(true);
 
     // ------------------------------------------------- metadados assincronos
 
@@ -230,6 +232,7 @@ int main(int argc, char** argv) {
         if (!dir.isEmpty()) add_paths({dir});
     };
     playlist_panel->on_drop = add_paths;  // LI-02
+    playlist_panel->on_height_changed = [&shell] { shell.relayout(); };
     playlist_panel->on_import = [&] {
         const QString file =
             QFileDialog::getOpenFileName(&shell, QStringLiteral("Importar playlist"), {},
@@ -311,6 +314,8 @@ int main(int argc, char** argv) {
             main_panel->visualization() == pang::ui::MainPanel::Visualization::Scope   ? 1
             : main_panel->visualization() == pang::ui::MainPanel::Visualization::Off   ? 2
                                                                                        : 0;
+        saved.detached = shell.detached();
+        saved.compact = shell.compact();
         saved.playlist_visible = shell.playlist_visible();
         saved.equalizer_visible = shell.equalizer_visible();
         saved.main_geometry = {shell.x(), shell.y(), shell.width(), shell.height()};
@@ -326,5 +331,6 @@ int main(int argc, char** argv) {
     }
 
     shell.show();
+    main_panel->setFocus();
     return app.exec();
 }

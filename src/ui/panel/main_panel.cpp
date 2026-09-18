@@ -51,6 +51,7 @@ MainPanel::MainPanel(core::Controller& controller, core::Engine& engine, skin::A
                      QWidget* parent)
     : QWidget(parent), controller_(controller), engine_(engine), atlas_(atlas) {
     setFocusPolicy(Qt::StrongFocus);
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
     setMouseTracking(true);
     analyzer_.configure(engine.sample_rate(), engine.channels());
     capture_.resize(8192);
@@ -372,6 +373,10 @@ void MainPanel::mousePressEvent(QMouseEvent* event) {
         update();
         return;
     }
+    if (hit == Hit::Titlebar && event->type() == QEvent::MouseButtonDblClick) {
+        if (on_toggle_compact) on_toggle_compact();  // AP-11, gesto classico
+        return;
+    }
     if (hit == Hit::Titlebar) {
         // Wayland nao permite ao cliente mover a propria janela; o compositor
         // cuida disso. Onde ha suporte, systemMove faz a coisa certa.
@@ -381,6 +386,8 @@ void MainPanel::mousePressEvent(QMouseEvent* event) {
     pressed_ = hit;
     update();
 }
+
+void MainPanel::mouseDoubleClickEvent(QMouseEvent* event) { mousePressEvent(event); }
 
 void MainPanel::mouseMoveEvent(QMouseEvent* event) {
     if (dragging_ == Hit::None) return;
@@ -449,17 +456,12 @@ void MainPanel::mouseReleaseEvent(QMouseEvent* event) {
 
 // IN-02 — todos os controles operaveis por teclado.
 void MainPanel::keyPressEvent(QKeyEvent* event) {
-    // AP-12 — escala inteira. 1x e caso de teste; 2x e 3x sao os modos uteis
-    // em monitor de alta densidade.
+    // Teclas com Ctrl pertencem ao shell (escala, compacto, destacado): deixar
+    // passar e o que faz o atalho funcionar com qualquer painel focado.
     if (event->modifiers() & Qt::ControlModifier) {
-        switch (event->key()) {
-            case Qt::Key_1: if (on_scale_changed) on_scale_changed(1); return;
-            case Qt::Key_2: if (on_scale_changed) on_scale_changed(2); return;
-            case Qt::Key_3: if (on_scale_changed) on_scale_changed(3); return;
-            // AP-11 — alterna o modo compacto.
-            case Qt::Key_W: if (on_toggle_compact) on_toggle_compact(); return;
-            default: break;
-        }
+        event->ignore();
+        QWidget::keyPressEvent(event);
+        return;
     }
 
     switch (event->key()) {

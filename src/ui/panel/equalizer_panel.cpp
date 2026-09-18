@@ -39,6 +39,7 @@ EqualizerPanel::EqualizerPanel(core::dsp::Equalizer& equalizer,
                                QWidget* parent)
     : QWidget(parent), equalizer_(equalizer), user_presets_(user_presets), atlas_(atlas) {
     setFocusPolicy(Qt::StrongFocus);
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
     preset_name_ = QStringLiteral("PERSONALIZADO");
     set_scale(atlas.scale());
 }
