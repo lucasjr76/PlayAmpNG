@@ -1,0 +1,271 @@
+Desenvolva um player de áudio desktop inspirado no Winamp clássico, com aparência padrão fixa, reprodução real de áudio e implementação adequada para manutenção e distribuição.
+
+Atue como engenheiro de software sênior com experiência em aplicações desktop, processamento digital de sinais, interfaces gráficas e testes.
+
+O resultado deve ser um aplicativo funcional. Uma reprodução visual com controles sem efeito, dados fictícios ou animações desconectadas do áudio não atende ao objetivo.
+
+1. DEFINIÇÃO DO PROJETO
+
+Antes de implementar:
+
+* Identifique o sistema operacional alvo e eventuais restrições do ambiente.
+* Na ausência de uma plataforma especificada, adote Linux desktop como alvo inicial.
+* Escolha uma stack adequada para áudio de baixa latência, interface compacta, integração com o sistema e empacotamento.
+* Justifique brevemente a escolha do framework gráfico, backend de áudio, decodificadores e mecanismo de persistência.
+* Defina uma versão ou referência visual do Winamp Classic para orientar a implementação. Caso não exista uma referência disponível, documente as aproximações visuais adotadas.
+* Produza uma matriz de requisitos com identificadores, comportamento esperado e método de verificação.
+
+Não deixe decisões essenciais escondidas em suposições. Registre-as e prossiga com padrões razoáveis quando não houver impedimento real.
+
+2. APARÊNCIA PADRÃO FIXA
+
+Reproduza a linguagem visual do Winamp Classic:
+
+* Interface compacta, retangular e de alta densidade.
+* Fundo em tons escuros de cinza.
+* Bordas chanfradas e controles com aparência de equipamento de áudio.
+* Mostradores digitais e textos em verde.
+* Tipografia compacta e legível.
+* Botões pequenos, com estados normal, pressionado, ativo, desabilitado e foco.
+* Organização em três painéis: player principal, equalizador e playlist.
+
+Não implemente seleção de skins, importação de temas, marketplace ou personalização visual estrutural.
+
+Mantenha proporções e alinhamentos consistentes. Ofereça escala de interface para monitores de alta densidade, sem recortar textos ou reduzir áreas clicáveis indevidamente.
+
+Os painéis devem permitir:
+
+* Exibição e ocultação independentes.
+* Movimentação e encaixe entre si.
+* Persistência de posição e tamanho.
+* Modo compacto, semelhante a uma barra.
+* Recuperação automática de janelas que tenham ficado fora da área visível após mudanças de monitor.
+
+3. PLAYER PRINCIPAL
+
+Implemente controles funcionais para:
+
+* Reproduzir.
+* Pausar e continuar.
+* Parar.
+* Faixa anterior e próxima.
+* Abrir arquivos.
+* Abrir diretório.
+* Abrir URL de áudio.
+* Ajustar volume.
+* Ajustar balanço estéreo.
+* Ativar e desativar shuffle.
+* Alternar repetição desligada, da faixa e da playlist.
+* Exibir ou ocultar equalizador e playlist.
+
+O display deve apresentar:
+
+* Nome da faixa, com rolagem para títulos longos.
+* Tempo decorrido e opção de tempo restante.
+* Estado da reprodução.
+* Bitrate, quando disponível.
+* Frequência de amostragem.
+* Informação mono ou estéreo.
+* Posição da faixa na playlist.
+
+A barra de progresso deve acompanhar a posição real do backend e permitir busca temporal quando a fonte suportar essa operação.
+
+Especifique e teste o comportamento de “anterior”, “parar”, fim de playlist e mudança de faixa durante pausa.
+
+Não apresente duração, bitrate ou progresso inventados quando a fonte não fornecer essas informações.
+
+4. ENGINE DE ÁUDIO
+
+Utilize bibliotecas consolidadas para decodificação e saída de áudio. Não desenvolva codecs próprios.
+
+Preveja suporte a MP3, WAV, FLAC, Ogg Vorbis, Opus e AAC/M4A, documentando a disponibilidade efetiva de cada formato no pacote distribuído.
+
+A reprodução deve oferecer:
+
+* Processamento interno em ponto flutuante quando suportado pelo backend.
+* Volume e balanço com efeito real.
+* Mudanças suaves de ganho para evitar estalos.
+* Seleção de dispositivo de saída.
+* Tratamento de desconexão ou indisponibilidade do dispositivo.
+* Gapless para formatos e backend compatíveis.
+* Leitura de ReplayGain, com modos por faixa e por álbum.
+* Estratégia explícita para evitar clipping causado por ganho e equalização.
+
+Documente a ordem dos estágios de processamento e o ponto de captura usado pelas visualizações.
+
+Separe as operações de disco, rede, leitura de metadados e interface do processamento crítico de áudio.
+
+Não execute operações bloqueantes, logging síncrono ou alocações recorrentes no callback de áudio.
+
+5. SPECTRUM DISPLAY E OSCILOSCÓPIO
+
+Implemente um analisador de espectro alimentado por amostras reais do áudio em reprodução.
+
+O spectrum deve:
+
+* Utilizar FFT com janela apropriada, como Hann.
+* Documentar tamanho da FFT, normalização, faixa dinâmica e taxa de atualização.
+* Agrupar frequências em barras com distribuição adequada à percepção musical.
+* Converter magnitudes para uma escala logarítmica de amplitude.
+* Aplicar suavização temporal.
+* Implementar subida, queda e retenção de picos.
+* Usar cores coerentes com a aparência clássica.
+* Respeitar a frequência de Nyquist da fonte.
+* Evitar valores inválidos em silêncio.
+* Representar corretamente silêncio, pausa e parada.
+
+Inclua modo osciloscópio com representação temporal das amostras e opção de desligar a visualização.
+
+Defina como os canais estéreo são combinados. Evite que a simples soma dos canais faça o spectrum desaparecer em sinais com fases opostas.
+
+A visualização deve ter atualização independente da interface geral e transferência de amostras que não bloqueie o áudio.
+
+É proibido usar números aleatórios, animações pré-calculadas ou dados de demonstração como substitutos do sinal real.
+
+6. EQUALIZADOR
+
+Implemente equalizador gráfico estéreo de dez bandas com pré-amplificador.
+
+Adote como referência funcional as frequências:
+
+60 Hz, 170 Hz, 310 Hz, 600 Hz, 1 kHz, 3 kHz, 6 kHz, 12 kHz, 14 kHz e 16 kHz.
+
+Inclua:
+
+* Ajustes de ganho em dB.
+* Faixa de ajuste documentada.
+* Ativação e bypass.
+* Reset para resposta plana.
+* Presets integrados.
+* Criação, edição, salvamento e exclusão de presets do usuário.
+* Aplicação suave das mudanças durante a reprodução.
+* Persistência dos ajustes.
+
+Documente o tipo dos filtros, largura de banda e tratamento de bandas próximas ou acima de Nyquist.
+
+O bypass deve retirar efetivamente a equalização do sinal. Os controles precisam produzir alterações audíveis e mensuráveis.
+
+7. PLAYLIST
+
+Implemente:
+
+* Inclusão de arquivos e pastas por diálogo e drag-and-drop.
+* Busca recursiva opcional em diretórios.
+* Reordenação por arrastar.
+* Seleção múltipla.
+* Remoção de itens sem excluir os arquivos originais.
+* Limpeza da lista.
+* Ordenação por título, artista, álbum, duração e caminho.
+* Busca textual.
+* Destaque da faixa em reprodução.
+* Exibição de duração individual e total conhecida.
+* Importação e exportação de M3U, M3U8 e PLS.
+* Resolução correta de caminhos relativos em playlists.
+
+Diferencie faixa selecionada de faixa em reprodução.
+
+No shuffle, mantenha histórico de navegação e evite repetições até concluir o ciclo, salvo quando a repetição de faixa estiver explicitamente ativa.
+
+A leitura de metadados deve ser assíncrona. Utilize virtualização da lista quando necessário para manter fluidez com dez mil itens.
+
+8. METADADOS E STREAMING
+
+Leia título, artista, álbum, número da faixa, gênero, ano e duração quando disponíveis.
+
+Na ausência de tags, utilize o nome do arquivo.
+
+Disponibilize uma janela com propriedades técnicas e localização do arquivo.
+
+Para streaming HTTP/HTTPS:
+
+* Exiba estados de conexão, buffering, reprodução e erro.
+* Leia metadados ICY quando fornecidos pela estação.
+* Trate redirecionamentos e falhas de conexão.
+* Utilize reconexão com tentativas e intervalos limitados.
+* Desabilite busca temporal quando a fonte não permitir.
+* Não apresente streams ao vivo como arquivos de duração finita.
+
+9. INTEGRAÇÃO E PERSISTÊNCIA
+
+Inclua:
+
+* Atalhos de teclado documentados.
+* Operação dos controles por teclado.
+* Nomes acessíveis e tooltips.
+* Integração com teclas multimídia.
+* Integração MPRIS no Linux.
+* Opção de manter a janela acima das demais.
+* Abertura de arquivos por argumentos de linha de comando.
+
+Persista configurações, playlist, presets e disposição dos painéis com gravação atômica e recuperação de configuração inválida.
+
+Restaurar a sessão não deve iniciar áudio automaticamente, exceto quando essa preferência tiver sido ativada.
+
+10. ARQUITETURA E QUALIDADE
+
+Separe responsabilidades entre:
+
+* Apresentação.
+* Estado e comandos de reprodução.
+* Backend e processamento de áudio.
+* Playlist.
+* Metadados.
+* Streaming.
+* Persistência.
+* Integração com o sistema.
+
+Defina estados explícitos para parado, carregando, reproduzindo, pausado, buffering e erro.
+
+Garanta que respostas assíncronas de uma faixa anterior não sobrescrevam o estado da faixa atual.
+
+A interface deve refletir o estado confirmado pelo backend, inclusive quando um comando falhar.
+
+Mantenha logs úteis para diagnóstico, sem registrar credenciais presentes em URLs.
+
+11. VERIFICAÇÃO E CRITÉRIOS DE ACEITAÇÃO
+
+Verifique pelo menos:
+
+* Reprodução real de todos os formatos declarados.
+* Pausa, retomada, parada, busca temporal e troca de faixa.
+* Shuffle, histórico e modos de repetição.
+* Importação e exportação de playlists.
+* Persistência e recuperação da sessão.
+* Arquivos ausentes, corrompidos ou sem permissão.
+* Interrupção de stream e perda de dispositivo de áudio.
+* Ausência de travamento ao carregar uma playlist extensa.
+
+Para DSP:
+
+* Use sinais senoidais conhecidos para verificar a posição dos picos no spectrum.
+* Use silêncio para verificar estabilidade numérica.
+* Use canais em oposição de fase para verificar o tratamento estéreo.
+* Meça a resposta do equalizador com sinais de teste.
+* Verifique balanço, ganho, bypass e prevenção de clipping.
+
+Defina ambiente, procedimento e limites mensuráveis antes de avaliar desempenho. Registre uso de CPU, memória e eventuais interrupções de áudio em execução prolongada.
+
+Não declare um teste como aprovado sem executá-lo. Diferencie claramente verificação automatizada, inspeção manual e itens não verificados.
+
+12. ENTREGÁVEIS E EXECUÇÃO
+
+Entregue:
+
+* Código-fonte organizado.
+* Instruções reproduzíveis de instalação, execução e build.
+* Dependências com versões e licenças identificadas.
+* Pacote executável para o sistema alvo.
+* Documento breve de arquitetura.
+* Matriz de requisitos com estado de implementação e evidências.
+* Testes relevantes e relatório de execução.
+* Limitações conhecidas.
+
+Implemente em etapas verificáveis: reprodução básica, playlist, processamento de áudio, visualizações, interface definitiva e integração com o sistema.
+
+Cada etapa deve terminar com software executável e verificação correspondente.
+
+Não substitua requisitos por placeholders. Não classifique como concluído um recurso que existe apenas visualmente.
+
+Recursos adicionais, como biblioteca de mídia indexada, vídeo, gravação de CDs, plugins externos e visualizações do tipo MilkDrop, devem ser tratados como extensões de escopo, com requisitos próprios.
+
+O objetivo final é um player desktop estável, com visual clássico fixo, controles verdadeiros, equalização real e visualizações derivadas do áudio.

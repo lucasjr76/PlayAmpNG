@@ -1,0 +1,65 @@
+name: ci
+
+# Os tres sistemas alvo sao construidos e testados a cada mudanca. O objetivo
+# nao e empacotar aqui — e impedir que core/ ganhe dependencia de plataforma
+# sem ninguem perceber (AR-07, AR-08).
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux,   os: ubuntu-latest }
+          - { name: windows, os: windows-latest }
+          - { name: macos,   os: macos-latest }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencias (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config \
+            qt6-base-dev libgl1-mesa-dev \
+            libavformat-dev libavcodec-dev libavutil-dev libswresample-dev
+
+      - name: Dependencias (macOS)
+        if: matrix.name == 'macos'
+        run: |
+          brew install ninja pkg-config ffmpeg qt@6
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@6)" >> "$GITHUB_ENV"
+
+      - name: Qt (Windows)
+        if: matrix.name == 'windows'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          modules: ''
+
+      - name: FFmpeg (Windows)
+        if: matrix.name == 'windows'
+        shell: bash
+        run: |
+          vcpkg install ffmpeg:x64-windows pkgconf:x64-windows
+          echo "CMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" >> "$GITHUB_ENV"
+
+      - name: Configurar
+        shell: bash
+        run: cmake -S . -B build -G Ninja
+
+      - name: Compilar
+        run: cmake --build build
+
+      # Runner nao tem placa de som: os testes sao headless por construcao e
+      # nao exigem dispositivo de saida.
+      - name: Testar
+        run: ctest --test-dir build --output-on-failure
