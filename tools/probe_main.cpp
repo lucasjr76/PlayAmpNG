@@ -96,7 +96,7 @@ int play(const std::string& url, double seconds) {
                 output.sample_rate(), output.channels());
 
     output.suspend();  // precondicao de load(): render() parado
-    engine->load(url, true);
+    engine->load(url, pang::core::State::Playing);
     output.resume();
 
     const auto deadline = std::chrono::steady_clock::now() +

@@ -78,7 +78,7 @@ Capture drain(Engine& engine, double max_seconds = 5.0) {
 
 void test_format(const char* file, const char* label) {
     Engine engine(kRate, kChannels);
-    engine.load(asset(file), true);
+    engine.load(asset(file), State::Playing);
 
     const State s = settle(engine);
     PANG_CHECK(s == State::Playing, std::string("decodifica e comeca a tocar: ") + label);
@@ -111,7 +111,7 @@ void test_format(const char* file, const char* label) {
 
 void test_seek() {
     Engine engine(kRate, kChannels);
-    engine.load(asset("tone.wav"), true);
+    engine.load(asset("tone.wav"), State::Playing);
     if (settle(engine) != State::Playing) {
         PANG_CHECK(false, "seek: faixa nao carregou");
         return;
@@ -137,7 +137,7 @@ void test_seek() {
 
 void test_transport_semantics() {
     Engine engine(kRate, kChannels);
-    engine.load(asset("tone.wav"), true);
+    engine.load(asset("tone.wav"), State::Playing);
     if (settle(engine) != State::Playing) {
         PANG_CHECK(false, "transporte: faixa nao carregou");
         return;
@@ -178,7 +178,7 @@ void test_transport_semantics() {
 
 void test_error_paths() {
     Engine engine(kRate, kChannels);
-    engine.load(asset("nao-existe.flac"), true);
+    engine.load(asset("nao-existe.flac"), State::Playing);
     const State s = settle(engine);
     PANG_CHECK(s == State::Error, "arquivo ausente leva a Error, nao a Playing");
     PANG_CHECK(!engine.last_error().empty(), "Error traz mensagem de diagnostico");
@@ -195,7 +195,7 @@ void test_error_paths() {
 
 void test_cancellation_is_prompt() {
     Engine engine(kRate, kChannels);
-    engine.load(asset("tone.wav"), true);
+    engine.load(asset("tone.wav"), State::Playing);
     settle(engine);
 
     // stop() aciona cancel() no decodificador e faz join. Se o cancelamento

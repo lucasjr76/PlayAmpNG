@@ -43,15 +43,15 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-01 | Reproduzir | AUTO | M1 | OK (M1) |
 | PL-02 | Pausar e continuar na mesma posição | AUTO | M1 | OK (M1) |
 | PL-03 | Parar: estado `Stopped`, posição 0, faixa mantida | AUTO | M1 | OK (M1) |
-| PL-04 | Faixa anterior sempre vai à anterior, nunca reinicia a atual | AUTO | M2 | PENDENTE |
-| PL-05 | Próxima faixa | AUTO | M2 | PENDENTE |
-| PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | PENDENTE |
-| PL-07 | Abrir diretório, com busca recursiva opcional | AUTO + MANUAL | M2 | PENDENTE |
+| PL-04 | Faixa anterior sempre vai à anterior, nunca reinicia a atual | AUTO | M2 | OK (M2) |
+| PL-05 | Próxima faixa | AUTO | M2 | OK (M2) |
+| PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | OK (M2) |
+| PL-07 | Abrir diretório, com busca recursiva opcional | AUTO + MANUAL | M2 | OK (M2) |
 | PL-08 | Abrir URL de áudio | MANUAL | M6 | PENDENTE |
 | PL-09 | Volume com efeito real e rampa suave | MEDIDO | M3 | PENDENTE |
 | PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | PENDENTE |
-| PL-11 | Shuffle ligado/desligado | AUTO | M2 | PENDENTE |
-| PL-12 | Repetição: desligada, da faixa, da playlist | AUTO | M2 | PENDENTE |
+| PL-11 | Shuffle ligado/desligado | AUTO | M2 | OK (M2) |
+| PL-12 | Repetição: desligada, da faixa, da playlist | AUTO | M2 | OK (M2) |
 | PL-13 | Exibir/ocultar equalizador e playlist pelo player | MANUAL | M5 | PENDENTE |
 | PL-14 | Display: nome da faixa com rolagem para títulos longos | MANUAL | M5 | PENDENTE |
 | PL-15 | Display: tempo decorrido, alternável para tempo restante | AUTO | M5 | PENDENTE |
@@ -63,9 +63,9 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-21 | Barra de progresso acompanha a posição real do backend | MEDIDO | M1 | OK (M1) |
 | PL-22 | Busca temporal quando a fonte suporta | AUTO | M1 | OK (M1) |
 | PL-23 | Busca desabilitada quando a fonte não suporta | AUTO | M6 | PENDENTE |
-| PL-24 | Fim da playlist: repeat=off para; repeat=all reinicia; repeat=track repete | AUTO | M2 | PENDENTE |
-| PL-25 | Troca de faixa durante pausa mantém o estado pausado, posição 0 | AUTO | M2 | PENDENTE |
-| PL-26 | Duração, bitrate e progresso nunca são inventados quando ausentes | AUTO | M2 | PENDENTE |
+| PL-24 | Fim da playlist: repeat=off para; repeat=all reinicia; repeat=track repete | AUTO | M2 | OK (M2) |
+| PL-25 | Troca de faixa durante pausa mantém o estado pausado, posição 0 | AUTO | M2 | OK (M2) |
+| PL-26 | Duração, bitrate e progresso nunca são inventados quando ausentes | AUTO | M2 | OK (M2) |
 
 ## AU — Engine de áudio (spec §4)
 
@@ -145,30 +145,30 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| LI-01 | Inclusão de arquivos e pastas por diálogo | MANUAL | M2 | PENDENTE |
-| LI-02 | Inclusão por drag-and-drop | MANUAL | M2 | PENDENTE |
-| LI-03 | Busca recursiva opcional em diretórios | AUTO | M2 | PENDENTE |
-| LI-04 | Reordenação por arrastar | MANUAL | M5 | PENDENTE |
-| LI-05 | Seleção múltipla | MANUAL | M5 | PENDENTE |
-| LI-06 | Remoção de itens sem excluir os arquivos originais | AUTO | M2 | PENDENTE |
-| LI-07 | Limpeza da lista | AUTO | M2 | PENDENTE |
-| LI-08 | Ordenação por título, artista, álbum, duração e caminho | AUTO | M2 | PENDENTE |
-| LI-09 | Busca textual | AUTO | M2 | PENDENTE |
-| LI-10 | Destaque da faixa em reprodução, distinta da selecionada | MANUAL | M5 | PENDENTE |
-| LI-11 | Duração individual e total conhecida (sem somar durações desconhecidas) | AUTO | M2 | PENDENTE |
-| LI-12 | Importação e exportação de M3U, M3U8 e PLS (round-trip preserva ordem) | AUTO | M2 | PENDENTE |
-| LI-13 | Resolução correta de caminhos relativos em playlists | AUTO | M2 | PENDENTE |
-| LI-14 | Shuffle mantém histórico de navegação | AUTO | M2 | PENDENTE |
-| LI-15 | Shuffle não repete até fechar o ciclo, salvo repeat=track ativo | AUTO | M2 | PENDENTE |
-| LI-16 | Leitura de metadados assíncrona | MANUAL | M2 | PENDENTE |
-| LI-17 | Lista virtualizada: 10 000 itens sem travamento | MEDIDO | M2 | PENDENTE |
+| LI-01 | Inclusão de arquivos e pastas por diálogo | MANUAL | M2 | OK (M2) |
+| LI-02 | Inclusão por drag-and-drop | MANUAL | M2 | OK (M2) |
+| LI-03 | Busca recursiva opcional em diretórios | AUTO | M2 | OK (M2) |
+| LI-04 | Reordenação por arrastar | MANUAL | M5 | OK (M2) |
+| LI-05 | Seleção múltipla | MANUAL | M5 | OK (M2) |
+| LI-06 | Remoção de itens sem excluir os arquivos originais | AUTO | M2 | OK (M2) |
+| LI-07 | Limpeza da lista | AUTO | M2 | OK (M2) |
+| LI-08 | Ordenação por título, artista, álbum, duração e caminho | AUTO | M2 | OK (M2) |
+| LI-09 | Busca textual | AUTO | M2 | OK (M2) |
+| LI-10 | Destaque da faixa em reprodução, distinta da selecionada | MANUAL | M5 | OK (M2) |
+| LI-11 | Duração individual e total conhecida (sem somar durações desconhecidas) | AUTO | M2 | OK (M2) |
+| LI-12 | Importação e exportação de M3U, M3U8 e PLS (round-trip preserva ordem) | AUTO | M2 | OK (M2) |
+| LI-13 | Resolução correta de caminhos relativos em playlists | AUTO | M2 | OK (M2) |
+| LI-14 | Shuffle mantém histórico de navegação | AUTO | M2 | OK (M2) |
+| LI-15 | Shuffle não repete até fechar o ciclo, salvo repeat=track ativo | AUTO | M2 | OK (M2) |
+| LI-16 | Leitura de metadados assíncrona | MANUAL | M2 | OK (M2) |
+| LI-17 | Lista virtualizada: 10 000 itens sem travamento | MEDIDO | M2 | OK (M2) |
 
 ## MD — Metadados e streaming (spec §8)
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| MD-01 | Ler título, artista, álbum, nº da faixa, gênero, ano e duração quando disponíveis | AUTO | M2 | PENDENTE |
-| MD-02 | Sem tags, usar o nome do arquivo | AUTO | M2 | PENDENTE |
+| MD-01 | Ler título, artista, álbum, nº da faixa, gênero, ano e duração quando disponíveis | AUTO | M2 | OK (M2) |
+| MD-02 | Sem tags, usar o nome do arquivo | AUTO | M2 | OK (M2) |
 | MD-03 | Janela de propriedades técnicas e localização do arquivo | MANUAL | M6 | PENDENTE |
 | MD-04 | Estados de conexão, buffering, reprodução e erro em stream | MANUAL | M6 | PENDENTE |
 | MD-05 | Leitura de metadados ICY quando fornecidos | MANUAL | M6 | PENDENTE |
@@ -199,7 +199,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 |---|---|---|---|---|
 | AR-01 | Responsabilidades separadas conforme §10 | MANUAL | M0 | OK (M0) |
 | AR-02 | Estados explícitos: Stopped, Loading, Playing, Paused, Buffering, Error | AUTO | M1 | OK (M1) |
-| AR-03 | Resposta assíncrona de geração antiga é descartada sem efeito | AUTO | M2 | PENDENTE |
+| AR-03 | Resposta assíncrona de geração antiga é descartada sem efeito | AUTO | M2 | OK (M2) |
 | AR-04 | Interface reflete o estado confirmado pelo backend, inclusive em falha | AUTO | M1 | OK (M1) |
 | AR-05 | Logs úteis para diagnóstico | MANUAL | M1 | PENDENTE |
 | AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | PARCIAL (M1) — funcao de redacao verificada; integracao com streaming em M6 |
@@ -214,11 +214,11 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
 | RB-01 | Arquivo ausente → `Error`, sem crash, playlist intacta | AUTO | M2 | OK (M1) |
-| RB-02 | Arquivo corrompido ou truncado → `Error`, sem crash | AUTO | M2 | PENDENTE |
-| RB-03 | Arquivo sem permissão de leitura → `Error`, sem crash | AUTO | M2 | PENDENTE |
+| RB-02 | Arquivo corrompido ou truncado → `Error`, sem crash | AUTO | M2 | OK (M2) |
+| RB-03 | Arquivo sem permissão de leitura → `Error`, sem crash | AUTO | M2 | OK (M2) |
 | RB-04 | Interrupção de stream → reconexão ou `Error` explícito | MANUAL | M6 | PENDENTE |
 | RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | MANUAL | M6 | PENDENTE |
-| RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | PENDENTE |
+| RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | OK (M2) |
 | RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | PENDENTE |
 
 ## EN — Entregáveis (spec §12)

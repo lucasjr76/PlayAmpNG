@@ -53,6 +53,12 @@ add_library(pang_core STATIC
   src/core/audio/probe.cpp
   src/core/audio/decoder.cpp
   src/core/audio/engine.cpp
+  src/core/meta/scanner.cpp
+  src/core/meta/tags.cpp
+  src/core/playlist/m3u.cpp
+  src/core/playlist/playlist.cpp
+  src/core/playlist/shuffle.cpp
+  src/core/state/controller.cpp
   src/core/util/log.cpp)
 target_include_directories(pang_core PUBLIC src)
 target_link_libraries(pang_core PUBLIC PkgConfig::FFMPEG)
@@ -103,6 +109,15 @@ set_target_properties(pang_audio_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORC
 
 add_test(NAME audio COMMAND pang_audio_tests)
 set_tests_properties(audio PROPERTIES TIMEOUT 120)
+
+add_executable(pang_playlist_tests tests/test_playlist.cpp)
+target_link_libraries(pang_playlist_tests PRIVATE pang_core)
+target_compile_definitions(pang_playlist_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_playlist_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME playlist COMMAND pang_playlist_tests)
+set_tests_properties(playlist PROPERTIES TIMEOUT 120)
 
 add_test(NAME m0_headless COMMAND pang_probe)
 set_tests_properties(m0_headless PROPERTIES

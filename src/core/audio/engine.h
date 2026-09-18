@@ -43,7 +43,12 @@ public:
     Engine& operator=(const Engine&) = delete;
 
     // --- controle (render() parado)
-    void load(const std::string& url, bool start_playing);
+    //
+    // `desired` e o estado em que a faixa deve ficar assim que houver audio no
+    // buffer: Playing, Paused ou Stopped. Os tres casos existem porque PL-25
+    // exige que trocar de faixa durante a pausa continue pausado, e o fim de
+    // playlist com repeat=off (PL-24) precisa parar sem comecar a tocar.
+    void load(const std::string& url, State desired);
     void stop();
     bool seek(double seconds);
 
@@ -57,6 +62,10 @@ public:
     Snapshot snapshot() const;
     std::string last_error() const;
 
+    // true quando a faixa terminou sozinha, distinguindo fim natural de um
+    // stop() do usuario. Limpado por load(), stop() e seek().
+    bool ended() const { return ended_.load(std::memory_order_acquire); }
+
     // --- thread de audio
     void render(float* out, std::uint32_t frames) noexcept;
 
@@ -64,9 +73,9 @@ public:
     int channels() const { return channels_; }
 
 private:
-    void start_decoder(const std::string& url, bool start_playing);
+    void start_decoder(const std::string& url, State desired);
     void join_decoder();
-    void decode_loop(std::string url, bool start_playing);
+    void decode_loop(std::string url, State desired);
 
     const int sample_rate_;
     const int channels_;
@@ -79,6 +88,7 @@ private:
     std::atomic<State> state_{State::Stopped};
     std::atomic<std::uint64_t> generation_{0};
     std::atomic<bool> eof_{false};
+    std::atomic<bool> ended_{false};
 
     std::atomic<std::int64_t> position_frames_{0};
     std::atomic<std::uint32_t> underruns_{0};

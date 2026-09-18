@@ -134,3 +134,70 @@ MP3 e AAC chegando a 0,500 s exatos indica que o corte de delay e padding do lib
 ### Requisitos atendidos
 
 19 em `OK (M1)`, 2 em `PARCIAL (M1)`. Total acumulado: 29 de 175 com estado diferente de `PENDENTE`.
+
+---
+
+## M2 — Playlist e metadados
+
+Data: 2026-09-18
+
+Suíte: `ctest` 4/4 verdes (`core`, `audio`, `playlist`, `m0_headless`), ~5,2 s. Executada três vezes seguidas sem variação.
+
+### Executado
+
+| Verificação | Tipo | Resultado |
+|---|---|---|
+| LI-06/LI-07 — remover e limpar sem tocar nos arquivos | AUTO | **Passou** |
+| LI-04 — reordenar, com o id acompanhando o item | AUTO | **Passou** |
+| LI-08 — ordenar por caminho, artista e duração; campo ausente vai para o fim | AUTO | **Passou** |
+| LI-09 — busca textual sem diferenciar caixa | AUTO | **Passou** |
+| LI-11 — total soma só as durações conhecidas, e conta as ausentes à parte | AUTO | **Passou** |
+| MD-02 — sem tag de título, usa o nome do arquivo | AUTO | **Passou** |
+| LI-03 — varredura recursiva e não recursiva, ordem determinista | AUTO | **Passou** |
+| LI-12 — round-trip M3U8 e PLS preserva ordem, caminhos e duração desconhecida | AUTO | **Passou** |
+| LI-13 — caminho relativo resolvido contra o diretório da playlist | AUTO | **Passou** — arquivo resolvido existe em disco |
+| PLS com chaves fora de ordem | AUTO | **Passou** — o índice da chave manda, não a ordem das linhas |
+| LI-15 — ciclo de shuffle cobre todos sem repetir | AUTO | **Passou** — 10 itens, 10 distintos |
+| LI-14 — "anterior" percorre o histórico real, na ordem inversa da ida | AUTO | **Passou** |
+| PL-04 — anterior vai à faixa anterior; na primeira, permanece nela | AUTO | **Passou** |
+| PL-25 — trocar de faixa durante a pausa continua pausado, posição 0 | AUTO | **Passou** |
+| PL-24 — fim da playlist: `off` para, `all` volta à primeira, `track` repete | AUTO | **Passou** |
+| AR-03 — resultado de metadados com id inexistente é descartado | AUTO | **Passou** |
+| LI-16 — leitura de tags em segundo plano, resultado carimbado com id | AUTO | **Passou** |
+| RB-02 — MP3 corrompido termina em `Error`, sem travar nem tocar lixo | AUTO | **Passou** |
+| RB-03 — varredura pula diretório sem permissão e continua | AUTO | **Passou** |
+| LI-02 — drag-and-drop de arquivos e pastas | MANUAL | **Passou** |
+
+### LI-17 e RB-06 — medição com 10 000 itens
+
+```
+inserir 1 ms · ordenar 8 ms · buscar 0 ms · aplicar metadados 13 ms
+```
+
+Limite definido antes da execução: nenhuma operação acima de 50 ms no thread da interface. Todas ficaram uma ordem de grandeza abaixo.
+
+A aplicação de metadados exercita `Playlist::index_of()`, que é busca linear — aplicar em 10 000 itens é O(n²). Medido: 13 ms. O comentário `ponytail:` no código registra o teto e o caminho de substituição, mas **não há motivo para trocar**: o custo real é irrelevante nesta escala. Otimizar aqui seria trabalho sem retorno.
+
+A lista usa `QListView` sobre `QAbstractListModel`, e não `QListWidget`: só as linhas visíveis são consultadas.
+
+### Defeito de teste encontrado — e a lição
+
+Dois testes de fim de playlist estavam escritos como "rode 1,5 s e olhe o índice". Com faixas de 0,5 s, isso cai ora depois de uma troca, ora depois de duas. O caso `repeat=track` falhou de imediato e foi corrigido; o caso `repeat=all` **passou na primeira execução e falhou nas quatro seguintes**.
+
+```
+execucao 1:
+execucao 2: 349: fim da playlist com repeat=all volta para a primeira
+execucao 3: 349: fim da playlist com repeat=all volta para a primeira
+```
+
+Corrigido com `run_until_next_load()`, que roda até a geração do engine mudar — a geração é monotônica e não depende de onde o relógio parou. O caso `repeat=off` inverte o mesmo instrumento: passa justamente quando o prazo estoura sem troca alguma.
+
+Um teste que passa por acidente é pior que um teste ausente, porque dá confiança falsa. A suíte foi executada seis vezes seguidas depois da correção, sem variação.
+
+### Não verificado
+
+Interface definitiva (M5), streaming (M6), Windows e macOS. `LI-05` (seleção múltipla) e `LI-10` (destaque da faixa em reprodução) estão implementados e conferidos a olho na interface provisória; a verificação formal é do M5, junto com o restante da aparência.
+
+### Requisitos atendidos
+
+31 em `OK (M2)`. Total acumulado: 60 de 175 com estado diferente de `PENDENTE`.

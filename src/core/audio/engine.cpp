@@ -30,7 +30,7 @@ Engine::~Engine() { join_decoder(); }
 
 // ---------------------------------------------------------------- controle
 
-void Engine::load(const std::string& url, bool start_playing) {
+void Engine::load(const std::string& url, State desired) {
     join_decoder();
     decoder_.close();
     ring_.reset();
@@ -41,6 +41,7 @@ void Engine::load(const std::string& url, bool start_playing) {
 
     position_frames_.store(0, std::memory_order_relaxed);
     eof_.store(false, std::memory_order_relaxed);
+    ended_.store(false, std::memory_order_release);
     duration_frames_.store(-1, std::memory_order_relaxed);
     bitrate_bps_.store(-1, std::memory_order_relaxed);
     source_rate_.store(0, std::memory_order_relaxed);
@@ -53,7 +54,7 @@ void Engine::load(const std::string& url, bool start_playing) {
     pub_.store(AudioPublication{});
     state_.store(State::Loading, std::memory_order_relaxed);
 
-    start_decoder(url, start_playing);
+    start_decoder(url, desired);
 }
 
 void Engine::stop() {
@@ -62,6 +63,7 @@ void Engine::stop() {
     // PL-03 — parar volta a posicao 0 e mantem a faixa carregada.
     position_frames_.store(0, std::memory_order_relaxed);
     eof_.store(false, std::memory_order_relaxed);
+    ended_.store(false, std::memory_order_release);
     state_.store(State::Stopped, std::memory_order_relaxed);
     pub_.store(AudioPublication{});
     if (decoder_.is_open()) decoder_.seek(0.0);
@@ -77,6 +79,7 @@ bool Engine::seek(double seconds) {
 
     ring_.reset();
     eof_.store(false, std::memory_order_relaxed);
+    ended_.store(false, std::memory_order_release);
     const std::int64_t target = static_cast<std::int64_t>(seconds * sample_rate_);
     position_frames_.store(target, std::memory_order_relaxed);
 
@@ -92,7 +95,8 @@ bool Engine::seek(double seconds) {
     decoder_.clear_cancel();
     const bool resume = previous == State::Playing;
     state_.store(resume ? State::Playing : State::Paused, std::memory_order_relaxed);
-    decoder_thread_ = std::thread([this, resume] { decode_loop(std::string{}, resume); });
+    decoder_thread_ = std::thread(
+        [this, resume] { decode_loop(std::string{}, resume ? State::Playing : State::Paused); });
     return true;
 }
 
@@ -111,10 +115,10 @@ void Engine::set_volume(float linear) {
 
 // ------------------------------------------------------ thread de decodificacao
 
-void Engine::start_decoder(const std::string& url, bool start_playing) {
+void Engine::start_decoder(const std::string& url, State desired) {
     thread_quit_.store(false, std::memory_order_relaxed);
     decoder_.clear_cancel();
-    decoder_thread_ = std::thread([this, url, start_playing] { decode_loop(url, start_playing); });
+    decoder_thread_ = std::thread([this, url, desired] { decode_loop(url, desired); });
 }
 
 void Engine::join_decoder() {
@@ -126,7 +130,7 @@ void Engine::join_decoder() {
 }
 
 // url vazia significa "continuar com o decodificador ja aberto" (caso do seek).
-void Engine::decode_loop(std::string url, bool start_playing) {
+void Engine::decode_loop(std::string url, State desired) {
     if (!url.empty()) {
         std::string error;
         if (!decoder_.open(url, sample_rate_, channels_, error)) {
@@ -171,8 +175,7 @@ void Engine::decode_loop(std::string url, bool start_playing) {
         // AR-04 — so sai de Loading depois que ha audio de verdade no buffer.
         if (!announced) {
             announced = true;
-            state_.store(start_playing ? State::Playing : State::Paused,
-                         std::memory_order_relaxed);
+            state_.store(desired, std::memory_order_relaxed);
         }
     }
 }
@@ -212,7 +215,13 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
         if (got < wanted) {
             std::memset(out + got, 0, (wanted - got) * sizeof(float));
             if (eof_.load(std::memory_order_acquire)) {
-                if (got == 0) state_.store(State::Stopped, std::memory_order_relaxed);
+                if (got == 0) {
+                    // Fim natural da faixa. O sinalizador distingue isso de um
+                    // stop() do usuario, que e quem o Controller precisa saber
+                    // para decidir se avanca (PL-24).
+                    ended_.store(true, std::memory_order_release);
+                    state_.store(State::Stopped, std::memory_order_relaxed);
+                }
             } else {
                 underruns_.fetch_add(1, std::memory_order_relaxed);
             }
