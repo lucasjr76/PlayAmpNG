@@ -28,8 +28,12 @@ find_package(ZLIB REQUIRED)   # leitor de .wsz; ja vem com o Qt
 # compilador da distro nao deve impedir o projeto de compilar.
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
-find_package(Qt6 6.5 QUIET COMPONENTS DBus)
+# 6.4 e o piso real, e nao 6.5: nada aqui usa API posterior, e o 6.5 escolhido
+# no M0 nao tinha razao anotada. A diferenca e concreta — o Ubuntu 24.04, que e
+# o ubuntu-latest da integracao, traz 6.4.2, e o build falhava na configuracao
+# antes de compilar uma linha.
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Network)
+find_package(Qt6 6.4 QUIET COMPONENTS DBus)
 qt_standard_project_setup()
 
 # FFmpeg cobre demux, decode, resample, HTTP e ICY (spec 4 e 8).

@@ -592,6 +592,15 @@ int main(int argc, char** argv) {
     auto integration = pang::platform::make_integration("PlayAmpNG", std::move(commands));
     pang::core::log::info("integracao com o ambiente: " + integration->backend());
 
+    // Onde a configuracao e a sessao sao gravadas. Vai para o log porque o
+    // caminho depende do SISTEMA — o Qt usa ~/.config no Linux, Application
+    // Support no macOS e AppData no Windows — e quem investiga "minhas
+    // preferencias nao ficam salvas" precisa saber onde procurar. Os testes
+    // tambem leem daqui, em vez de presumir o caminho: presumir foi o que
+    // fez a suite reprovar no macOS por motivo nenhum.
+    pang::core::log::info("configuracao: " +
+                          pang::ui::settings::config_file_path().toStdString());
+
     auto publish_now_playing = [&] {
         if (!integration->available()) return;
         const auto snap = engine->snapshot();

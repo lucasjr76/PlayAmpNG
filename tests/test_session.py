@@ -94,7 +94,7 @@ def rodar(perfil, *args, segundos=6):
 binario = sys.argv[1]
 assets = sys.argv[2]
 perfil = tempfile.mkdtemp(prefix="pang_sessao_")
-config = os.path.join(perfil, "PlayAmpNG")
+config = None   # descoberto na primeira execucao, a partir do log do player
 
 # Faixas LONGAS de propósito. Os arquivos do repositório têm meio segundo, e
 # com eles a verificação de "voltou tocando" media outra coisa: aos seis
@@ -112,6 +112,18 @@ saida, _ = rodar(perfil, primeiro, segundo)
 if "dispositivo de audio" in saida.lower():
     print("sem dispositivo de audio: teste pulado", file=sys.stderr)
     sys.exit(PULAR)
+
+# O diretorio de configuracao depende do SISTEMA: o Qt usa ~/.config no Linux,
+# Application Support no macOS e AppData no Windows, e so o primeiro respeita
+# XDG_CONFIG_HOME. Presumir o caminho fazia o teste reprovar no macOS sem que
+# houvesse defeito; o player informa qual usa.
+for linha in saida.splitlines():
+    if "configuracao:" in linha:
+        config = os.path.dirname(linha.split("configuracao:", 1)[1].strip())
+        break
+if not checar(config is not None, "o player informa onde grava a configuracao"):
+    sys.exit(1)
+print(f"  configuracao em {config}")
 
 m3u = os.path.join(config, "session.m3u8")
 if checar(os.path.exists(m3u), "a playlist da sessao e gravada ao receber SIGTERM"):

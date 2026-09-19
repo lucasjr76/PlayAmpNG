@@ -33,7 +33,7 @@ O AppImage carrega as bibliotecas de que precisa, inclusive Qt e FFmpeg. Não in
 |---|---|---|---|
 | CMake | 3.24 | `cmake` | `cmake` |
 | Compilador C++20 | GCC 12 / Clang 15 | `gcc` | `g++` |
-| Qt 6 (Widgets, Network, DBus) | 6.5 | `qt6-base` | `qt6-base-dev` |
+| Qt 6 (Widgets, Network, DBus) | 6.4 | `qt6-base` | `qt6-base-dev` |
 | FFmpeg (libavformat, libavcodec, libavutil, libswresample) | 6.0 | `ffmpeg` | `libavformat-dev libavcodec-dev libavutil-dev libswresample-dev` |
 | zlib | 1.2 | `zlib` | `zlib1g-dev` |
 | Python 3 | 3.9 | `python` | `python3` |
