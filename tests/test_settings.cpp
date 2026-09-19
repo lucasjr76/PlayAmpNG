@@ -6,12 +6,16 @@
 // que nada acuse. Este projeto ja teve um defeito dessa exata forma em
 // probe/decoder.
 //
-// O teste escreve num diretorio temporario proprio — apontar XDG_CONFIG_HOME
-// para ele impede que a suite mexa na configuracao real do usuario.
+// O teste escreve num diretorio temporario proprio, e quem diz onde e o
+// proprio codigo: setTestModeEnabled desvia o QStandardPaths em TODAS as
+// plataformas, e config_file_path() devolve o caminho em uso. Apontar
+// XDG_CONFIG_HOME e montar o caminho a mao funcionava so no Linux — no macOS
+// o Qt guarda em ~/Library/Preferences e ignora a variavel, e o teste
+// reprovava por procurar num lugar que nunca foi o lugar.
 
 #include <QCoreApplication>
 #include <QDir>
-#include <QTemporaryDir>
+#include <QStandardPaths>
 
 #include <cstdio>
 #include <cstdlib>
@@ -20,9 +24,7 @@
 #include "ui/settings.h"
 
 int main(int argc, char** argv) {
-    QTemporaryDir home;
-    PANG_CHECK(home.isValid(), "diretorio temporario criado");
-    qputenv("XDG_CONFIG_HOME", home.path().toLocal8Bit());
+    QStandardPaths::setTestModeEnabled(true);
 
     QCoreApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("PlayAmpNG-teste"));
@@ -75,8 +77,7 @@ int main(int argc, char** argv) {
 
     // IN-10 — arquivo corrompido nao impede o programa de abrir.
     {
-        const QString path = QDir(home.path()).filePath(
-            QStringLiteral("PlayAmpNG-teste/PlayAmpNG-teste/config.json"));
+        const QString path = pang::ui::settings::config_file_path();
         QFile bad(path);
         PANG_CHECK(bad.exists(), "o arquivo de configuracao foi criado onde se espera");
         if (bad.open(QIODevice::WriteOnly)) {

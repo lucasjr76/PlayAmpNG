@@ -70,6 +70,18 @@ jobs:
           echo "$raiz/bin" >> "$GITHUB_PATH"
           ls "$raiz"
 
+      # O leitor de .wsz usa inflate cru do zlib. O Qt para Windows nao expoe
+      # cabecalho de zlib, entao ele vem do vcpkg — que ja esta no runner e
+      # compila zlib em segundos. ZLIB_ROOT basta: nao trocamos o toolchain,
+      # para nao interferir na busca do FFmpeg.
+      - name: zlib (Windows)
+        if: matrix.name == 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$VCPKG_INSTALLATION_ROOT/vcpkg" install zlib:x64-windows
+          echo "ZLIB_ROOT=$VCPKG_INSTALLATION_ROOT/installed/x64-windows" >> "$GITHUB_ENV"
+
       # Os testes de rede, de dispositivo e de barramento sao orquestrados por
       # Python. Ele ja vem nos runners; a linha existe para falhar cedo e com
       # mensagem clara se algum dia nao vier.
@@ -93,3 +105,20 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: ctest --test-dir build --output-on-failure --no-tests=error
+
+      # EN-09 — o instalador e montado no proprio CI para que nunca dependa da
+      # maquina de um desenvolvedor. Reaproveita o diretorio `build` ja
+      # compilado: o cmake so reconfigura, e nao recompila.
+      - name: Instalador (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: packaging/windows/build-installer.ps1 -FfmpegRoot "$env:FFMPEG_ROOT" -BuildDir build
+
+      - name: Publicar instalador
+        if: matrix.name == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playampng-windows
+          path: |
+            packaging/windows/*-setup.exe
+            dist/windows/
