@@ -1,5 +1,7 @@
 #include "core/meta/scanner.h"
 
+#include <thread>
+
 #include "core/meta/tags.h"
 
 namespace pang::core::meta {

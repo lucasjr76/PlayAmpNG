@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <optional>
+#include <thread>
 
 #include "core/util/log.h"
 

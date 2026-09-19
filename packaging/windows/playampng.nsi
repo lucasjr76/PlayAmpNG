@@ -70,34 +70,38 @@ Section "Atalho no Menu Iniciar" SecStartMenu
   CreateShortcut "$SMPROGRAMS\PlayAmpNG\Desinstalar.lnk" "$INSTDIR\uninstall.exe"
 SectionEnd
 
+; Os formatos ficam numa lista so, usada tanto para associar quanto para
+; desassociar. Duas listas separadas divergiriam no primeiro formato novo, e o
+; sintoma seria a desinstalacao deixar uma extensao apontando para um programa
+; que nao existe mais.
+!macro CadaFormato Acao
+  !insertmacro ${Acao} ".mp3"
+  !insertmacro ${Acao} ".flac"
+  !insertmacro ${Acao} ".ogg"
+  !insertmacro ${Acao} ".opus"
+  !insertmacro ${Acao} ".wav"
+  !insertmacro ${Acao} ".m4a"
+!macroend
+
+!macro Associar Ext
+  WriteRegStr HKCU "Software\Classes\${Ext}" "" "PlayAmpNG.Audio"
+!macroend
+
+; Só remove o que ainda aponta para nós: se o usuário associou o formato a
+; outro player depois de instalar, a escolha dele e que vale.
+!macro Desassociar Ext
+  ReadRegStr $0 HKCU "Software\Classes\${Ext}" ""
+  StrCmp $0 "PlayAmpNG.Audio" 0 +2
+    DeleteRegKey HKCU "Software\Classes\${Ext}"
+!macroend
+
 Section /o "Associar formatos de audio" SecAssoc
   ; Opcional e desmarcada por padrao: tomar as associacoes sem perguntar e
   ; hostil, e o usuario pode ja ter um player preferido.
   WriteRegStr HKCU "Software\Classes\PlayAmpNG.Audio" "" "Arquivo de audio"
   WriteRegStr HKCU "Software\Classes\PlayAmpNG.Audio\DefaultIcon" "" "$INSTDIR\playampng.exe,0"
   WriteRegStr HKCU "Software\Classes\PlayAmpNG.Audio\shell\open\command" "" '"$INSTDIR\playampng.exe" "%1"'
-
-  StrCpy $0 0
-  ${Do}
-    ${Select} $0
-      ${Case} 0
-        StrCpy $1 ".mp3"
-      ${Case} 1
-        StrCpy $1 ".flac"
-      ${Case} 2
-        StrCpy $1 ".ogg"
-      ${Case} 3
-        StrCpy $1 ".opus"
-      ${Case} 4
-        StrCpy $1 ".wav"
-      ${Case} 5
-        StrCpy $1 ".m4a"
-      ${CaseElse}
-        ${Break}
-    ${EndSelect}
-    WriteRegStr HKCU "Software\Classes\$1" "" "PlayAmpNG.Audio"
-    IntOp $0 $0 + 1
-  ${Loop}
+  !insertmacro CadaFormato Associar
 SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -115,6 +119,7 @@ Section "Uninstall"
 
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\PlayAmpNG"
   DeleteRegKey HKCU "Software\PlayAmpNG"
+  !insertmacro CadaFormato Desassociar
   DeleteRegKey HKCU "Software\Classes\PlayAmpNG.Audio"
 
   ; A CONFIGURACAO DO USUARIO NAO E APAGADA. Desinstalar nao e pedir para

@@ -10,6 +10,7 @@
 #include <QWindow>
 
 #include <algorithm>
+#include <chrono>
 
 #include "ui/skin/winamp_layout.h"
 

@@ -9,6 +9,7 @@
 // decodificacao, do outro lado do ring.
 
 #include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <new>

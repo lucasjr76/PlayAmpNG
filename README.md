@@ -63,6 +63,14 @@ flatpak-builder --user --install --force-clean build-flatpak \
 
 O script do AppImage baixa `linuxdeploy` e `appimagetool` na primeira execução e não exige root.
 
+No Windows, com Qt e o ambiente do MSVC no `PATH`:
+
+```powershell
+packaging\windows\build-installer.ps1 -FfmpegRoot C:\ffmpeg
+```
+
+Monta `dist\windows\`, um diretório que já roda por si só, e — se `makensis` estiver disponível — o instalador `PlayAmpNG-<versão>-setup.exe`. O instalador não pede administrador: instala em `%LOCALAPPDATA%`, as associações de arquivo são opcionais e desmarcadas, e desinstalar não apaga a configuração do usuário. O zlib do Windows vem do vcpkg (`vcpkg install zlib:x64-windows`, depois `ZLIB_ROOT`); o Qt para Windows não traz cabeçalho de zlib.
+
 ### Regerar a arte do skin
 
 ```sh
