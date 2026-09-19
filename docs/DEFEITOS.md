@@ -15,6 +15,24 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Corrigidos
 
+### C-17 — A recuperação do dispositivo de áudio não funcionava, e o teste isolado não mostrava
+
+A política de reabertura tinha teste e passava. Ao exercitá-la contra o sistema de áudio de verdade — criando um sink virtual com `pactl` e removendo-o com o player tocando nele — apareceram **dois defeitos que o teste isolado não podia ver**.
+
+**1. O aviso do miniaudio não chega.** A detecção de perda dependia do `notificationCallback`. Medido: ao remover um sink do PulseAudio em uso, esse callback **não dispara**. Os quadros simplesmente param de ser puxados e o dispositivo continua se declarando saudável — observado por mais de 25 s sem nenhuma mudança de estado. O player ficaria mudo sem nada acusar.
+
+*Correção:* o sinal de vida passou a ser o próprio callback de dados. Se o dispositivo está vivo, ele **puxa**. Um segundo sem nenhuma chamada, com o dispositivo supostamente tocando, é perda. O aviso do miniaudio continua ligado — em outros sistemas ele chega — mas deixou de ser a única detecção.
+
+**2. Destruir o dispositivo morto trava.** `ma_device_uninit` num dispositivo cujo sink sumiu **não retorna**. Medido: 25 s de espera sem resposta, e nada indica que terminaria. Como a reabertura começava fechando o anterior, a recuperação inteira travava — e, na primeira versão, levava junto o thread da interface, congelando a janela.
+
+*Correção:* o dispositivo perdido é **abandonado**, não destruído. A tentativa de liberá-lo segue num thread solto, que termina se o sistema de áudio voltar. O vazamento é deliberado e está comentado no código: acontece uma vez por perda de hardware, que é evento raro, e o preço de alguns descritores é menor que o de um player que nunca mais toca.
+
+Para que o dispositivo abandonado não interferisse, cada abertura passou a ter um **canal próprio** com seu contador de quadros. Sem isso, o callback do morto continuaria incrementando o contador do vivo e mascararia a próxima parada.
+
+**Verificado por mutação, com o sistema de áudio real:** desligado o detector de parada, o teste acusa "a perda do dispositivo foi detectada" e "a saída foi restabelecida"; trocado o abandono por destruição, o processo trava e o prazo do runner o reprova.
+
+**Lição:** a política pura estava certa e continua certa — o erro estava em tudo que ela pressupunha sobre o mundo. Teste de unidade sobre uma abstração não verifica a abstração.
+
 ### C-16 — A diagramação passou a ser verificada, não ajustada no olho
 
 **Observado:** *"TEMPO e FFT colado demais nos outros elementos. SLIDER do BALANÇO foi cortado no intuito de arranjar ou alinhar os elementos. Acho inacreditável não conseguir diagramar."*

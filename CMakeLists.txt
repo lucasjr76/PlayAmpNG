@@ -137,6 +137,10 @@ target_compile_definitions(pang_fontgen PRIVATE
 
 # ------------------------------------------------------------------- testes
 
+# Dois testes precisam de Python para orquestrar o ambiente: o de rede sobe um
+# servidor HTTP, o de perda de dispositivo cria e remove um sink.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 add_executable(pang_tests tests/test_core.cpp)
 target_link_libraries(pang_tests PRIVATE pang_core pang_platform)
 set_target_properties(pang_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
@@ -159,6 +163,17 @@ target_link_libraries(pang_device_tests PRIVATE pang_core pang_platform)
 set_target_properties(pang_device_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME device COMMAND pang_device_tests)
 
+# AU-12, RB-05 — perda REAL de dispositivo. Cria um sink virtual e o remove com
+# o player tocando nele. Pulado (77) onde nao houver pactl nem servidor de
+# audio: a ausencia deles numa maquina de integracao nao e defeito do player.
+add_executable(pang_device_loss_tests tests/test_device_loss.cpp)
+target_link_libraries(pang_device_loss_tests PRIVATE pang_core pang_platform)
+set_target_properties(pang_device_loss_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME device_loss COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_device_loss.py
+  $<TARGET_FILE:pang_device_loss_tests>)
+set_tests_properties(device_loss PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+
 # Ida e volta da configuracao. Escreve em diretorio temporario proprio, via
 # XDG_CONFIG_HOME, para nao tocar na configuracao real do usuario.
 qt_add_executable(pang_settings_tests tests/test_settings.cpp src/ui/settings.cpp)
@@ -175,7 +190,6 @@ target_compile_definitions(pang_stream_tests PRIVATE
   PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
 set_target_properties(pang_stream_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_test(NAME stream COMMAND ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_stream_test.py
   ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream_server.py
