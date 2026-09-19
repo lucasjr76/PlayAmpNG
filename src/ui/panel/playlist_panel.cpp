@@ -52,6 +52,7 @@ const QColor kFaceHighlight{239, 248, 250};
 const QColor kFaceShadow{120, 128, 146};
 const QColor kOutline{16, 16, 26};
 const QColor kButtonInk{26, 30, 46};
+const QColor kNormalText{0, 255, 12};
 const QColor kCurrentText{252, 251, 233};
 const QColor kSelectedRow{38, 38, 92};
 
@@ -183,7 +184,10 @@ int PlaylistPanel::row_at(const QPoint& p) const {
 // divergem e o cursor deixa de pegar onde aparece.
 QRect PlaylistPanel::scrollbar_rect() const {
     const int top = kTitlebarHeight;
-    return QRect(kWidth - kListMargin - kScrollbarWidth, top, kScrollbarWidth,
+    // Encostada na borda DIREITA da janela, nao recuada pela margem da lista.
+    // Barra de rolagem e cromo de janela, e cromo mora na borda; recuada, ela
+    // flutua no meio do preto e parece solta do que rola.
+    return QRect(kWidth - kScrollbarWidth, top, kScrollbarWidth,
                  visible_rows() * kRowHeight);
 }
 
@@ -285,15 +289,17 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
             title = title.left(fits) + QStringLiteral(".");
         }
 
-        painter.save();
-        // O texto do formato e monocromatico; a cor sai do recorte, entao a
-        // distincao entre faixa atual e demais e feita por composicao.
-        skin_.draw_text(painter, number, {kListMargin, y + 1});
-        skin_.draw_text(painter, title, {title_x, y + 1});
-        skin_.draw_text(painter, duration, {kWidth - kListMargin - duration_width, y + 1});
-        if (index == current)
-            painter.fillRect(0, y * s, 3 * s, kRowHeight * s, kCurrentText);
-        painter.restore();
+        // Texto RECORTADO. O text.bmp do formato tem fundo preto; desenhado
+        // por cima do azul da selecao, cada palavra levava junto uma caixa
+        // preta e a linha selecionada ficava listrada. Recortando, o azul
+        // aparece entre as letras, que e o que se espera de uma selecao.
+        //
+        // A cor tambem passa a distinguir a faixa em reproducao, no lugar da
+        // barrinha de 3 px que so aparecia na margem.
+        const QColor ink = index == current ? kCurrentText : kNormalText;
+        skin_.draw_text(painter, number, {kListMargin, y + 1}, ink);
+        skin_.draw_text(painter, title, {title_x, y + 1}, ink);
+        skin_.draw_text(painter, duration, {kWidth - kListMargin - duration_width, y + 1}, ink);
     }
 
     // Barra de rolagem, so quando ha o que rolar.

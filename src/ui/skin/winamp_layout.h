@@ -214,7 +214,10 @@ constexpr QRect kVisualization{19, 43, 76, 16};
 // mesma largura e a mesma coluna do espectro. Nao e enfeite: sem ele o usuario
 // nao tem como saber que o preamp do equalizador poe o limitador a trabalhar
 // em todos os blocos, e ouve o ganho respirando sem explicacao.
-constexpr QRect kLimiterMeter{19, 39, 76, 3};
+// Uma linha, na folga entre os digitos (que terminam em 38) e o espectro (que
+// comeca em 43). Tres linhas competiam com as barras pela atencao; o medidor e
+// aviso, nao instrumento principal.
+constexpr QRect kLimiterMeter{19, 40, 76, 1};
 
 // --------------------------------------- eqmain.bmp (275x315)
 

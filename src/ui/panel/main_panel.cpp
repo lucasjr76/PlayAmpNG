@@ -309,11 +309,14 @@ void MainPanel::paint_limiter(QPainter& painter) {
         std::clamp(static_cast<int>(reduction_db / 12.0f * meter.width()), 1, meter.width());
     // Rampa propria, e nao a do espectro: indexar a paleta do espectro dava
     // verde-oliva escuro para reducao pequena, e um aviso que nao se ve nao
-    // avisa. Aqui a cor vai de amarelo a vermelho conforme a reducao cresce,
-    // sempre em brilho cheio.
+    // avisa. Aqui a cor vai de ambar a vermelho conforme a reducao cresce.
+    //
+    // Brilho contido de proposito: numa linha unica, no meio do mostrador, um
+    // amarelo pleno disputava atencao com o espectro. O aviso precisa ser
+    // notado quando se olha, nao o tempo todo.
     const float t = std::clamp(reduction_db / 9.0f, 0.0f, 1.0f);
-    const QColor ink(static_cast<int>(240 - 30 * t), static_cast<int>(203 - 150 * t),
-                     static_cast<int>(71 - 40 * t));
+    const QColor ink(static_cast<int>(186 - 20 * t), static_cast<int>(142 - 110 * t),
+                     static_cast<int>(48 - 24 * t));
     painter.fillRect((meter.right() + 1 - filled) * s, meter.y() * s, filled * s,
                      meter.height() * s, ink);
 }

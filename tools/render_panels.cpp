@@ -38,6 +38,11 @@ int main(int argc, char** argv) {
     pang::core::Controller controller(engine);
     controller.playlist().add("/musica/Artista Um - Cancao De Nome Longo Para Rolar.mp3");
     controller.playlist().add("/musica/Outro - Segunda.mp3");
+    // Lista longa o bastante para a barra de rolagem existir, e uma faixa
+    // marcada como em reproducao para ver selecao e cor juntas.
+    for (int i = 3; i <= 40; ++i)
+        controller.playlist().add("/musica/Banda " + std::to_string(i) +
+                                  " - Titulo da faixa " + std::to_string(i) + ".mp3");
 
     std::vector<pang::core::dsp::EqPreset> presets;
     // Bandas espalhadas: com tudo em 0 dB os polegares cobrem os proprios
@@ -74,6 +79,10 @@ int main(int argc, char** argv) {
     }
     pang::ui::EqualizerPanel equalizer(engine.equalizer(), presets, skin);
     pang::ui::PlaylistPanel playlist(controller, skin);
+    // Faixa marcada como em reproducao: e o que mostra a selecao e a cor
+    // propria da linha atual no render.
+    controller.play_index(5);
+    playlist.refresh();
     save(main_panel, "main");
     save(equalizer, "eq");
     save(playlist, "playlist");

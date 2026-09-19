@@ -15,6 +15,21 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Corrigidos
 
+### C-20 — Barra de rolagem flutuando e linha selecionada listrada de preto
+
+Dois defeitos visuais encontrados em uso, na playlist.
+
+| Observação | Causa | Correção |
+|---|---|---|
+| *"a barra de rolagem não fica na lateral direita, fica flutuando"* | Ela era posicionada com a margem da lista (14 px), como se fosse conteúdo. Barra de rolagem é **cromo de janela**, e cromo mora na borda — recuada, ela flutuava no meio do preto e parecia solta do que rola | Encostada na borda direita: 269..274 |
+| *"música selecionada fica com selecionado AZUL e onde tem TEXTO com fundo preto, estranho ao olhar"* | O `text.bmp` do formato tem fundo preto. Desenhado por cima do azul da seleção, cada palavra levava junto uma caixa preta e a linha ficava **listrada** | Texto recortado (`draw_text` com cor), que já existia desde o M5 e não estava sendo usado nas linhas da lista |
+
+A cor do texto também passou a distinguir a faixa em reprodução — creme contra o verde das demais — no lugar da barrinha de 3 px que só aparecia na margem esquerda.
+
+**Medido depois:** na linha selecionada, 1508 px azuis e **zero** px pretos. **Verificado por mutação:** devolvido o texto não recortado, aparecem 123 px pretos e o teste reprova; recuada a barra, reprova também.
+
+O medidor do limitador passou de 3 px para **1 px**, em âmbar contido: três linhas competiam com o espectro pela atenção, e o medidor é aviso, não instrumento principal.
+
 ### C-18 — "Ruídos ao tocar": o limitador trabalhando em todos os blocos, sem nada avisar
 
 **Observado:** *"percebi uns ruídos no som ao tocar a música, será codec?"*

@@ -10,6 +10,7 @@
 //      mouse rolava. Ela era desenhada e nao era area sensivel.
 
 #include <QApplication>
+#include <QImage>
 #include <QMouseEvent>
 
 #include <cstdio>
@@ -78,6 +79,38 @@ int main(int argc, char** argv) {
         panel.refresh();
         PANG_CHECK(panel.selection() == escolhida,
                    "refresh sem troca de faixa preserva a selecao do usuario");
+    }
+
+    // --------------------------------------------- aparencia da selecao
+    {
+        controller.play_index(3);
+        panel.refresh();
+
+        QImage imagem(panel.size(), QImage::Format_ARGB32);
+        imagem.fill(Qt::transparent);
+        panel.render(&imagem);
+
+        const QRect barra = panel.scrollbar();
+        // A barra de rolagem e CROMO DE JANELA: mora na borda direita. Recuada
+        // pela margem da lista, ela flutuava no meio do preto e parecia solta
+        // do que rola.
+        PANG_CHECK(barra.x() + barra.width() == pang::ui::PlaylistPanel::kWidth,
+                   "a barra de rolagem encosta na borda direita da janela");
+
+        // A linha selecionada nao pode ter PRETO dentro dela. O text.bmp do
+        // formato tem fundo preto; desenhado por cima do azul da selecao, cada
+        // palavra levava junto uma caixa preta e a linha ficava listrada.
+        const int linha = 14 + (3 - panel.scroll_position()) * 8;
+        int pretos = 0, azuis = 0;
+        for (int y = linha + 1; y < linha + 7; ++y)
+            for (int x = 2; x < barra.x() - 2; ++x) {
+                const QRgb c = imagem.pixel(x, y);
+                if (qRed(c) < 12 && qGreen(c) < 12 && qBlue(c) < 12) ++pretos;
+                if (qBlue(c) > 60 && qBlue(c) > qRed(c) + 30) ++azuis;
+            }
+        std::printf("  linha selecionada: %d px azuis, %d px pretos\n", azuis, pretos);
+        PANG_CHECK(azuis > 200, "a linha selecionada tem fundo azul");
+        PANG_CHECK(pretos == 0, "a linha selecionada nao tem caixa preta atras do texto");
     }
 
     // ------------------------------------------------ arrasto da rolagem
