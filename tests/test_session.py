@@ -109,9 +109,26 @@ if checar(os.path.exists(m3u), "a playlist da sessao e gravada ao receber SIGTER
     checar(os.path.basename(primeiro) in texto and os.path.basename(segundo) in texto,
            "as duas faixas estao na playlist gravada")
 
+def duracoes(caminho):
+    """Segundos de cada #EXTINF. -1 significa que ninguem varreu o arquivo."""
+    return [int(l.split(":", 1)[1].split(",", 1)[0])
+            for l in open(caminho).read().splitlines() if l.startswith("#EXTINF:")]
+
+
+antes = duracoes(m3u)
+checar(antes and all(d > 0 for d in antes),
+       f"a primeira execucao varre e grava as duracoes (viu {antes})")
+
 saida, estado = rodar(perfil, segundos=6)
 checar("sessao restaurada: 2 faixa(s)" in saida,
        "a sessao seguinte restaura as duas faixas")
+
+# A sessao restaurada precisa passar pela varredura de metadados como qualquer
+# outra insercao. Sem isso ela aparece inteira com duracao "--:--" e total
+# zerado — defeito que so se ve depois de fechar e abrir o player.
+depois = duracoes(m3u)
+checar(depois == antes,
+       f"a sessao restaurada mantem as duracoes (antes {antes}, depois {depois})")
 # IN-11 — o ponto do requisito: restaurar nao pode comecar a tocar.
 if estado is None:
     print("  sem barramento: o estado de reproducao nao pode ser verificado", file=sys.stderr)

@@ -770,9 +770,16 @@ int main(int argc, char** argv) {
         const auto restored = pang::core::playlist_io::load(
             pang::ui::settings::session_playlist_path().toStdString(), playlist_error);
         if (!restored.empty()) {
-            for (const auto& track : restored) controller->playlist().add(track.path);
-            controller->playlist_changed();
-            playlist_panel->refresh(/*force=*/true);
+            // Pelo MESMO caminho de abrir arquivos, e nao por uma insercao
+            // propria. A versao anterior inseria direto na playlist e pulava a
+            // varredura de metadados, entao a sessao restaurada aparecia
+            // inteira com duracao "--:--" e total zerado — defeito que so se
+            // via depois de fechar e abrir o player.
+            QStringList paths;
+            paths.reserve(static_cast<int>(restored.size()));
+            for (const auto& track : restored)
+                paths << QString::fromStdString(track.path);
+            add_paths(paths);
             pang::core::log::info("sessao restaurada: " + std::to_string(restored.size()) +
                                   " faixa(s)");
             if (saved.autoplay_on_restore) controller->play_index(0);

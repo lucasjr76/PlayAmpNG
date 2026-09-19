@@ -15,6 +15,24 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Corrigidos
 
+### C-21 — Sessão restaurada aparecia inteira sem duração
+
+**Observado:** 225 faixas na playlist, todas com `--:--` e total `00:00+`.
+
+**Causa — minha, introduzida no M7.** A restauração de sessão inseria as faixas **direto na playlist**, em vez de usar o mesmo caminho de abrir arquivos. Esse caminho faz três coisas, e a inserção direta fazia só a primeira:
+
+```
+add_paths()  ->  insere  ->  playlist_changed()  ->  refresh()  ->  scan_missing()
+```
+
+Sem `scan_missing()`, nenhuma faixa era varrida e todas ficavam com `duration_ms = -1`. O defeito só aparecia **depois de fechar e abrir** o player: abrindo com um diretório como argumento, o caminho correto era usado e as durações apareciam.
+
+É a mesma classe de erro que já havia aparecido em `probe`/`decoder` no M6-1 e no desenho da barra de rolagem: **duas rotas para a mesma operação divergem**. A correção não foi acrescentar a chamada que faltava, e sim fazer a restauração passar por `add_paths`, que já existe.
+
+**Verificado:** 225 arquivos MP3 varridos em menos de 20 s; a segunda execução mantém as durações. **Por mutação:** devolvida a inserção direta, o teste acusa `antes [60, 60], depois [-1, -1]`.
+
+O scanner em si estava correto e não foi tocado.
+
 ### C-20 — Barra de rolagem flutuando e linha selecionada listrada de preto
 
 Dois defeitos visuais encontrados em uso, na playlist.
