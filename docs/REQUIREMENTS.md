@@ -169,7 +169,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 |---|---|---|---|---|
 | MD-01 | Ler título, artista, álbum, nº da faixa, gênero, ano e duração quando disponíveis | AUTO | M2 | OK (M2) |
 | MD-02 | Sem tags, usar o nome do arquivo | AUTO | M2 | OK (M2) |
-| MD-03 | Janela de propriedades técnicas e localização do arquivo | MANUAL | M6 | PENDENTE |
+| MD-03 | Janela de propriedades técnicas e localização do arquivo | MANUAL | M6 | OK (M6) |
 | MD-04 | Estados de conexão, buffering, reprodução e erro em stream | MANUAL | M6 | PARCIAL (M6) |
 | MD-05 | Leitura de metadados ICY quando fornecidos | AUTO | M6 | PARCIAL (M6) |
 | MD-06 | Tratamento de redirecionamentos HTTP | AUTO | M6 | OK (M6) |
@@ -181,14 +181,14 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| IN-01 | Atalhos de teclado documentados | MANUAL | M6 | PENDENTE |
+| IN-01 | Atalhos de teclado documentados | MANUAL | M6 | OK (M6) |
 | IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | OK (M5) |
-| IN-03 | Nomes acessíveis e tooltips | MANUAL | M6 | PENDENTE |
-| IN-04 | Integração com teclas multimídia | MANUAL | M6 | PENDENTE |
-| IN-05 | Integração MPRIS no Linux | MANUAL | M6 | PENDENTE |
-| IN-06 | Opção de manter a janela acima das demais | MANUAL | M6 | PENDENTE |
+| IN-03 | Nomes acessíveis e tooltips | MANUAL | M6 | OK (M6) |
+| IN-04 | Integração com teclas multimídia | AUTO | M6 | OK (M6) |
+| IN-05 | Integração MPRIS no Linux | AUTO | M6 | OK (M6) |
+| IN-06 | Opção de manter a janela acima das demais | MANUAL | M6 | OK (M6) |
 | IN-07 | Abertura de arquivos por argumentos de linha de comando | AUTO | M1 | OK (M1) |
-| IN-08 | Arquivo passado a uma instância já aberta é enfileirado nela | MANUAL | M6 | PENDENTE |
+| IN-08 | Arquivo passado a uma instância já aberta é enfileirado nela | AUTO | M6 | OK (M6) |
 | IN-09 | Gravação atômica de configuração, playlist, presets e layout | AUTO | M5 | OK (M5) |
 | IN-10 | Configuração inválida → renomeia para `.bad`, carrega padrões, registra log | AUTO | M5 | OK (M5) |
 | IN-11 | Restaurar sessão não inicia áudio, salvo preferência explícita | AUTO | M5 | PENDENTE |

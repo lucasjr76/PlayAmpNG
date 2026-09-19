@@ -24,6 +24,16 @@ std::atomic<bool> g_watching{false};
 std::atomic<int> g_allocations{0};
 }  // namespace
 
+// O compilador avisa de "mismatched new/delete" nestes substitutos, e e falso
+// positivo: ele enxerga o std::free ao inlinar um destrutor da biblioteca
+// padrao, mas nao enxerga que o operator new correspondente TAMBEM foi
+// substituido logo acima e tambem usa malloc. Silenciado aqui, e so aqui, com
+// a razao anotada — desligar o aviso no projeto inteiro esconderia o caso em
+// que ele estivesse certo.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wmismatched-new-delete"
+#endif
+
 void* operator new(std::size_t size) {
     if (g_watching.load(std::memory_order_relaxed)) g_allocations.fetch_add(1);
     void* pointer = std::malloc(size ? size : 1);

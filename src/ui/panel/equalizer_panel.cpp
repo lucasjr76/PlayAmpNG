@@ -32,6 +32,11 @@ EqualizerPanel::EqualizerPanel(core::dsp::Equalizer& equalizer,
                                skin::WinampSkin& skin, QWidget* parent)
     : QWidget(parent), equalizer_(equalizer), user_presets_(user_presets), skin_(skin) {
     setFocusPolicy(Qt::StrongFocus);
+    // IN-03 — o painel nao tem widget por controle, entao o que o leitor de
+    // tela anuncia e a janela. O detalhe de cada controle vem do tooltip, que
+    // segue a posicao do cursor.
+    setAccessibleName(tr("Equalizador"));
+    setAccessibleDescription(tr("Preamp e dez bandas, de 60 Hz a 16 kHz"));
     setAttribute(Qt::WA_OpaquePaintEvent, true);
     set_scale(skin.scale());
 }

@@ -34,6 +34,11 @@ public:
 
     // AP-11 — modo compacto: so a faixa de titulo do painel principal.
     void set_compact(bool compact);
+
+    // IN-06 — melhor esforco por plataforma. No Wayland o compositor pode
+    // ignorar o pedido; a janela continua funcionando, so nao fica acima.
+    void set_always_on_top(bool on);
+    bool always_on_top() const { return always_on_top_; }
     bool compact() const { return compact_; }
 
     void set_scale(int scale);
@@ -56,6 +61,7 @@ private:
     bool equalizer_visible_ = false;
     bool playlist_visible_ = true;
     bool compact_ = false;
+    bool always_on_top_ = false;
     bool detached_ = false;
 };
 

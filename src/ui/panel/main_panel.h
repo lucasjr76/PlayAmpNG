@@ -54,6 +54,11 @@ public:
 
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
+
+    // IN-03 — o painel e desenhado a mao e nao tem widget por controle, entao
+    // nao ha a quem pendurar tooltip. O teste de acerto por posicao, que ja
+    // existe para o clique, serve tambem para dizer o que esta sob o cursor.
+    bool event(QEvent*) override;
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
@@ -69,6 +74,7 @@ private:
     };
 
     Hit hit_test(const QPoint& logical) const;
+    static QString control_name(Hit hit);
     QPoint to_logical(const QPoint& physical) const;
 
     void paint_display(QPainter&);

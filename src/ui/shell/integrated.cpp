@@ -33,6 +33,8 @@ IntegratedShell::IntegratedShell(MainPanel* main, EqualizerPanel* equalizer,
              [this] { set_equalizer_visible(!equalizer_visible_); });
     shortcut(QKeySequence(QStringLiteral("Ctrl+P")),
              [this] { set_playlist_visible(!playlist_visible_); });
+    shortcut(QKeySequence(QStringLiteral("Ctrl+T")),
+             [this] { set_always_on_top(!always_on_top_); });
 
     relayout();
 }
@@ -45,6 +47,17 @@ void IntegratedShell::set_equalizer_visible(bool visible) {
 void IntegratedShell::set_playlist_visible(bool visible) {
     playlist_visible_ = visible;
     relayout();
+}
+
+void IntegratedShell::set_always_on_top(bool on) {
+    if (always_on_top_ == on) return;
+    always_on_top_ = on;
+    // setWindowFlag reabre a janela no X11, entao o estado de visibilidade
+    // precisa ser restaurado na sequencia, senao o player some da tela ao
+    // alternar a opcao.
+    const bool was_visible = isVisible();
+    setWindowFlag(Qt::WindowStaysOnTopHint, on);
+    if (was_visible) show();
 }
 
 void IntegratedShell::set_compact(bool compact) {

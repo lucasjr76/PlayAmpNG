@@ -40,7 +40,6 @@ struct Piece {
 };
 
 int right(const QRect& r) { return r.x() + r.width() - 1; }
-int bottom(const QRect& r) { return r.y() + r.height() - 1; }
 
 QRect placed(const QPoint& at, const wa::Sprite& sprite) {
     return QRect(at, sprite.source.size());

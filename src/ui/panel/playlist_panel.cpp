@@ -80,6 +80,11 @@ QString format_total_ms(std::int64_t ms) {
 PlaylistPanel::PlaylistPanel(core::Controller& controller, skin::WinampSkin& skin, QWidget* parent)
     : QWidget(parent), controller_(controller), skin_(skin) {
     setFocusPolicy(Qt::StrongFocus);
+    // IN-03 — o painel nao tem widget por controle, entao o que o leitor de
+    // tela anuncia e a janela. O detalhe de cada controle vem do tooltip, que
+    // segue a posicao do cursor.
+    setAccessibleName(tr("Playlist"));
+    setAccessibleDescription(tr("Lista de faixas com duracao e total"));
     setAcceptDrops(true);  // LI-02
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent, true);

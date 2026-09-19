@@ -76,6 +76,7 @@ bool save(const AppState& state) {
     root[QStringLiteral("replaygain_mode")] = state.replaygain_mode;
     root[QStringLiteral("autoplay_on_restore")] = state.autoplay_on_restore;
     root[QStringLiteral("audio_device")] = QString::fromStdString(state.audio_device);
+    root[QStringLiteral("always_on_top")] = state.always_on_top;
     root[QStringLiteral("equalizer")] = eq;
     root[QStringLiteral("user_presets")] = presets;
 
@@ -126,6 +127,7 @@ AppState load() {
     state.replaygain_mode = root[QStringLiteral("replaygain_mode")].toInt(0);
     state.autoplay_on_restore = root[QStringLiteral("autoplay_on_restore")].toBool(false);
     state.audio_device = root[QStringLiteral("audio_device")].toString().toStdString();
+    state.always_on_top = root[QStringLiteral("always_on_top")].toBool(false);
 
 
     const QJsonObject eq = root[QStringLiteral("equalizer")].toObject();

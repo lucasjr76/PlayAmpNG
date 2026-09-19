@@ -136,6 +136,16 @@ Entrega: player integrado ao desktop nos três sistemas, tocando rádio.
 
 Verificação: PL-08, PL-23; AU-11, AU-12; MD-03..MD-09; IN-01..IN-08; AR-06; RB-04, RB-05.
 
+**Entregue em três partes**, porque as naturezas de verificação são diferentes:
+
+| Parte | Escopo | Como é verificado |
+|---|---|---|
+| M6-1 | Streaming, ICY, redirecionamento, reconexão contada, seek e duração em fonte ao vivo | `tests/test_stream.cpp` sobe um servidor HTTP local com quatro comportamentos |
+| M6-2 | Dispositivo de saída e recuperação de perda | Política pura em `test_device.cpp`; perda real criando e removendo um sink com `pactl` em `test_device_loss.cpp` |
+| M6-3 | MPRIS, teclas de mídia, sempre no topo, instância única, propriedades, tooltips, atalhos | `test_mpris.py` e `test_single_instance.py` falam com o player de verdade pelo barramento |
+
+Windows (SMTC) e macOS (MPNowPlayingInfoCenter) usam `integration_none.cpp` até serem implementados: o player roda sem aparecer no painel do sistema, que é degradação prevista e não falha.
+
 ---
 
 ### M7 — Empacotamento Linux e relatório

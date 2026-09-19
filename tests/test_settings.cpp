@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
     written.detached = true;
     written.compact = true;
     written.equalizer_visible = true;
+    written.always_on_top = true;
     written.main_geometry = {10, 20, 275, 116};
     written.playlist_geometry = {10, 140, 275, 232};
     written.equalizer_geometry = {10, 380, 275, 116};
@@ -66,6 +67,7 @@ int main(int argc, char** argv) {
     PANG_CHECK(read.detached == written.detached, "paineis destacados persiste");
     PANG_CHECK(read.compact == written.compact, "modo compacto persiste");
     PANG_CHECK(read.equalizer_visible == written.equalizer_visible, "equalizador visivel persiste");
+    PANG_CHECK(read.always_on_top == written.always_on_top, "sempre no topo persiste");
     PANG_CHECK(read.main_geometry == written.main_geometry, "geometria principal persiste");
     PANG_CHECK(read.playlist_geometry == written.playlist_geometry, "geometria da playlist persiste");
     PANG_CHECK(read.equalizer_geometry == written.equalizer_geometry,

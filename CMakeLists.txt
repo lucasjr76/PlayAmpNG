@@ -19,7 +19,17 @@ find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED)   # leitor de .wsz; ja vem com o Qt
 
 # Qt entra apenas na camada ui/. Nunca em core/ nem em platform/.
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
+# DBus e Network sao opcionais: entram para MPRIS (IN-05) e para a instancia
+# unica (IN-08). Onde nao existirem, o player perde essas integracoes e nada
+# mais — nenhuma das duas e condicao para tocar.
+# Avisos ligados. Custam 6 no projeto inteiro e ja pagaram: sem -Wswitch, um
+# `switch` sobre enum ao qual se acrescenta um valor compila calado e o caso
+# novo simplesmente nao e tratado. Nao viram erro porque um aviso novo do
+# compilador da distro nao deve impedir o projeto de compilar.
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
+find_package(Qt6 6.5 QUIET COMPONENTS DBus)
 qt_standard_project_setup()
 
 # FFmpeg cobre demux, decode, resample, HTTP e ICY (spec 4 e 8).
@@ -85,6 +95,30 @@ target_link_libraries(pang_platform PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
 if(NOT WIN32)
   target_link_libraries(pang_platform PRIVATE m)
 endif()
+# Integracao com o ambiente de trabalho. Alvo SEPARADO de pang_platform, e nao
+# uma adicao a ele, porque precisa de Qt: os testes de core/ e de dispositivo
+# ligam pang_platform e nao devem arrastar o framework junto.
+if(LINUX OR (UNIX AND NOT APPLE))
+  if(Qt6DBus_FOUND)
+    set(PANG_INTEGRATION_SOURCE src/platform/integration_linux.cpp)
+    set(PANG_INTEGRATION_QT Qt6::DBus Qt6::Core)
+  else()
+    message(STATUS "Qt6 DBus ausente: sem MPRIS nem teclas de midia do ambiente")
+    set(PANG_INTEGRATION_SOURCE src/platform/integration_none.cpp)
+    set(PANG_INTEGRATION_QT Qt6::Core)
+  endif()
+else()
+  # Windows (SMTC) e macOS (MPNowPlayingInfoCenter) ainda nao implementados;
+  # ate la o player roda sem aparecer no painel do sistema, que e degradacao
+  # prevista e nao falha.
+  set(PANG_INTEGRATION_SOURCE src/platform/integration_none.cpp)
+  set(PANG_INTEGRATION_QT Qt6::Core)
+endif()
+
+qt_add_library(pang_integration STATIC ${PANG_INTEGRATION_SOURCE})
+target_include_directories(pang_integration PUBLIC src)
+target_link_libraries(pang_integration PUBLIC ${PANG_INTEGRATION_QT})
+
 if(APPLE)
   target_link_libraries(pang_platform PRIVATE
     "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox")
@@ -101,6 +135,7 @@ set_target_properties(pang_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 qt_add_executable(playampng
   src/ui/app.cpp
   src/ui/settings.cpp
+  src/ui/single_instance.cpp
   src/ui/shell/recovery.cpp
   src/ui/skin/winamp_skin.cpp
   src/ui/skin/zip.cpp
@@ -108,7 +143,7 @@ qt_add_executable(playampng
   src/ui/panel/equalizer_panel.cpp
   src/ui/panel/playlist_panel.cpp
   src/ui/shell/integrated.cpp)
-target_link_libraries(playampng PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core pang_platform)
+target_link_libraries(playampng PRIVATE Qt6::Widgets Qt6::Network ZLIB::ZLIB pang_core pang_platform pang_integration)
 target_compile_definitions(playampng PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
@@ -173,6 +208,18 @@ add_test(NAME device_loss COMMAND ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_device_loss.py
   $<TARGET_FILE:pang_device_loss_tests>)
 set_tests_properties(device_loss PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+
+# IN-05, IN-04 — MPRIS. Sobe o player de verdade e fala com ele por D-Bus; e o
+# mesmo caminho por onde o ambiente encaminha as teclas de midia.
+add_test(NAME mpris COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_mpris.py $<TARGET_FILE:playampng>)
+set_tests_properties(mpris PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+
+# IN-08 — instancia unica. Usa o MPRIS para enxergar de fora o estado da
+# primeira instancia, entao tambem depende do barramento de sessao.
+add_test(NAME single_instance COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_single_instance.py $<TARGET_FILE:playampng>)
+set_tests_properties(single_instance PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
 
 # Ida e volta da configuracao. Escreve em diretorio temporario proprio, via
 # XDG_CONFIG_HOME, para nao tocar na configuracao real do usuario.

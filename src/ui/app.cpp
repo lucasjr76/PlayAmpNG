@@ -23,11 +23,14 @@
 #include <QSlider>
 #include <QMenu>
 #include <QActionGroup>
+#include <QMessageBox>
+#include <QTextStream>
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QWidget>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -43,11 +46,14 @@
 #include "core/playlist/m3u.h"
 #include "core/state/controller.h"
 #include "platform/audio_device.h"
+#include "core/audio/probe.h"
+#include "platform/integration.h"
 #include "ui/panel/equalizer_panel.h"
 #include "ui/panel/main_panel.h"
 #include "ui/panel/playlist_panel.h"
 #include "ui/shell/integrated.h"
 #include "ui/settings.h"
+#include "ui/single_instance.h"
 #include "ui/shell/recovery.h"
 #include "ui/skin/winamp_skin.h"
 
@@ -59,27 +65,7 @@ namespace {
 constexpr int kPreferredRate = 44100;
 constexpr int kChannels = 2;
 
-QString format_ms(std::int64_t ms) {
-    if (ms < 0) return QStringLiteral("--:--");
-    const std::int64_t total = ms / 1000;
-    return QStringLiteral("%1:%2")
-        .arg(total / 60, 2, 10, QLatin1Char('0'))
-        .arg(total % 60, 2, 10, QLatin1Char('0'));
-}
 
-QString format_frames(std::int64_t frames, int rate) {
-    if (frames < 0 || rate <= 0) return QStringLiteral("--:--");
-    return format_ms(frames * 1000 / rate);
-}
-
-const char* repeat_label(Repeat r) {
-    switch (r) {
-        case Repeat::Off: return "Repetir: nao";
-        case Repeat::Track: return "Repetir: faixa";
-        case Repeat::All: return "Repetir: lista";
-    }
-    return "?";
-}
 
 }  // namespace
 
@@ -111,6 +97,30 @@ int main(int argc, char** argv) {
                                  QStringLiteral("arquivos, diretorios ou URLs"),
                                  QStringLiteral("[arquivos...]"));
     parser.process(app);
+
+    // IN-08 — instancia unica, decidida ANTES de abrir dispositivo de audio ou
+    // janela: um segundo lancamento que fosse ate la tomaria o dispositivo e
+    // piscaria uma janela antes de desistir.
+    //
+    // A chave leva o nome do usuario porque o socket vive num diretorio
+    // compartilhado: sem isso, duas contas na mesma maquina disputariam o mesmo
+    // canal e a segunda nunca abriria o player.
+    pang::ui::SingleInstance instance(
+        QStringLiteral("playampng-%1").arg(qEnvironmentVariable("USER", QStringLiteral("0"))));
+    if (!instance.primary()) {
+        const QStringList paths = parser.positionalArguments();
+        if (!paths.isEmpty() && instance.send(paths)) {
+            pang::core::log::info("arquivos entregues a instancia ja aberta");
+            return 0;
+        }
+        if (paths.isEmpty()) {
+            // Sem arquivos a entregar, o util e trazer a janela existente para
+            // a frente — que e o que o usuario quis ao lancar de novo.
+            instance.send(QStringList{});
+            return 0;
+        }
+        pang::core::log::warn("a instancia existente nao respondeu; abrindo outra janela");
+    }
 
     // A configuracao e lida antes do audio porque o dispositivo de saida
     // escolhido pelo usuario (AU-11) e um dado dela: abrir no padrao e trocar
@@ -232,6 +242,7 @@ int main(int argc, char** argv) {
     shell.set_playlist_visible(saved.playlist_visible);
     if (saved.detached) shell.set_detached(true);
     if (saved.compact) shell.set_compact(true);
+    if (saved.always_on_top) shell.set_always_on_top(true);  // IN-06
 
     // ------------------------------------------------- metadados assincronos
 
@@ -321,6 +332,98 @@ int main(int argc, char** argv) {
 
     // ------------------------------------------------------------ temporizadores
 
+    // MD-03 — janela de propriedades. Campo que a fonte nao informa aparece
+    // como "nao informado", e nunca como zero ou estimativa: inventar numero
+    // aqui e pior que admitir a ausencia.
+    auto show_properties = [&] {
+        const int index = controller->current_index();
+        if (index < 0 || index >= controller->playlist().size()) return;
+        const auto& track = controller->playlist().at(index);
+
+        std::string probe_error;
+        const auto info = pang::core::probe(track.path, probe_error);
+        const auto snap = engine->snapshot();
+
+        const auto ou = [](const QString& v) { return v.isEmpty() ? QStringLiteral("nao informado") : v; };
+        QString text;
+        QTextStream out(&text);
+        out << "Localizacao\n" << QString::fromStdString(track.path) << "\n\n";
+        if (info) {
+            out << "Formato       " << QString::fromStdString(info->format) << "\n";
+            out << "Codec         " << QString::fromStdString(info->codec) << "\n";
+            out << "Taxa          " << (info->sample_rate ? QString::number(info->sample_rate) + " Hz"
+                                                          : QStringLiteral("nao informada")) << "\n";
+            out << "Canais        " << (info->channels ? QString::number(info->channels)
+                                                       : QStringLiteral("nao informado")) << "\n";
+            out << "Bitrate       " << (info->bitrate_bps
+                                            ? QString::number(*info->bitrate_bps / 1000) + " kbps"
+                                            : QStringLiteral("nao informado")) << "\n";
+            out << "Duracao       " << (info->duration_us
+                                            ? QStringLiteral("%1 s").arg(*info->duration_us / 1e6, 0, 'f', 2)
+                                            : QStringLiteral("nao informada")) << "\n";
+            out << "Pesquisavel   " << (info->seekable ? QStringLiteral("sim") : QStringLiteral("nao")) << "\n";
+            out << "Fonte ao vivo " << (info->live ? QStringLiteral("sim") : QStringLiteral("nao")) << "\n";
+            if (info->station)
+                out << "Estacao       " << QString::fromStdString(*info->station) << "\n";
+            out << "ReplayGain    "
+                << (info->replaygain_track_db
+                        ? QStringLiteral("%1 dB (faixa)").arg(*info->replaygain_track_db, 0, 'f', 2)
+                        : info->replaygain_album_db
+                              ? QStringLiteral("%1 dB (album)").arg(*info->replaygain_album_db, 0, 'f', 2)
+                              : QStringLiteral("ausente na fonte"))
+                << "\n";
+        } else {
+            out << "Nao foi possivel ler a fonte:\n"
+                << QString::fromStdString(probe_error) << "\n";
+        }
+        out << "\nTags\n";
+        out << "Titulo        " << ou(QString::fromStdString(track.title)) << "\n";
+        out << "Artista       " << ou(QString::fromStdString(track.artist)) << "\n";
+        out << "Album         " << ou(QString::fromStdString(track.album)) << "\n";
+        out << "Genero        " << ou(QString::fromStdString(track.genre)) << "\n";
+        out << "Ano           " << (track.year ? QString::number(track.year)
+                                               : QStringLiteral("nao informado")) << "\n";
+        out << "\nSaida\n";
+        out << "Dispositivo   " << QString::fromStdString(output.device_name()) << "\n";
+        out << "Backend       " << QString::fromStdString(pang::platform::backend_name()) << "\n";
+        out << "Taxa da saida " << snap.sample_rate << " Hz, " << snap.channels << " canais\n";
+        out << "FFmpeg        " << QString::fromStdString(pang::core::ffmpeg_version())
+            << " (" << QString::fromStdString(pang::core::ffmpeg_license()) << ")\n";
+
+        QMessageBox box(&shell);
+        box.setWindowTitle(QStringLiteral("Propriedades da faixa"));
+        box.setTextInteractionFlags(Qt::TextSelectableByMouse);  // o caminho precisa ser copiavel
+        box.setText(text);
+        box.exec();
+    };
+
+    // IN-01 — atalhos documentados, e documentados ONDE o usuario esta. Uma
+    // lista so no README nao ajuda quem ja abriu o programa.
+    auto show_shortcuts = [&] {
+        QMessageBox box(&shell);
+        box.setWindowTitle(QStringLiteral("Atalhos de teclado"));
+        box.setText(QStringLiteral(
+            "Reproducao\n"
+            "  Espaco        tocar / pausar\n"
+            "  Z X C V B     anterior, tocar, pausar, parar, proxima\n"
+            "  Setas < >     retroceder e avancar 5 s\n"
+            "  Setas ^ v     volume\n"
+            "\nJanela\n"
+            "  Ctrl+1/2/3    escala 1x, 2x, 3x\n"
+            "  Ctrl+W        modo barra\n"
+            "  Ctrl+D        separar ou juntar os paineis\n"
+            "  Ctrl+E        equalizador\n"
+            "  Ctrl+P        playlist\n"
+            "  Ctrl+T        manter acima das demais janelas\n"
+            "\nPlaylist\n"
+            "  Delete        remover a selecao\n"
+            "  Enter         tocar a selecao\n"
+            "  digitar       busca por prefixo\n"
+            "\nTeclas de midia do teclado e do ambiente de trabalho tambem\n"
+            "controlam o player."));
+        box.exec();
+    };
+
     // AU-11 — menu de contexto com a escolha do dispositivo de saida.
     //
     // A lista e enumerada na hora de abrir o menu, nao guardada: dispositivo
@@ -360,7 +463,25 @@ int main(int argc, char** argv) {
             failed->setEnabled(false);
         }
 
+        menu.addSeparator();
+
+        // MD-03 — propriedades tecnicas e localizacao do arquivo. Os dados vem
+        // do probe, e nao da playlist: o que interessa aqui e o que a FONTE
+        // informou, incluindo o que ela nao informou.
+        QAction* properties = menu.addAction(QStringLiteral("Propriedades da faixa"));
+        properties->setEnabled(controller->current_index() >= 0);
+
+        QAction* shortcuts = menu.addAction(QStringLiteral("Atalhos de teclado"));
+
         QAction* chosen = menu.exec(at);
+        if (chosen == properties) {
+            show_properties();
+            return;
+        }
+        if (chosen == shortcuts) {
+            show_shortcuts();
+            return;
+        }
         if (!chosen || !chosen->isCheckable()) return;
 
         const std::string wanted =
@@ -373,6 +494,76 @@ int main(int argc, char** argv) {
             pang::core::log::error("nao foi possivel usar o dispositivo: " + error);
         }
         main_panel->update();
+    };
+
+    // ------------------------------------------- integracao com o ambiente
+    //
+    // IN-05 — MPRIS no Linux. IN-04 sai junto: as teclas de midia sao
+    // encaminhadas pelo ambiente ao player registrado, em vez de cada programa
+    // capturar a tecla por conta propria — que so funcionaria com a janela em
+    // foco e brigaria com os outros players.
+    pang::platform::Commands commands;
+    commands.play = [&] { controller->play(); };
+    commands.pause = [&] { controller->pause(); };
+    commands.play_pause = [&] {
+        const auto s = engine->snapshot().state;
+        if (s == pang::core::State::Playing) controller->pause(); else controller->play();
+    };
+    commands.stop = [&] { controller->stop(); };
+    commands.next = [&] { controller->next(); };
+    commands.previous = [&] { controller->previous(); };
+    commands.set_volume = [&](float v) { engine->set_volume(std::clamp(v, 0.0f, 1.0f)); };
+    commands.seek = [&](std::int64_t offset_us) {
+        const auto snap = engine->snapshot();
+        if (!snap.seekable || snap.sample_rate <= 0) return;
+        const double now = double(snap.position_frames) / snap.sample_rate;
+        controller->seek(std::max(0.0, now + double(offset_us) / 1e6));
+    };
+    commands.set_position = [&](std::int64_t position_us) {
+        if (engine->snapshot().seekable) controller->seek(double(position_us) / 1e6);
+    };
+    commands.raise = [&] {
+        shell.show();
+        shell.raise();
+        shell.activateWindow();
+    };
+    commands.quit = [&] { QCoreApplication::quit(); };
+
+    auto integration = pang::platform::make_integration("PlayAmpNG", std::move(commands));
+    pang::core::log::info("integracao com o ambiente: " + integration->backend());
+
+    auto publish_now_playing = [&] {
+        if (!integration->available()) return;
+        const auto snap = engine->snapshot();
+        pang::platform::NowPlaying now;
+        const int index = controller->current_index();
+        if (index >= 0 && index < controller->playlist().size()) {
+            const auto& track = controller->playlist().at(index);
+            now.title = track.display_title();
+            now.artist = track.artist;
+            now.album = track.album;
+            now.url = track.path;
+        }
+        // MD-05 — em stream, o que o servidor diz estar tocando vale mais que o
+        // nome do arquivo, que nem existe.
+        if (const std::string icy = engine->icy_title(); !icy.empty()) now.title = icy;
+        if (const std::string station = engine->station(); !station.empty()) now.album = station;
+
+        // MD-09 — duracao so vai ao barramento quando a fonte informa.
+        now.duration_us = snap.duration_frames > 0 && snap.sample_rate > 0
+                              ? snap.duration_frames * 1'000'000LL / snap.sample_rate
+                              : -1;
+        now.position_us = snap.sample_rate > 0
+                              ? snap.position_frames * 1'000'000LL / snap.sample_rate
+                              : 0;
+        now.playing = snap.state == pang::core::State::Playing;
+        now.stopped = snap.state == pang::core::State::Stopped ||
+                      snap.state == pang::core::State::Error;
+        now.can_seek = snap.seekable;
+        now.can_go_next = controller->playlist().size() > 1;
+        now.can_go_previous = controller->playlist().size() > 1;
+        now.volume = engine->volume();
+        integration->publish(now);
     };
 
     auto* frame_timer = new QTimer(&shell);
@@ -394,6 +585,7 @@ int main(int argc, char** argv) {
             playlist_panel->refresh();
         }
         if (equalizer_panel->isVisible()) equalizer_panel->refresh();
+        publish_now_playing();
 
         // AU-12, RB-05 — vigia o dispositivo no tique que ja existe, em vez de
         // criar um thread so para isso. A reabertura acontece aqui, no thread
@@ -451,11 +643,26 @@ int main(int argc, char** argv) {
         saved.compact = shell.compact();
         saved.playlist_visible = shell.playlist_visible();
         saved.equalizer_visible = shell.equalizer_visible();
+        saved.always_on_top = shell.always_on_top();
         saved.main_geometry = {shell.x(), shell.y(), shell.width(), shell.height()};
         saved.playlist_geometry = {0, 0, pang::ui::PlaylistPanel::kWidth,
                                    playlist_panel->logical_height()};
         pang::ui::settings::save(saved);  // IN-09
     });
+
+    // IN-08 — entrega vinda de um segundo lancamento. Enfileira sem
+    // interromper o que toca: quem deu duplo clique num arquivo com o player
+    // tocando nao pediu para cortar a faixa atual.
+    instance.on_files = [&](const QStringList& paths) {
+        if (!paths.isEmpty()) {
+            const bool was_empty = controller->playlist().size() == 0;
+            add_paths(paths);
+            if (was_empty) controller->play_index(0);
+        }
+        shell.show();
+        shell.raise();
+        shell.activateWindow();
+    };
 
     const QStringList args = parser.positionalArguments();
     if (!args.isEmpty()) {

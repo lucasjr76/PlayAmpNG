@@ -3,6 +3,8 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QContextMenuEvent>
+#include <QHelpEvent>
+#include <QToolTip>
 #include <QPainter>
 #include <QWindow>
 
@@ -63,6 +65,11 @@ MainPanel::MainPanel(core::Controller& controller, core::Engine& engine, skin::W
                      QWidget* parent)
     : QWidget(parent), controller_(controller), engine_(engine), skin_(skin) {
     setFocusPolicy(Qt::StrongFocus);
+    // IN-03 — o painel nao tem widget por controle, entao o que o leitor de
+    // tela anuncia e a janela. O detalhe de cada controle vem do tooltip, que
+    // segue a posicao do cursor.
+    setAccessibleName(tr("Player"));
+    setAccessibleDescription(tr("Controles de reproducao, volume, balanco, posicao e visualizacao"));
     setMouseTracking(true);
     setAttribute(Qt::WA_OpaquePaintEvent, true);
     analyzer_.configure(engine.sample_rate(), engine.channels());
@@ -126,6 +133,53 @@ void MainPanel::tick(float dt_seconds) {
 }
 
 // ---------------------------------------------------------------- desenho
+
+// Nome de cada controle, para o tooltip e para o nome acessivel. Traz o atalho
+// junto porque e onde o usuario procura: quem passa o mouse para descobrir o
+// que o botao faz tambem quer saber se ha tecla para ele.
+//
+// O switch e sobre o proprio Hit e nao tem `default`: assim, acrescentar um
+// controle sem lhe dar nome vira aviso do compilador, e nao um tooltip vazio
+// que ninguem nota. Mapear por inteiro, como a primeira versao fazia, deixaria
+// os nomes trocados em silencio se o enum fosse reordenado.
+QString MainPanel::control_name(Hit hit) {
+    switch (hit) {
+        case Hit::None:      return {};
+        case Hit::Titlebar:  return tr("Barra de titulo — arraste para mover, duplo clique para o modo barra");
+        case Hit::Previous:  return tr("Faixa anterior (Z)");
+        case Hit::Play:      return tr("Tocar (X)");
+        case Hit::Pause:     return tr("Pausar (C)");
+        case Hit::Stop:      return tr("Parar (V)");
+        case Hit::Next:      return tr("Proxima faixa (B)");
+        case Hit::Eject:     return tr("Abrir arquivos");
+        case Hit::Shuffle:   return tr("Ordem aleatoria");
+        case Hit::Repeat:    return tr("Repetir");
+        case Hit::Equalizer: return tr("Equalizador (Ctrl+E)");
+        case Hit::Playlist:  return tr("Playlist (Ctrl+P)");
+        case Hit::Volume:    return tr("Volume");
+        case Hit::Balance:   return tr("Balanco");
+        case Hit::Position:  return tr("Posicao na faixa — arraste para buscar");
+        case Hit::Time:      return tr("Tempo — clique para alternar entre decorrido e restante");
+        case Hit::Vis:       return tr("Visualizacao — clique para alternar espectro, osciloscopio e desligado");
+        case Hit::Minimize:  return tr("Minimizar");
+        case Hit::Shade:     return tr("Modo barra (Ctrl+W)");
+        case Hit::Close:     return tr("Fechar");
+    }
+    return {};
+}
+
+bool MainPanel::event(QEvent* event) {
+    if (event->type() == QEvent::ToolTip) {
+        auto* help = static_cast<QHelpEvent*>(event);
+        const QString name = control_name(hit_test(to_logical(help->pos())));
+        if (name.isEmpty())
+            QToolTip::hideText();
+        else
+            QToolTip::showText(help->globalPos(), name, this);
+        return true;
+    }
+    return QWidget::event(event);
+}
 
 void MainPanel::contextMenuEvent(QContextMenuEvent* event) {
     if (on_context_menu) on_context_menu(event->globalPos());
