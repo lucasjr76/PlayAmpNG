@@ -1,6 +1,7 @@
 // Testes do M0. Rodam sem Qt, sem janela e sem dispositivo de audio, nos tres
 // sistemas alvo.
 
+#include <cstdio>
 #include <string>
 
 #include "core/audio/probe.h"
@@ -57,11 +58,19 @@ void test_device_enumeration() {
 
 }  // namespace
 
+// Cada etapa se anuncia antes de correr. Custa cinco linhas e responde a
+// pergunta "onde travou?" sem depender de depurador na maquina de integracao.
+#define RUN(f)                   \
+    do {                         \
+        std::printf("-> %s\n", #f); \
+        f();                     \
+    } while (0)
+
 int main() {
-    test_check_survives_ndebug();
-    test_probe_missing_file();
-    test_probe_empty_url();
-    test_ffmpeg_present();
-    test_device_enumeration();
+    RUN(test_check_survives_ndebug);
+    RUN(test_probe_missing_file);
+    RUN(test_probe_empty_url);
+    RUN(test_ffmpeg_present);
+    RUN(test_device_enumeration);
     return pang::check::exit_code();
 }

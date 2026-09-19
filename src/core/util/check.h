@@ -15,6 +15,19 @@
 
 namespace pang::check {
 
+// Saida sem buffer.
+//
+// Quando a saida do teste e um cano — e sob o ctest sempre e — a biblioteca C
+// acumula ate alguns kilobytes antes de escrever. Um teste morto por prazo
+// esgotado leva esse acumulado junto, e o relatorio chega VAZIO justamente no
+// caso que mais precisa ser lido: foi o que aconteceu com dez testes que
+// travaram no Windows sem dizer uma linha sequer.
+[[maybe_unused]] inline const bool unbuffered = [] {
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+    return true;
+}();
+
 inline int failures = 0;
 
 inline void report(bool ok, std::string_view expr, std::string_view msg, const char* file,
