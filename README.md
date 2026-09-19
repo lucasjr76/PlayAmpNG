@@ -6,6 +6,14 @@ Toca MP3, WAV, FLAC, Ogg Vorbis, Opus e AAC — local ou por streaming HTTP — 
 
 **Licença: GPL-3.0-or-later** (`LICENSE`). A razão da escolha está em [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md).
 
+<p align="center">
+  <img src="docs/img/playampng.png" alt="As três janelas do PlayAmpNG: player, equalizador e playlist" width="420">
+</p>
+
+As três janelas em escala 2×: player, equalizador de dez bandas e playlist. A arte é própria, desenhada no formato de skin do Winamp 2.x — o layout segue a geometria do formato, os pixels não são dele.
+
+A linha curta em âmbar abaixo do tempo é o medidor de redução do limitador: ela acende quando o ganho do equalizador excede o que cabe na saída, e é a diferença entre ouvir o som "estranho" e ver por quê.
+
 ---
 
 ## Baixar e rodar
