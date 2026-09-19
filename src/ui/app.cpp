@@ -589,7 +589,10 @@ int main(int argc, char** argv) {
     };
     commands.quit = [&] { QCoreApplication::quit(); };
 
-    auto integration = pang::platform::make_integration("PlayAmpNG", std::move(commands));
+    // winId() cria a janela nativa mesmo antes de show(), que e o que o SMTC
+    // do Windows precisa. Nos outros sistemas o valor e ignorado.
+    auto integration = pang::platform::make_integration(
+        "PlayAmpNG", std::move(commands), reinterpret_cast<void*>(shell.winId()));
     pang::core::log::info("integracao com o ambiente: " + integration->backend());
 
     // Onde a configuracao e a sessao sao gravadas. Vai para o log porque o

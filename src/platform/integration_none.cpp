@@ -1,7 +1,6 @@
 #include "platform/integration.h"
 
-// Sistemas sem integracao implementada ainda (Windows e macOS, ate o M6-3 ser
-// concluido neles). O player funciona igual — so nao aparece no painel do
+// Sistemas sem integracao implementada ainda (macOS, ate o M9). O player funciona igual — so nao aparece no painel do
 // sistema nem responde a teclas de midia pelo caminho do ambiente.
 //
 // Existir como objeto valido, em vez de ponteiro nulo, e o que evita um teste
@@ -18,7 +17,7 @@ public:
 
 }  // namespace
 
-std::unique_ptr<Integration> make_integration(const std::string&, Commands) {
+std::unique_ptr<Integration> make_integration(const std::string&, Commands, void*) {
     return std::make_unique<NoIntegration>();
 }
 

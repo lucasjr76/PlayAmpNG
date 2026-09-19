@@ -63,7 +63,13 @@ public:
 
 // Devolve sempre um objeto valido. Onde nao houver integracao, devolve um que
 // responde available() == false — assim o chamador nunca precisa testar nulo.
+//
+// native_window e o identificador de janela do sistema (HWND no Windows), ou
+// nulo. Existe porque o SMTC nao e um servico do sistema como o MPRIS: ele se
+// prende a UMA janela, e sem ela nao ha o que registrar. Linux e macOS
+// ignoram o parametro; e o chamador que nao deve ter de saber disso.
 std::unique_ptr<Integration> make_integration(const std::string& application_name,
-                                              Commands commands);
+                                              Commands commands,
+                                              void* native_window = nullptr);
 
 }  // namespace pang::platform

@@ -251,7 +251,7 @@ private:
 }  // namespace
 
 std::unique_ptr<Integration> make_integration(const std::string& application_name,
-                                              Commands commands) {
+                                              Commands commands, void*) {
     return std::make_unique<Mpris>(application_name, std::move(commands));
 }
 

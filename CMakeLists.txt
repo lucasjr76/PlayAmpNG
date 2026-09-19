@@ -26,7 +26,14 @@ find_package(ZLIB REQUIRED)   # leitor de .wsz; ja vem com o Qt
 # `switch` sobre enum ao qual se acrescenta um valor compila calado e o caso
 # novo simplesmente nao e tratado. Nao viram erro porque um aviso novo do
 # compilador da distro nao deve impedir o projeto de compilar.
-add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
+# No MSVC, -Wall nao e o equivalente de GCC: e /Wall, que inclui avisos de
+# estilo e enterra o log do CI sob milhares de linhas vindas dos cabecalhos do
+# Qt e do SDK. /W3 e o nivel que corresponde ao que se pede aqui.
+if(MSVC)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/W3>)
+else()
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
+endif()
 
 # 6.4 e o piso real, e nao 6.5: nada aqui usa API posterior, e o 6.5 escolhido
 # no M0 nao tinha razao anotada. A diferenca e concreta — o Ubuntu 24.04, que e
@@ -143,10 +150,16 @@ if(LINUX OR (UNIX AND NOT APPLE))
     set(PANG_INTEGRATION_SOURCE src/platform/integration_none.cpp)
     set(PANG_INTEGRATION_QT Qt6::Core)
   endif()
+elseif(WIN32)
+  # SMTC. Os cabecalhos de C++/WinRT vem do SDK do Windows e o ambiente do
+  # MSVC ja os poe no INCLUDE; windowsapp.lib e a biblioteca de importacao do
+  # WinRT. Nao ha pacote a instalar.
+  set(PANG_INTEGRATION_SOURCE src/platform/integration_win.cpp)
+  set(PANG_INTEGRATION_QT Qt6::Core)
+  set(PANG_INTEGRATION_LIBS windowsapp)
 else()
-  # Windows (SMTC) e macOS (MPNowPlayingInfoCenter) ainda nao implementados;
-  # ate la o player roda sem aparecer no painel do sistema, que e degradacao
-  # prevista e nao falha.
+  # macOS (MPNowPlayingInfoCenter) ainda nao implementado; ate la o player roda
+  # sem aparecer no painel do sistema, que e degradacao prevista e nao falha.
   set(PANG_INTEGRATION_SOURCE src/platform/integration_none.cpp)
   set(PANG_INTEGRATION_QT Qt6::Core)
 endif()
@@ -154,6 +167,7 @@ endif()
 qt_add_library(pang_integration STATIC ${PANG_INTEGRATION_SOURCE})
 target_include_directories(pang_integration PUBLIC src)
 target_link_libraries(pang_integration PUBLIC ${PANG_INTEGRATION_QT})
+target_link_libraries(pang_integration PRIVATE ${PANG_INTEGRATION_LIBS})
 
 if(APPLE)
   target_link_libraries(pang_platform PRIVATE
