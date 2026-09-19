@@ -104,7 +104,11 @@ jobs:
         shell: bash
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ctest --test-dir build --output-on-failure --no-tests=error
+        # --timeout e o prazo PADRAO, aplicado a quem nao declarou o seu. Sem
+        # ele, um teste que trava no Windows prende a maquina de integracao por
+        # horas e nao diz sequer o proprio nome; com ele, vira uma reprovacao
+        # identificada em tres minutos.
+        run: ctest --test-dir build --output-on-failure --no-tests=error --timeout 180
 
       # EN-09 — o instalador e montado no proprio CI para que nunca dependa da
       # maquina de um desenvolvedor. Reaproveita o diretorio `build` ja
