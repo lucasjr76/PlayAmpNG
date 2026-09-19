@@ -100,6 +100,29 @@ jobs:
       # que dependem disso se declaram PULADOS (codigo 77) em vez de reprovar:
       # a ausencia desses recursos numa maquina de integracao nao e defeito do
       # player, e reprovar por isso treinaria a equipe a ignorar a suite.
+      # Diagnostico temporario: dez testes travaram no Windows sem imprimir uma
+      # linha, mesmo com a saida sem buffer. Rodando o binario FORA do ctest e
+      # gravando em arquivo, o que ele escreveu sobrevive ao encerramento
+      # forcado — e ai da para ver em que chamada ele para.
+      - name: Onde trava (Windows)
+        if: matrix.name == 'windows'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          foreach ($exe in @("pang_tests", "pang_skin_tests")) {
+            Write-Host "===== $exe ====="
+            $p = Start-Process -FilePath "build\$exe.exe" -NoNewWindow -PassThru `
+                 -RedirectStandardOutput "$exe.out" -RedirectStandardError "$exe.err"
+            if (-not $p.WaitForExit(45000)) {
+              Write-Host "TRAVOU: ainda vivo depois de 45 s"
+              $p.Kill()
+            } else {
+              Write-Host "terminou com codigo $($p.ExitCode)"
+            }
+            Write-Host "--- stdout ---"; Get-Content "$exe.out" -ErrorAction SilentlyContinue
+            Write-Host "--- stderr ---"; Get-Content "$exe.err" -ErrorAction SilentlyContinue
+          }
+
       - name: Testar
         shell: bash
         env:
