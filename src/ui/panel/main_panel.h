@@ -48,7 +48,12 @@ public:
     std::function<void(int)> on_scale_changed;
     std::function<void()> on_toggle_compact;
 
+    // AU-11 — menu de contexto. O painel nao conhece dispositivos de audio;
+    // quem monta o menu e o shell, que ja conhece o AudioOutput.
+    std::function<void(const QPoint&)> on_context_menu;
+
 protected:
+    void contextMenuEvent(QContextMenuEvent*) override;
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;

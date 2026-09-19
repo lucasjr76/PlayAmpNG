@@ -151,6 +151,21 @@ set_target_properties(pang_audio_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORC
 
 add_test(NAME audio COMMAND pang_audio_tests)
 
+# M6-2 — dispositivo de saida. A politica de recuperacao e pura e roda sem
+# placa de som; a enumeracao apenas exige consistencia, porque numa maquina de
+# CI sem audio a lista vem vazia e isso nao e falha.
+add_executable(pang_device_tests tests/test_device.cpp)
+target_link_libraries(pang_device_tests PRIVATE pang_core pang_platform)
+set_target_properties(pang_device_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME device COMMAND pang_device_tests)
+
+# Ida e volta da configuracao. Escreve em diretorio temporario proprio, via
+# XDG_CONFIG_HOME, para nao tocar na configuracao real do usuario.
+qt_add_executable(pang_settings_tests tests/test_settings.cpp src/ui/settings.cpp)
+target_link_libraries(pang_settings_tests PRIVATE Qt6::Widgets pang_core)
+add_test(NAME settings COMMAND pang_settings_tests)
+set_tests_properties(settings PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # M6-1 — fonte de rede. O teste sobe um servidor HTTP local de verdade; um
 # mock nao exercitaria o que se quer verificar, que sao as decisoes do
 # libavformat diante de cabecalho ICY, redirecionamento e conexao cortada.

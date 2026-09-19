@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <string>
 #include <vector>
 
 #include "core/dsp/presets.h"
@@ -21,6 +22,12 @@ struct AppState {
     int repeat = 0;            // 0 off, 1 faixa, 2 lista
     int replaygain_mode = 0;   // 0 off, 1 faixa, 2 album
     bool autoplay_on_restore = false;  // IN-11
+
+    // AU-11 — nome do dispositivo de saida. Vazio significa "o padrao do
+    // sistema", que e diferente de "o dispositivo que por acaso era o padrao
+    // quando isto foi salvo": guardar o nome do padrao congelaria a escolha do
+    // sistema operacional.
+    std::string audio_device;
 
     core::dsp::EqState eq;
     std::vector<core::dsp::EqPreset> user_presets;  // EQ-07

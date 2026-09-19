@@ -2,6 +2,7 @@
 
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QContextMenuEvent>
 #include <QPainter>
 #include <QWindow>
 
@@ -125,6 +126,10 @@ void MainPanel::tick(float dt_seconds) {
 }
 
 // ---------------------------------------------------------------- desenho
+
+void MainPanel::contextMenuEvent(QContextMenuEvent* event) {
+    if (on_context_menu) on_context_menu(event->globalPos());
+}
 
 void MainPanel::paintEvent(QPaintEvent*) {
     QPainter painter(this);

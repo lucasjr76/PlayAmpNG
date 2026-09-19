@@ -81,8 +81,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AU-08 | Disponibilidade efetiva de cada formato documentada por pacote distribuído | MANUAL | M7 | PENDENTE |
 | AU-09 | Processamento interno em ponto flutuante (f32) | MANUAL | M1 | OK (M1) |
 | AU-10 | Mudanças de ganho com rampa, sem estalo | MEDIDO | M3 | OK (M3) |
-| AU-11 | Seleção de dispositivo de saída | MANUAL | M6 | PENDENTE |
-| AU-12 | Tratamento de desconexão do dispositivo: reabrir até 3×, preservar posição | MANUAL | M6 | PENDENTE |
+| AU-11 | Seleção de dispositivo de saída | AUTO | M6 | PARCIAL (M6) |
+| AU-12 | Tratamento de desconexão do dispositivo: reabrir até 3×, preservar posição | AUTO | M6 | PARCIAL (M6) |
 | AU-13 | Gapless: sinal de rampa cortado em dois arquivos reproduz sem amostra a mais nem a menos na junção | MEDIDO | M3 | OK (M3) |
 | AU-14 | Matriz de disponibilidade de gapless por formato, medida e não presumida | MEDIDO | M3 | OK (M3) |
 | AU-15 | Leitura de ReplayGain, modos por faixa e por álbum | AUTO | M3 | OK (M3) |
@@ -217,7 +217,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | RB-02 | Arquivo corrompido ou truncado → `Error`, sem crash | AUTO | M2 | OK (M2) |
 | RB-03 | Arquivo sem permissão de leitura → `Error`, sem crash | AUTO | M2 | OK (M2) |
 | RB-04 | Interrupção de stream → reconexão ou `Error` explícito | AUTO | M6 | OK (M6) |
-| RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | MANUAL | M6 | PENDENTE |
+| RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | AUTO | M6 | PARCIAL (M6) |
 | RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | OK (M2) |
 | RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | PENDENTE |
 

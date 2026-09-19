@@ -21,6 +21,8 @@
 #include <QMimeData>
 #include <QPushButton>
 #include <QSlider>
+#include <QMenu>
+#include <QActionGroup>
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
@@ -110,6 +112,11 @@ int main(int argc, char** argv) {
                                  QStringLiteral("[arquivos...]"));
     parser.process(app);
 
+    // A configuracao e lida antes do audio porque o dispositivo de saida
+    // escolhido pelo usuario (AU-11) e um dado dela: abrir no padrao e trocar
+    // depois faria o player soar um instante no lugar errado.
+    pang::ui::settings::AppState saved = pang::ui::settings::load();
+
     // ------------------------------------------------------------- audio
 
     pang::platform::AudioOutput output;
@@ -127,7 +134,8 @@ int main(int argc, char** argv) {
     };
 
     std::string device_error;
-    if (!output.start(kPreferredRate, kChannels, render, &bridge, device_error)) {
+    if (!output.start(kPreferredRate, kChannels, render, &bridge, device_error,
+                      saved.audio_device)) {
         QWidget failure;
         failure.setWindowTitle(QStringLiteral("PlayAmpNG"));
         failure.setStyleSheet(QStringLiteral("background:#2a2a2a; color:#00ff7f;"));
@@ -159,8 +167,6 @@ int main(int argc, char** argv) {
     if (!skin.missing().isEmpty())
         pang::core::log::warn(("skin sem os bitmaps: " +
                                skin.missing().join(QStringLiteral(", ")).toStdString()));
-
-    pang::ui::settings::AppState saved = pang::ui::settings::load();
 
     // Confere que a premissa acima se sustenta: se algum ambiente ainda
     // entregar ratio diferente de 1, o desenho sai reamostrado e e melhor
@@ -315,6 +321,60 @@ int main(int argc, char** argv) {
 
     // ------------------------------------------------------------ temporizadores
 
+    // AU-11 — menu de contexto com a escolha do dispositivo de saida.
+    //
+    // A lista e enumerada na hora de abrir o menu, nao guardada: dispositivo
+    // de audio aparece e some enquanto o programa roda, e uma lista montada no
+    // inicio mostraria fone que ja foi desconectado.
+    main_panel->on_context_menu = [&, main_panel](const QPoint& at) {
+        QMenu menu;
+        QMenu* devices = menu.addMenu(QStringLiteral("Dispositivo de saida"));
+
+        auto* group = new QActionGroup(devices);
+        group->setExclusive(true);
+
+        QAction* system_default = devices->addAction(QStringLiteral("Padrao do sistema"));
+        system_default->setCheckable(true);
+        system_default->setChecked(saved.audio_device.empty());
+        group->addAction(system_default);
+        devices->addSeparator();
+
+        std::string list_error;
+        for (const auto& device : pang::platform::list_playback_devices(list_error)) {
+            QAction* action = devices->addAction(QString::fromStdString(device.name));
+            action->setCheckable(true);
+            action->setChecked(device.name == saved.audio_device);
+            action->setData(QString::fromStdString(device.name));
+            group->addAction(action);
+        }
+        if (!list_error.empty())
+            devices->addAction(QString::fromStdString(list_error))->setEnabled(false);
+
+        // Em falha o menu precisa dizer que ha falha, e nao so oferecer a lista:
+        // o usuario chegou aqui justamente porque parou de sair som.
+        if (output.health() == pang::platform::AudioOutput::Health::Failed) {
+            menu.addSeparator();
+            QAction* failed = menu.addAction(
+                QStringLiteral("Saida indisponivel: %1")
+                    .arg(QString::fromStdString(output.last_error())));
+            failed->setEnabled(false);
+        }
+
+        QAction* chosen = menu.exec(at);
+        if (!chosen || !chosen->isCheckable()) return;
+
+        const std::string wanted =
+            chosen == system_default ? std::string{} : chosen->data().toString().toStdString();
+        std::string error;
+        if (output.switch_to(wanted, error)) {
+            saved.audio_device = wanted;
+            pang::ui::settings::save(saved);
+        } else {
+            pang::core::log::error("nao foi possivel usar o dispositivo: " + error);
+        }
+        main_panel->update();
+    };
+
     auto* frame_timer = new QTimer(&shell);
     QObject::connect(frame_timer, &QTimer::timeout, [main_panel] { main_panel->tick(0.016f); });
     frame_timer->start(16);  // VI-18
@@ -334,6 +394,25 @@ int main(int argc, char** argv) {
             playlist_panel->refresh();
         }
         if (equalizer_panel->isVisible()) equalizer_panel->refresh();
+
+        // AU-12, RB-05 — vigia o dispositivo no tique que ja existe, em vez de
+        // criar um thread so para isso. A reabertura acontece aqui, no thread
+        // da interface, e nao dentro do callback do proprio dispositivo.
+        static bool device_failure_reported = false;
+        switch (output.poll(100)) {
+            case pang::platform::AudioOutput::Health::Failed:
+                if (!device_failure_reported) {
+                    device_failure_reported = true;
+                    pang::core::log::error("saida de audio: " + output.last_error());
+                    engine->pause();  // RB-05 — para explicitamente, nao em silencio
+                }
+                break;
+            case pang::platform::AudioOutput::Health::Ok:
+                device_failure_reported = false;
+                break;
+            default:
+                break;
+        }
     });
     slow_timer->start(100);
 

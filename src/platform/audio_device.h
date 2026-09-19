@@ -35,10 +35,27 @@ public:
     AudioOutput(const AudioOutput&) = delete;
     AudioOutput& operator=(const AudioOutput&) = delete;
 
-    bool start(int sample_rate, int channels, RenderFn render, void* user, std::string& error);
+    // AU-11 — `device` vazio usa o padrao do sistema. Nome que nao existe mais
+    // cai no padrao com aviso, em vez de falhar: o dispositivo salvo na sessao
+    // anterior pode ter sido desconectado desde entao, e isso nao e erro do
+    // usuario.
+    bool start(int sample_rate, int channels, RenderFn render, void* user, std::string& error,
+               const std::string& device = {});
     void suspend();
     void resume();
     void close();
+
+    // AU-12, RB-05 — chamar periodicamente, do thread do dono. Quando o
+    // dispositivo some, reabre ate esgotar as tentativas; depois disso
+    // health() fica Failed e last_error() explica.
+    enum class Health : std::uint8_t { Ok, Recovering, Failed };
+    Health poll(int elapsed_ms);
+    Health health() const;
+    std::string last_error() const;
+
+    // Troca de dispositivo em uso, preservando a reproducao. Tambem serve para
+    // sair do estado Failed.
+    bool switch_to(const std::string& device, std::string& error);
 
     bool is_open() const;
     int sample_rate() const;
