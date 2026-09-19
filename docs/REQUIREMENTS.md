@@ -87,7 +87,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AU-14 | Matriz de disponibilidade de gapless por formato, medida e não presumida | MEDIDO | M3 | OK (M3) |
 | AU-15 | Leitura de ReplayGain, modos por faixa e por álbum | AUTO | M3 | OK (M3) |
 | AU-16 | Anti-clipping: nenhuma amostra da saída acima de -1.0 dBFS (pico de amostra; true peak não é prometido) | MEDIDO | M3 | OK (M3) |
-| AU-17 | Indicador de clipping na interface quando o limitador atua | MANUAL | M5 | OK (M3) |
+| AU-17 | Indicador de clipping na interface quando o limitador atua | MEDIDO | M5 | OK (M6) |
 | AU-18 | Ordem dos estágios de processamento documentada | MANUAL | M0 | OK (M0) |
 | AU-19 | Ponto de captura da visualização documentado | MANUAL | M0 | OK (M0) |
 | AU-20 | Disco, rede, metadados e interface fora do processamento crítico | MANUAL | M1 | OK (M1) |

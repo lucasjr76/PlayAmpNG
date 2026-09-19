@@ -15,6 +15,49 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Corrigidos
 
+### C-18 — "Ruídos ao tocar": o limitador trabalhando em todos os blocos, sem nada avisar
+
+**Observado:** *"percebi uns ruídos no som ao tocar a música, será codec?"*
+
+**Não era o codec.** Medido e descartado, junto com o resto do caminho:
+
+| Hipótese | Medição | Resultado |
+|---|---|---|
+| Codec | Ruído em 16–21 kHz, WAV contra MP3 128k | Descartada — o LAME **corta** acima de 16 kHz; não há artefato ali para amplificar |
+| Underruns | 20 s no dispositivo real | Zero. Blocos constantes de 826 quadros, posição colada no relógio |
+| Decodificação e DSP | Renderização offline em WAV, MP3 e FLAC | Sem descontinuidade, sem clamp |
+| Limitador defeituoso | Rajadas com ganho de entrada de 1× a 4× | Correto: ganho constante dentro da rajada (0,02 dB), teto mantido |
+| Saída real do player | Captura por sink virtual, análise espectral | 0,00% de energia em frequências espúrias |
+
+**A causa, medida:** a configuração do usuário tinha o equalizador com **preamp +5,08 dB**.
+
+| Cenário | Pico após o EQ | Redução do limitador |
+|---|---|---|
+| EQ desligado | 0,67 | 0 dB, **0%** dos blocos |
+| EQ do usuário | 1,39 | mediana **−2,3 dB**, pior −3,9 dB, **100%** dos blocos |
+| Mesmo EQ, preamp 0 dB | 0,78 | 0 dB, **0%** dos blocos |
+
+Não é distorção: é o ganho variando continuamente com o programa. A curva do EQ sozinha não causa nada — é o preamp que estoura o teto.
+
+**O defeito real que isso expôs:** `AU-17` — *indicador de clipping na interface quando o limitador atua* — estava marcado **OK (M3)** e **não existia na interface**. Foi perdido quando os painéis foram reescritos para o formato de skin no M5, e o status nunca foi reconferido. O usuário ajustou o preamp, ganhou 15 dB de excesso e não tinha como saber.
+
+**Correção:** medidor de redução do limitador na faixa livre entre os dígitos e o espectro (19,39, 76×3), alinhado com o espectro e travado no `test_layout`. Mostra *quanto*, e não só *se* — cor de amarelo a vermelho até 12 dB, que é a faixa do equalizador. Abaixo de meio decibel não acende: o limitador toca de leve no sinal o tempo todo, e um medidor que pisca por isso vira ruído visual em vez de aviso.
+
+**Duas medições minhas que estavam erradas e foram corrigidas antes de virar conclusão:** medi a modulação do limitador sem alinhar o atraso de 1,5 ms do lookahead, o que dava 37 dB falsos de variação; e contei "saltos bruscos entre amostras" num sinal com 11 kHz, onde amostras vizinhas diferem muito por definição.
+
+### C-19 — Playlist: seleção não acompanhava a faixa, e a barra de rolagem não respondia ao mouse
+
+**Observado:** *"a música não fica selecionada na PLAYLIST quando troca de música"* e *"a barra de SCROLL não funciona clicando com o mouse e arrastando, somente com o botão SCROLL"*.
+
+| Defeito | Causa | Correção |
+|---|---|---|
+| Seleção não acompanha | `refresh()` preservava a seleção e **nunca** olhava a faixa em reprodução. Pior: só era chamado quando chegava metadado, então a troca de faixa nem chegava ao painel | Ao mudar a faixa, ela vira a seleção e é trazida para a vista pelo mínimo necessário. Só na mudança — refazer a cada `refresh()` desfaria a seleção do usuário dez vezes por segundo |
+| Barra de rolagem inerte | Ela era **desenhada** e não era área sensível: `mousePressEvent` não a testava | Clicar no cursor arrasta, clicar no trilho salta. Desenho e teste de acerto passaram a usar a **mesma** função de geometria — duas contas separadas divergem e o cursor deixa de pegar onde aparece |
+
+Como o `refresh()` passou a ser chamado a cada tique, ele só repinta quando a assinatura do que se vê muda.
+
+**Verificado por mutação** em `tests/test_playlist_ui.cpp`, que envia eventos de mouse ao painel: desligada a seleção que acompanha, 3 verificações falham; tornada a barra insensível, 2 falham.
+
 ### C-17 — A recuperação do dispositivo de áudio não funcionava, e o teste isolado não mostrava
 
 A política de reabertura tinha teste e passava. Ao exercitá-la contra o sistema de áudio de verdade — criando um sink virtual com `pactl` e removendo-o com o player tocando nele — apareceram **dois defeitos que o teste isolado não podia ver**.

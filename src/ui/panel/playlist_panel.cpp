@@ -31,6 +31,8 @@ constexpr int kButtonWidth = 26;
 constexpr int kButtonHeight = 12;
 constexpr int kButtonSpacing = 28;
 constexpr int kResizeGrip = 4;
+constexpr int kScrollbarWidth = 6;
+constexpr int kScrollThumbMinimum = 8;
 
 // Cores do editor de playlist. O formato as guarda em pledit.txt; sem esse
 // arquivo valem estes padroes. Sao os mesmos da paleta medida na referencia,
@@ -103,13 +105,54 @@ void PlaylistPanel::set_logical_height(int height) {
     update();
 }
 
-void PlaylistPanel::refresh() {
+void PlaylistPanel::refresh(bool force) {
     std::set<int> kept;
     for (int index : selected_)
         if (index >= 0 && index < controller_.playlist().size()) kept.insert(index);
     selected_.swap(kept);
+
+    // A faixa que passou a tocar vira a selecao e e trazida para a vista.
+    //
+    // So quando ela MUDA: refazer isso a cada refresh desfaria a selecao que o
+    // usuario acabou de fazer com o mouse, e prenderia a rolagem na faixa
+    // atual. A troca pode vir do botao, do fim da faixa ou do barramento — em
+    // qualquer caso o que o usuario ve tem de acompanhar o que ele ouve.
+    const int current = controller_.current_index();
+    if (current != last_current_) {
+        last_current_ = current;
+        if (current >= 0 && current < controller_.playlist().size()) {
+            selected_.clear();
+            selected_.insert(current);
+            anchor_ = current;
+            ensure_visible(current);
+        }
+    }
+
     clamp_scroll();
-    update();
+
+    // Repinta so quando ha o que ver de diferente. O tique da interface chama
+    // isto dez vezes por segundo, e repintar a lista inteira a cada vez seria
+    // trabalho jogado fora na maior parte delas.
+    std::size_t signature = static_cast<std::size_t>(controller_.playlist().size());
+    signature = signature * 1000003 + static_cast<std::size_t>(current + 1);
+    signature = signature * 1000003 + static_cast<std::size_t>(scroll_);
+    signature = signature * 1000003 + selected_.size();
+    for (int index : selected_) signature = signature * 31 + static_cast<std::size_t>(index);
+    if (force || signature != last_signature_) {
+        last_signature_ = signature;
+        update();
+    }
+}
+
+// Rola o minimo necessario para a linha aparecer. Centrar sempre faria a lista
+// saltar a cada troca mesmo quando a proxima faixa ja estava a vista.
+void PlaylistPanel::ensure_visible(int index) {
+    const int rows = visible_rows();
+    if (index < scroll_)
+        scroll_ = index;
+    else if (index >= scroll_ + rows)
+        scroll_ = index - rows + 1;
+    clamp_scroll();
 }
 
 QPoint PlaylistPanel::to_logical(const QPoint& physical) const {
@@ -133,6 +176,38 @@ int PlaylistPanel::row_at(const QPoint& p) const {
     if (row < 0 || row >= controller_.playlist().size()) return -1;
     if (p.y() >= top + visible_rows() * kRowHeight) return -1;
     return row;
+}
+
+// Barra de rolagem: uma conta so, usada pelo desenho E pelo clique. Quando o
+// desenho e o teste de acerto calculam a geometria cada um por sua conta, eles
+// divergem e o cursor deixa de pegar onde aparece.
+QRect PlaylistPanel::scrollbar_rect() const {
+    const int top = kTitlebarHeight;
+    return QRect(kWidth - kListMargin - kScrollbarWidth, top, kScrollbarWidth,
+                 visible_rows() * kRowHeight);
+}
+
+QRect PlaylistPanel::scroll_thumb_rect() const {
+    const QRect track = scrollbar_rect();
+    const int total = controller_.playlist().size();
+    const int rows = visible_rows();
+    const int maximum = std::max(0, total - rows);
+    if (maximum <= 0) return {};
+    const int height = std::max(kScrollThumbMinimum, track.height() * rows / std::max(1, total));
+    const int y = track.y() + (track.height() - height) * scroll_ / maximum;
+    return QRect(track.x(), y, track.width(), height);
+}
+
+// Posiciona a rolagem de modo que o cursor fique sob o ponto apontado.
+void PlaylistPanel::scroll_to_position(int logical_y) {
+    const QRect track = scrollbar_rect();
+    const int height = scroll_thumb_rect().height();
+    const int span = track.height() - height;
+    const int maximum = std::max(0, controller_.playlist().size() - visible_rows());
+    if (span <= 0 || maximum <= 0) return;
+    const int offset = std::clamp(logical_y - scroll_grab_offset_ - track.y(), 0, span);
+    scroll_ = (offset * maximum + span / 2) / span;
+    clamp_scroll();
 }
 
 // O rodape e uma faixa de kFooterHeight px colada na base; tudo que vive nele
@@ -222,15 +297,14 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
     }
 
     // Barra de rolagem, so quando ha o que rolar.
-    const int maximum = std::max(0, playlist.size() - rows);
-    if (maximum > 0) {
-        const int track_x = kWidth - 5;
-        painter.fillRect(track_x * s, top * s, 3 * s, rows * kRowHeight * s, kFaceShade);
-        const int thumb = std::max(6, rows * kRowHeight * rows / playlist.size());
-        const int thumb_y = top + (rows * kRowHeight - thumb) * scroll_ / maximum;
-        painter.fillRect((track_x - 1) * s, thumb_y * s, 5 * s, thumb * s, kFaceLight);
-        painter.fillRect((track_x - 1) * s, thumb_y * s, 5 * s, s, kBevelLight);
-        painter.fillRect((track_x - 1) * s, (thumb_y + thumb - 1) * s, 5 * s, s, kBevelDark);
+    if (const QRect thumb = scroll_thumb_rect(); !thumb.isNull()) {
+        const QRect track = scrollbar_rect();
+        painter.fillRect(track.x() * s, track.y() * s, track.width() * s, track.height() * s,
+                         kFaceShade);
+        painter.fillRect(thumb.x() * s, thumb.y() * s, thumb.width() * s, thumb.height() * s,
+                         kFaceLight);
+        painter.fillRect(thumb.x() * s, thumb.y() * s, thumb.width() * s, s, kBevelLight);
+        painter.fillRect(thumb.x() * s, thumb.bottom() * s, thumb.width() * s, s, kBevelDark);
     }
 
     // Rodape.
@@ -310,6 +384,19 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
+    // Barra de rolagem: clicar no cursor arrasta; clicar no trilho salta para
+    // o ponto. Antes so a roda do mouse rolava, e a barra era um enfeite.
+    if (const QRect track = scrollbar_rect(); track.contains(p) && !scroll_thumb_rect().isNull()) {
+        const QRect thumb = scroll_thumb_rect();
+        scrolling_ = true;
+        // Arrastando o cursor, ele acompanha o ponto agarrado; clicando no
+        // trilho, ele centra no clique — que e o que se espera de um salto.
+        scroll_grab_offset_ = thumb.contains(p) ? p.y() - thumb.y() : thumb.height() / 2;
+        scroll_to_position(p.y());
+        update();
+        return;
+    }
+
     for (int i = 0; i < kButtonCount; ++i) {
         if (!button_rect(i).contains(p)) continue;
         switch (i) {
@@ -361,6 +448,11 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
 }
 
 void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
+    if (scrolling_) {
+        scroll_to_position(to_logical(event->pos()).y());
+        update();
+        return;
+    }
     if (!resizing_) {
         setCursor(to_logical(event->pos()).y() >= logical_height_ - kResizeGrip
                       ? Qt::SizeVerCursor
@@ -373,7 +465,10 @@ void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
     if (on_height_changed) on_height_changed();
 }
 
-void PlaylistPanel::mouseReleaseEvent(QMouseEvent*) { resizing_ = false; }
+void PlaylistPanel::mouseReleaseEvent(QMouseEvent*) {
+    resizing_ = false;
+    scrolling_ = false;
+}
 
 void PlaylistPanel::mouseDoubleClickEvent(QMouseEvent* event) {
     const int row = row_at(to_logical(event->pos()));

@@ -40,6 +40,7 @@ struct Piece {
 };
 
 int right(const QRect& r) { return r.x() + r.width() - 1; }
+int bottom(const QRect& r) { return r.y() + r.height() - 1; }
 
 QRect placed(const QPoint& at, const wa::Sprite& sprite) {
     return QRect(at, sprite.source.size());
@@ -148,6 +149,19 @@ void main_window() {
         PANG_CHECK(std::abs(before - after) <= 1,
                    (std::string(name) + " nao esta centrado no poco").c_str());
     }
+    // AU-14 — o medidor do limitador vive na faixa entre os digitos e o
+    // espectro. Precisa caber ali sem encostar em nenhum dos dois, senao ou
+    // corta o mostrador de tempo ou come uma linha das barras.
+    std::printf("    %-22s %3d..%-3d  linhas %d..%d\n", "medidor do limitador",
+                wa::kLimiterMeter.x(), right(wa::kLimiterMeter), wa::kLimiterMeter.y(),
+                bottom(wa::kLimiterMeter));
+    PANG_CHECK(interior.contains(wa::kLimiterMeter), "medidor do limitador cabe no poco");
+    PANG_CHECK(wa::kLimiterMeter.y() > bottom(digits), "medidor abaixo dos digitos");
+    PANG_CHECK(bottom(wa::kLimiterMeter) < wa::kVisualization.y(), "medidor acima do espectro");
+    PANG_CHECK(wa::kLimiterMeter.x() == wa::kVisualization.x() &&
+                   wa::kLimiterMeter.width() == wa::kVisualization.width(),
+               "medidor alinhado com o espectro");
+
     PANG_CHECK(!indicator.intersects(digits), "indicador encostado nos digitos");
     PANG_CHECK(digits.x() - right(indicator) - 1 >= 2, "indicador colado nos digitos");
     PANG_CHECK(title.contains(wa::kSongTitle), "titulo da faixa nao cabe no poco");

@@ -397,6 +397,7 @@ Snapshot Engine::snapshot() const {
     s.peak = pub.peak;
     s.underruns = pub.underruns;
     s.clamp_hits = pub.clamp_hits;
+    s.limiter_gain = pub.limiter_gain;
     s.vis_drops = pub.vis_drops;
     s.replaygain_db = replaygain_db_.load(std::memory_order_relaxed);
     s.replaygain_present = replaygain_present_.load(std::memory_order_relaxed);
@@ -491,6 +492,7 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
     pub.underruns = underruns_.load(std::memory_order_relaxed);
     pub.clamp_hits = limiter_.clamp_hits();
     pub.vis_drops = vis_drops_.load(std::memory_order_relaxed);
+    pub.limiter_gain = limiter_.gain_reduction();
     pub_.store(pub);
 }
 

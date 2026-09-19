@@ -41,6 +41,12 @@ struct AudioPublication {
     std::uint32_t underruns = 0;       // blocos em que o ring nao tinha dados
     std::uint32_t clamp_hits = 0;      // atuacoes do clamp rigido (M3)
     std::uint32_t vis_drops = 0;       // blocos de visualizacao descartados (M4)
+
+    // AU-14 — ganho que o limitador esta aplicando, 1,0 quando ele nao atua.
+    // Publicado porque o usuario nao tem como saber, de outro modo, que o
+    // preamp do equalizador poe o limitador a trabalhar o tempo todo: o som
+    // fica com o ganho respirando e nada na tela explica por que.
+    float limiter_gain = 1.0f;
 };
 
 // O que a interface le a cada repintura.
@@ -59,6 +65,9 @@ struct Snapshot {
     bool replaygain_present = false;
     std::uint32_t clamp_hits = 0;
     std::uint32_t vis_drops = 0;
+
+    // AU-14 — reducao do limitador, em ganho linear. 1,0 = inativo.
+    float limiter_gain = 1.0f;
 };
 
 }  // namespace pang::core

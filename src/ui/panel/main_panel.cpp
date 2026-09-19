@@ -204,6 +204,7 @@ void MainPanel::paintEvent(QPaintEvent*) {
 
     paint_display(painter);
     paint_visualization(painter);
+    paint_limiter(painter);
     paint_sliders(painter);
     paint_buttons(painter);
 }
@@ -286,6 +287,35 @@ void MainPanel::paint_display(QPainter& painter) {
                         {wa::kSongTitle.x() - title_offset_, wa::kSongTitle.y()});
     }
     painter.restore();
+}
+
+// AU-14 — medidor de reducao do limitador, da direita para a esquerda.
+//
+// A escala vai ate 12 dB porque e a faixa do equalizador: com o preamp e as
+// bandas no maximo, e essa a ordem de grandeza do excesso que o limitador tem
+// de absorver. Reducao abaixo de meio decibel nao acende — o limitador toca de
+// leve no sinal o tempo todo, e um medidor que pisca por isso vira ruido
+// visual em vez de aviso.
+void MainPanel::paint_limiter(QPainter& painter) {
+    const int s = skin_.scale();
+    const QRect meter = wa::kLimiterMeter;
+    const float gain = snapshot_.limiter_gain;
+    if (gain >= 1.0f) return;
+
+    const float reduction_db = -20.0f * std::log10(std::max(gain, 1e-4f));
+    if (reduction_db < 0.5f) return;
+
+    const int filled =
+        std::clamp(static_cast<int>(reduction_db / 12.0f * meter.width()), 1, meter.width());
+    // Rampa propria, e nao a do espectro: indexar a paleta do espectro dava
+    // verde-oliva escuro para reducao pequena, e um aviso que nao se ve nao
+    // avisa. Aqui a cor vai de amarelo a vermelho conforme a reducao cresce,
+    // sempre em brilho cheio.
+    const float t = std::clamp(reduction_db / 9.0f, 0.0f, 1.0f);
+    const QColor ink(static_cast<int>(240 - 30 * t), static_cast<int>(203 - 150 * t),
+                     static_cast<int>(71 - 40 * t));
+    painter.fillRect((meter.right() + 1 - filled) * s, meter.y() * s, filled * s,
+                     meter.height() * s, ink);
 }
 
 void MainPanel::paint_visualization(QPainter& painter) {

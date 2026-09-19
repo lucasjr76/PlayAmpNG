@@ -582,8 +582,11 @@ int main(int argc, char** argv) {
         if (!ready.empty()) {
             for (const auto& result : ready)
                 controller->playlist().apply_metadata(result.id, result.track);
-            playlist_panel->refresh();
+            playlist_panel->refresh(/*force=*/true);
         }
+        // A faixa em reproducao pode mudar sem metadado novo — pelo botao,
+        // pelo fim da faixa ou pelo barramento. O painel precisa saber.
+        playlist_panel->refresh();
         if (equalizer_panel->isVisible()) equalizer_panel->refresh();
         publish_now_playing();
 

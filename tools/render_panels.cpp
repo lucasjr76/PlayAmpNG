@@ -42,10 +42,12 @@ int main(int argc, char** argv) {
     std::vector<pang::core::dsp::EqPreset> presets;
     // Bandas espalhadas: com tudo em 0 dB os polegares cobrem os proprios
     // entalhes e nao ha como conferir o alinhamento.
-    const float gains[] = {9, 6, -3, -7, -2, 4, 7, 10, 8, 5};
+    // A configuracao real do usuario, para ver o medidor do limitador sob a
+    // condicao que ele existe para mostrar.
+    const float gains[] = {5, 3, -3, -5, -2, 2, 5, 7, 7, 7};
     for (int b = 0; b < pang::core::dsp::Equalizer::kBands; ++b)
         engine.equalizer().set_band_db(b, gains[b]);
-    engine.equalizer().set_preamp_db(3.0f);
+    engine.equalizer().set_preamp_db(5.076923f);
     auto save = [&](QWidget& widget, const char* name) {
         QImage image(widget.size(), QImage::Format_ARGB32);
         image.fill(Qt::transparent);

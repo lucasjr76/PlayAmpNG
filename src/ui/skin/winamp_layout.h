@@ -209,6 +209,13 @@ constexpr QPoint kIndicatorAt{20, 28};
 
 constexpr QRect kVisualization{19, 43, 76, 16};
 
+// AU-14 — medidor de reducao do limitador. Ocupa a faixa livre entre os
+// digitos (que terminam na linha 38) e o espectro (que comeca na 43), com a
+// mesma largura e a mesma coluna do espectro. Nao e enfeite: sem ele o usuario
+// nao tem como saber que o preamp do equalizador poe o limitador a trabalhar
+// em todos os blocos, e ouve o ganho respirando sem explicacao.
+constexpr QRect kLimiterMeter{19, 39, 76, 3};
+
 // --------------------------------------- eqmain.bmp (275x315)
 
 constexpr Sprite kEqualizerBackground{"eqmain", {0, 0, 275, 116}};

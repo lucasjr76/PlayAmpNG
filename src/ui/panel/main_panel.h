@@ -79,6 +79,7 @@ private:
 
     void paint_display(QPainter&);
     void paint_visualization(QPainter&);
+    void paint_limiter(QPainter&);
     void paint_sliders(QPainter&);
     void paint_buttons(QPainter&);
 

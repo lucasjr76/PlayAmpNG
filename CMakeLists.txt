@@ -226,6 +226,18 @@ set_tests_properties(single_instance PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
 qt_add_executable(pang_settings_tests tests/test_settings.cpp src/ui/settings.cpp)
 target_link_libraries(pang_settings_tests PRIVATE Qt6::Widgets pang_core)
 add_test(NAME settings COMMAND pang_settings_tests)
+
+# Interacao do painel de playlist. Roda offscreen: o que se verifica e o efeito
+# do clique no estado, nao o desenho.
+qt_add_executable(pang_playlist_ui_tests
+  tests/test_playlist_ui.cpp
+  src/ui/panel/playlist_panel.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp)
+target_link_libraries(pang_playlist_ui_tests PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core)
+target_compile_definitions(pang_playlist_ui_tests PRIVATE
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
+add_test(NAME playlist_ui COMMAND pang_playlist_ui_tests)
 set_tests_properties(settings PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 # M6-1 — fonte de rede. O teste sobe um servidor HTTP local de verdade; um
