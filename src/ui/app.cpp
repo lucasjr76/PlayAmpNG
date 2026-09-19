@@ -30,6 +30,7 @@
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
+
 #include <QWidget>
 
 #include <algorithm>
@@ -43,6 +44,13 @@
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+
+#ifdef _WIN32
+// Depois dos cabecalhos do Qt de proposito: windows.h define min/max e outros
+// nomes curtos que atrapalham quem vier antes.
+#include <cstdio>
+#include <windows.h>
+#endif
 
 #include "core/dsp/presets.h"
 #include "core/util/log.h"
@@ -91,7 +99,23 @@ extern "C" void request_termination(int) {
 
 }  // namespace
 
+#ifdef _WIN32
+// O binario do Windows e de subsistema GUI, e por isso nasce SEM console: o
+// log em stderr some, inclusive a linha que diz se a integracao com o painel
+// de midia subiu. Quem roda pelo PowerShell recebe o log no proprio terminal;
+// quem abre pelo atalho continua sem console, como deve ser.
+void attach_parent_console() {
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) return;
+    FILE* dummy = nullptr;
+    freopen_s(&dummy, "CONOUT$", "w", stderr);
+    freopen_s(&dummy, "CONOUT$", "w", stdout);
+}
+#endif
+
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    attach_parent_console();
+#endif
     std::signal(SIGTERM, request_termination);
     std::signal(SIGINT, request_termination);
 
