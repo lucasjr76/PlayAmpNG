@@ -56,8 +56,9 @@ void check_geometry(const WinampSkin& skin, const char* origin) {
                label("o fundo do volume muda com o nivel"));
 
     // Barra de posicao: fundo de 248 e cursor de 29.
-    PANG_CHECK(skin.sprite(winamp::kPositionBackground).size() == QSize(248, 10),
-               label("fundo da barra de posicao tem 248x10"));
+    PANG_CHECK(skin.sprite(winamp::kPositionBackground).size() ==
+                   winamp::kPositionBackground.source.size(),
+               label("o fundo da barra de posicao cabe no posbar.bmp"));
     PANG_CHECK(skin.sprite(winamp::kPositionThumbNormal).size() == QSize(29, 10),
                label("cursor da barra de posicao tem 29x10"));
 
@@ -89,6 +90,53 @@ void check_geometry(const WinampSkin& skin, const char* origin) {
                label("fundo do equalizador tem 275x116"));
     PANG_CHECK(skin.sprite(winamp::kEqualizerThumbNormal).size() == QSize(11, 11),
                label("cursor do equalizador tem 11x11"));
+
+    // Controle cujo bitmap ja traz o fundo inteiro nao pode ter um segundo
+    // fundo desenhado atras dele no main.bmp: as duas bordas se empilham e o
+    // resultado aparece como moldura dupla e caixa preta sobrando. O teste
+    // exige que o main.bmp seja liso sob esses controles.
+    {
+        const QImage background = skin.sprite(winamp::kMainBackground).toImage();
+        const struct { QRect area; const char* what; } covered[] = {
+            {QRect(winamp::kVolumeAt, winamp::kVolumeSize), "main.bmp liso sob o volume"},
+            {QRect(winamp::kBalanceAt, winamp::kBalanceSize), "main.bmp liso sob o balanco"},
+            {QRect(winamp::kPositionAt, winamp::kPositionBackground.source.size()),
+             "main.bmp liso sob a barra de posicao"},
+        };
+        // A face da janela tem degrade vertical, entao a exigencia nao e "cor
+        // unica": e que cada LINHA seja uniforme. Borda de poco varia dentro da
+        // linha; degrade varia so de uma linha para a outra.
+        for (const auto& entry : covered) {
+            bool flat = true;
+            for (int y = entry.area.y(); y <= entry.area.bottom() && flat; ++y) {
+                const QRgb first = background.pixel(entry.area.x(), y);
+                for (int x = entry.area.x(); x <= entry.area.right(); ++x)
+                    if (background.pixel(x, y) != first) { flat = false; break; }
+            }
+            PANG_CHECK(flat, label(entry.what));
+        }
+    }
+
+    // As tiras de quadros. Um quadro que cai fora do bitmap volta vazio e o
+    // controle aparece sem trilho — foi o que aconteceu com os fundos de
+    // slider do equalizador, que estavam empilhados na vertical e exigiriam
+    // 1928 px de altura num bitmap de 315. Conferir so o primeiro quadro nao
+    // pega isso: e preciso percorrer os 28.
+    for (int frame = 0; frame < winamp::kEqSliderFrames; ++frame) {
+        const winamp::Sprite piece{"eqmain", winamp::eq_slider_frame(frame)};
+        PANG_CHECK(skin.sprite(piece).size() == winamp::kEqSliderSize,
+                   label("todo quadro de slider do equalizador cabe no eqmain"));
+    }
+    for (int frame = 0; frame < winamp::kVolumeFrames; ++frame) {
+        const QRect at(0, frame * winamp::kVolumeFrameStride, winamp::kVolumeSize.width(),
+                       winamp::kVolumeSize.height());
+        PANG_CHECK(skin.sprite({"volume", at}).size() == winamp::kVolumeSize,
+                   label("todo quadro de volume cabe no volume.bmp"));
+        const QRect b(0, frame * winamp::kVolumeFrameStride, winamp::kBalanceSize.width(),
+                      winamp::kBalanceSize.height());
+        PANG_CHECK(skin.sprite({"balance", b}).size() == winamp::kBalanceSize,
+                   label("todo quadro de balanco cabe no balance.bmp"));
+    }
 
     // Cores da visualizacao: 24 entradas, sendo 2..17 o degrade do espectro.
     PANG_CHECK(skin.visualization_colors().size() >= 18,

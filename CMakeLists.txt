@@ -101,7 +101,6 @@ qt_add_executable(playampng
   src/ui/app.cpp
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
-  src/ui/skin/atlas.cpp
   src/ui/skin/winamp_skin.cpp
   src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
@@ -118,7 +117,6 @@ qt_add_executable(pang_render
   tools/render_panels.cpp
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
-  src/ui/skin/atlas.cpp
   src/ui/skin/winamp_skin.cpp
   src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
@@ -128,6 +126,13 @@ target_link_libraries(pang_render PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core pang
 target_compile_definitions(pang_render PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
+
+# Extrai a fonte 5x6 do formato a partir da Silkscreen, para tools/make_wsz.py.
+# Nao roda no build: a tabela e gerada uma vez e fica no gerador do skin.
+qt_add_executable(pang_fontgen tools/fontgen.cpp)
+target_link_libraries(pang_fontgen PRIVATE Qt6::Gui)
+target_compile_definitions(pang_fontgen PRIVATE
+  FONT_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin/font/Silkscreen-Regular.ttf")
 
 # ------------------------------------------------------------------- testes
 

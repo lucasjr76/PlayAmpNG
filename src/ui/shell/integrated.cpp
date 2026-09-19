@@ -6,8 +6,8 @@
 namespace pang::ui::shell {
 
 IntegratedShell::IntegratedShell(MainPanel* main, EqualizerPanel* equalizer,
-                                 PlaylistPanel* playlist, skin::Atlas& atlas, QWidget* parent)
-    : QWidget(parent), main_(main), equalizer_(equalizer), playlist_(playlist), atlas_(atlas) {
+                                 PlaylistPanel* playlist, skin::WinampSkin& skin, QWidget* parent)
+    : QWidget(parent), main_(main), equalizer_(equalizer), playlist_(playlist), skin_(skin) {
     main_->setParent(this);
     equalizer_->setParent(this);
     playlist_->setParent(this);
@@ -78,7 +78,7 @@ void IntegratedShell::set_detached(bool detached) {
 }
 
 void IntegratedShell::relayout() {
-    const int s = atlas_.scale();
+    const int s = skin_.scale();
     int y = 0;
 
     const int main_height = compact_ ? MainPanel::kCompactHeight : MainPanel::kHeight;

@@ -7,7 +7,7 @@
 #include "ui/panel/equalizer_panel.h"
 #include "ui/panel/main_panel.h"
 #include "ui/panel/playlist_panel.h"
-#include "ui/skin/atlas.h"
+#include "ui/skin/winamp_skin.h"
 
 namespace pang::ui::shell {
 
@@ -25,7 +25,7 @@ namespace pang::ui::shell {
 class IntegratedShell : public QWidget {
 public:
     IntegratedShell(MainPanel* main, EqualizerPanel* equalizer, PlaylistPanel* playlist,
-                    skin::Atlas& atlas, QWidget* parent = nullptr);
+                    skin::WinampSkin& skin, QWidget* parent = nullptr);
 
     void set_equalizer_visible(bool visible);
     void set_playlist_visible(bool visible);
@@ -51,7 +51,7 @@ private:
     MainPanel* main_;
     EqualizerPanel* equalizer_;
     PlaylistPanel* playlist_;
-    skin::Atlas& atlas_;
+    skin::WinampSkin& skin_;
 
     bool equalizer_visible_ = false;
     bool playlist_visible_ = true;

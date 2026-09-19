@@ -19,20 +19,20 @@
 #include "ui/panel/equalizer_panel.h"
 #include "ui/panel/main_panel.h"
 #include "ui/panel/playlist_panel.h"
-#include "ui/skin/atlas.h"
+#include "ui/skin/winamp_skin.h"
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
     const QString out = argc > 1 ? QString::fromLocal8Bit(argv[1]) : QStringLiteral(".");
     const int scale = argc > 2 ? QString::fromLocal8Bit(argv[2]).toInt() : 1;
 
-    pang::ui::skin::Atlas atlas;
+    pang::ui::skin::WinampSkin skin;
     QString error;
-    if (!atlas.load(QStringLiteral(PLAYAMPNG_SKIN_DIR), error)) {
+    if (!skin.load(QStringLiteral(PLAYAMPNG_SKIN_DIR "/default"), error)) {
         std::printf("erro: %s\n", qPrintable(error));
         return 1;
     }
-    atlas.set_scale(scale);
+    skin.set_scale(scale);
 
     pang::core::Engine engine(44100, 2);
     pang::core::Controller controller(engine);
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         std::printf("%-12s %dx%d -> %s\n", name, image.width(), image.height(), qPrintable(path));
     };
 
-    pang::ui::MainPanel main_panel(controller, engine, atlas);
+    pang::ui::MainPanel main_panel(controller, engine, skin);
 
     // Alimenta o espectro com audio real: sem isto as barras nao aparecem e
     // nao ha o que medir.
@@ -70,8 +70,8 @@ int main(int argc, char** argv) {
         main_panel.tick(0.016f);
         QThread::msleep(2);
     }
-    pang::ui::EqualizerPanel equalizer(engine.equalizer(), presets, atlas);
-    pang::ui::PlaylistPanel playlist(controller, atlas);
+    pang::ui::EqualizerPanel equalizer(engine.equalizer(), presets, skin);
+    pang::ui::PlaylistPanel playlist(controller, skin);
     save(main_panel, "main");
     save(equalizer, "eq");
     save(playlist, "playlist");

@@ -47,7 +47,7 @@
 #include "ui/shell/integrated.h"
 #include "ui/settings.h"
 #include "ui/shell/recovery.h"
-#include "ui/skin/atlas.h"
+#include "ui/skin/winamp_skin.h"
 
 using pang::core::Repeat;
 using pang::core::State;
@@ -146,12 +146,19 @@ int main(int argc, char** argv) {
 
     // -------------------------------------------------------------- skin
 
-    pang::ui::skin::Atlas atlas;
-    QString atlas_error;
-    if (!atlas.load(QStringLiteral(PLAYAMPNG_SKIN_DIR), atlas_error)) {
-        pang::core::log::error(atlas_error.toStdString());
+    // A aparencia e um skin no formato do Winamp 2.x. Nao ha selecao na
+    // interface — a secao 2 da especificacao proibe; o que se adota e o
+    // FORMATO, e o arquivo carregado e a aparencia fixa. Aceita .wsz ou pasta.
+    pang::ui::skin::WinampSkin skin;
+    QString skin_error;
+    const QString skin_path = QStringLiteral(PLAYAMPNG_SKIN_DIR "/default");
+    if (!skin.load(skin_path, skin_error)) {
+        pang::core::log::error(skin_error.toStdString());
         return 1;
     }
+    if (!skin.missing().isEmpty())
+        pang::core::log::warn(("skin sem os bitmaps: " +
+                               skin.missing().join(QStringLiteral(", ")).toStdString()));
 
     pang::ui::settings::AppState saved = pang::ui::settings::load();
 
@@ -187,7 +194,7 @@ int main(int argc, char** argv) {
                 "arestas perdem nitidez. Para o player ficar exato, use uma escala "
                 "inteira de monitor (1 ou 2).");
     }
-    atlas.set_scale(saved.scale);
+    skin.set_scale(saved.scale);
 
     engine->set_volume(saved.volume);
     engine->set_balance(saved.balance);
@@ -198,10 +205,9 @@ int main(int argc, char** argv) {
 
     // ------------------------------------------------------------ paineis
 
-    auto* main_panel = new pang::ui::MainPanel(*controller, *engine, atlas);
-    auto* equalizer_panel = new pang::ui::EqualizerPanel(engine->equalizer(), saved.user_presets,
-                                                         atlas);
-    auto* playlist_panel = new pang::ui::PlaylistPanel(*controller, atlas);
+    auto* main_panel = new pang::ui::MainPanel(*controller, *engine, skin);
+    auto* equalizer_panel = new pang::ui::EqualizerPanel(engine->equalizer(), saved.user_presets, skin);
+    auto* playlist_panel = new pang::ui::PlaylistPanel(*controller, skin);
     playlist_panel->set_logical_height(saved.playlist_geometry[3] > 0
                                            ? saved.playlist_geometry[3]
                                            : 150);
@@ -213,7 +219,7 @@ int main(int argc, char** argv) {
 
     // DEFEITOS.md A-1, A-2, A-3 — uma janela so. Os paineis abrem e fecham
     // juntos, tem a mesma largura, e nao ha janela primaria para se perder.
-    pang::ui::shell::IntegratedShell shell(main_panel, equalizer_panel, playlist_panel, atlas);
+    pang::ui::shell::IntegratedShell shell(main_panel, equalizer_panel, playlist_panel, skin);
     shell.setWindowTitle(QStringLiteral("PlayAmpNG"));
     shell.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     shell.set_equalizer_visible(saved.equalizer_visible);
@@ -357,7 +363,7 @@ int main(int argc, char** argv) {
         saved.repeat = static_cast<int>(controller->repeat());
         saved.replaygain_mode = static_cast<int>(engine->replaygain_mode());
         saved.eq = pang::core::dsp::capture(engine->equalizer());
-        saved.scale = atlas.scale();
+        saved.scale = skin.scale();
         saved.visualization =
             main_panel->visualization() == pang::ui::MainPanel::Visualization::Scope   ? 1
             : main_panel->visualization() == pang::ui::MainPanel::Visualization::Off   ? 2

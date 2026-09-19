@@ -10,32 +10,50 @@
 #include <QWindow>
 
 #include <algorithm>
-#include <chrono>
+
+#include "ui/skin/winamp_layout.h"
 
 namespace pang::ui {
 namespace {
 
-constexpr int kTitlebarHeight = 14;
-constexpr int kRowHeight = 9;
-constexpr int kListMargin = 6;
-constexpr int kFooterHeight = 24;
-constexpr int kButtonWidth = 28;
-constexpr int kButtonHeight = 13;
-constexpr int kButtonSpacing = 30;
+namespace wa = skin::winamp;
 
-// Faixa de arraste da aresta inferior. Quatro pixels logicos viram oito ou doze
-// na escala util, que e alvo suficiente.
+// Mesma altura das outras duas janelas. Com 20 a legenda da playlist nao
+// batia com a da principal nem com a do equalizador, e as listras cabiam em
+// numero diferente.
+constexpr int kTitlebarHeight = 14;
+constexpr int kRowHeight = wa::kGlyphHeight + 2;   // fonte do formato mais respiro
+// A mesma margem das outras duas janelas: conteudo de 14 a 260. O valor vem
+// da grade em tests/test_layout.cpp.
+constexpr int kListMargin = 14;
+constexpr int kFooterHeight = 24;
+constexpr int kButtonWidth = 26;
+constexpr int kButtonHeight = 12;
+constexpr int kButtonSpacing = 28;
 constexpr int kResizeGrip = 4;
 
-struct Button {
-    const char* label;
-    const char* tooltip;
-};
+// Cores do editor de playlist. O formato as guarda em pledit.txt; sem esse
+// arquivo valem estes padroes. Sao os mesmos da paleta medida na referencia,
+// para a playlist nao destoar das outras duas janelas.
+const QColor kBackground{0, 0, 0};
+const QColor kFace{58, 58, 86};
+const QColor kFaceLight{78, 78, 108};
+const QColor kFaceShade{45, 45, 68};
+const QColor kBevelLight{108, 108, 142};
+const QColor kBevelDark{26, 26, 40};
+const QColor kCream{252, 251, 233};
+// A familia dos botoes de transporte: face clara, contorno escuro, tinta
+// escura. Sao os mesmos valores de tools/make_wsz.py.
+const QColor kFaceTop{214, 222, 230};
+const QColor kFaceBottom{166, 174, 190};
+const QColor kFaceHighlight{239, 248, 250};
+const QColor kFaceShadow{120, 128, 146};
+const QColor kOutline{16, 16, 26};
+const QColor kButtonInk{26, 30, 46};
+const QColor kCurrentText{252, 251, 233};
+const QColor kSelectedRow{38, 38, 92};
 
-constexpr Button kButtons[] = {
-    {"ARQ", "adicionar arquivos"}, {"DIR", "adicionar pasta"}, {"REM", "remover selecionados"},
-    {"LMP", "limpar lista"},       {"IMP", "importar"},        {"EXP", "exportar"},
-};
+constexpr const char* kButtons[] = {"add", "dir", "rem", "clr", "imp", "exp"};
 constexpr int kButtonCount = 6;
 
 QString format_ms(std::int64_t ms) {
@@ -46,8 +64,7 @@ QString format_ms(std::int64_t ms) {
         .arg(total % 60, 2, 10, QLatin1Char('0'));
 }
 
-// Total da lista pode passar de uma hora, e "620:25" nao se le. Acima de 60
-// minutos o campo ganha o digito de hora.
+// Acima de uma hora, "620:25" nao se le: o campo ganha o digito de hora.
 QString format_total_ms(std::int64_t ms) {
     if (ms < 0) return QStringLiteral("--:--");
     const std::int64_t total = ms / 1000;
@@ -60,30 +77,28 @@ QString format_total_ms(std::int64_t ms) {
 
 }  // namespace
 
-PlaylistPanel::PlaylistPanel(core::Controller& controller, skin::Atlas& atlas, QWidget* parent)
-    : QWidget(parent), controller_(controller), atlas_(atlas) {
+PlaylistPanel::PlaylistPanel(core::Controller& controller, skin::WinampSkin& skin, QWidget* parent)
+    : QWidget(parent), controller_(controller), skin_(skin) {
     setFocusPolicy(Qt::StrongFocus);
     setAcceptDrops(true);  // LI-02
     setMouseTracking(true);
-    // Fundo opaco: sem isso o widget pode deixar passar o que estiver atras.
     setAttribute(Qt::WA_OpaquePaintEvent, true);
-    set_scale(atlas.scale());
+    set_scale(skin.scale());
 }
 
 void PlaylistPanel::set_scale(int) {
-    setFixedSize(kWidth * atlas_.scale(), logical_height_ * atlas_.scale());
+    setFixedSize(kWidth * skin_.scale(), logical_height_ * skin_.scale());
     update();
 }
 
 void PlaylistPanel::set_logical_height(int height) {
     logical_height_ = std::max(kMinimumHeight, height);
-    setFixedSize(kWidth * atlas_.scale(), logical_height_ * atlas_.scale());
+    setFixedSize(kWidth * skin_.scale(), logical_height_ * skin_.scale());
     clamp_scroll();
     update();
 }
 
 void PlaylistPanel::refresh() {
-    // Indices selecionados que nao existem mais saem da selecao.
     std::set<int> kept;
     for (int index : selected_)
         if (index >= 0 && index < controller_.playlist().size()) kept.insert(index);
@@ -93,22 +108,21 @@ void PlaylistPanel::refresh() {
 }
 
 QPoint PlaylistPanel::to_logical(const QPoint& physical) const {
-    const int s = std::max(1, atlas_.scale());
+    const int s = std::max(1, skin_.scale());
     return QPoint(physical.x() / s, physical.y() / s);
 }
 
 int PlaylistPanel::visible_rows() const {
-    const int area = logical_height_ - kTitlebarHeight - kFooterHeight - kListMargin;
+    const int area = logical_height_ - kTitlebarHeight - kFooterHeight;
     return std::max(1, area / kRowHeight);
 }
 
 void PlaylistPanel::clamp_scroll() {
-    const int maximum = std::max(0, controller_.playlist().size() - visible_rows());
-    scroll_ = std::clamp(scroll_, 0, maximum);
+    scroll_ = std::clamp(scroll_, 0, std::max(0, controller_.playlist().size() - visible_rows()));
 }
 
 int PlaylistPanel::row_at(const QPoint& p) const {
-    const int top = kTitlebarHeight + 4;
+    const int top = kTitlebarHeight;
     if (p.y() < top) return -1;
     const int row = scroll_ + (p.y() - top) / kRowHeight;
     if (row < 0 || row >= controller_.playlist().size()) return -1;
@@ -116,99 +130,143 @@ int PlaylistPanel::row_at(const QPoint& p) const {
     return row;
 }
 
+// O rodape e uma faixa de kFooterHeight px colada na base; tudo que vive nele
+// e centrado NA FAIXA, nao posicionado a partir da borda de baixo. Medido a
+// partir da borda, o conteudo ficava mais perto do fim da janela do que do
+// fim da lista.
+int PlaylistPanel::footer_top() const { return logical_height_ - kFooterHeight; }
+
 QRect PlaylistPanel::button_rect(int index) const {
-    return QRect(kListMargin + index * kButtonSpacing, logical_height_ - kButtonHeight - 4,
-                 kButtonWidth, kButtonHeight);
+    return QRect(kListMargin + index * kButtonSpacing,
+                 footer_top() + (kFooterHeight - kButtonHeight) / 2, kButtonWidth, kButtonHeight);
 }
 
 void PlaylistPanel::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
-    const int s = atlas_.scale();
+    const int s = skin_.scale();
 
-    painter.fillRect(rect(), atlas_.color(QStringLiteral("background")));
-    atlas_.draw_tiled(painter, QStringLiteral("frame/titlebar"), QRect(0, 0, kWidth, kTitlebarHeight));
-    const QString caption = QStringLiteral("PLAYLIST");
-    const int caption_w = atlas_.text_width(caption);
-    const int caption_x = (kWidth - caption_w) / 2;
-    painter.fillRect((caption_x - 5) * s, 2 * s, (caption_w + 10) * s, 10 * s,
-                     atlas_.color(QStringLiteral("background")));
-    atlas_.draw_text(painter, caption, caption_x, (14 - atlas_.glyph_height()) / 2);
+    painter.fillRect(rect(), kFace);
 
-    // Poco da lista.
-    const int top = kTitlebarHeight + 4;
+    // Barra de titulo igual a das outras duas janelas: degrade da face e TRES
+    // listras nas linhas 4, 6 e 8. O laco anterior ia de 4 a 15 de dois em
+    // dois e produzia seis listras numa barra de altura diferente — dai as
+    // tres legendas nao se parecerem.
+    for (int row = 0; row < kTitlebarHeight; ++row) {
+        const double t = row / double(kTitlebarHeight - 1);
+        painter.fillRect(0, row * s, kWidth * s, s,
+                         QColor(int(78 + (45 - 78) * t), int(78 + (45 - 78) * t),
+                                int(108 + (68 - 108) * t)));
+    }
+    for (int row : {4, 6, 8}) {
+        painter.fillRect(0, row * s, kWidth * s, s, kCream);
+        painter.fillRect(0, (row + 1) * s, kWidth * s, s, kFaceShade);
+    }
+    const QString caption = QStringLiteral("playamp ng playlist");
+    const int caption_x = (kWidth - skin_.text_width(caption)) / 2;
+    const int caption_y = (kTitlebarHeight - wa::kGlyphHeight) / 2;
+    // Campo preto atras do titulo, pelo mesmo motivo dos botoes.
+    painter.fillRect((caption_x - 6) * s, 1 * s, (skin_.text_width(caption) + 12) * s,
+                     (kTitlebarHeight - 2) * s, kFace);
+    skin_.draw_text(painter, caption, {caption_x, caption_y}, kCream);
+
+    const int top = kTitlebarHeight;
     const int rows = visible_rows();
-    const QRect well(kListMargin - 2, top - 2, kWidth - 2 * kListMargin + 4,
-                     rows * kRowHeight + 4);
-    painter.fillRect(well.x() * s, well.y() * s, well.width() * s, well.height() * s,
-                     atlas_.color(QStringLiteral("well")));
+    // A area da lista vai ate o rodape, nao ate o fim da ultima linha visivel.
+    // A altura da janela raramente e multiplo exato da altura de linha, e o
+    // resto ficava como uma faixa da cor do painel entre a lista e o rodape —
+    // que empurrava o rodape para baixo do centro da faixa dele.
+    painter.fillRect(0, top * s, kWidth * s, (footer_top() - top) * s, kBackground);
 
     const core::Playlist& playlist = controller_.playlist();
     const int current = controller_.current_index();
-    const QColor green = atlas_.color(QStringLiteral("green"));
-    const QColor dim = atlas_.color(QStringLiteral("gray_text"));
 
     // LI-17 — so as linhas visiveis sao tocadas.
     for (int row = 0; row < rows; ++row) {
         const int index = scroll_ + row;
         if (index >= playlist.size()) break;
-
         const int y = top + row * kRowHeight;
 
-        // LI-10 — selecionada tem fundo; em reproducao tem cor propria. Sao
-        // dois estados distintos, e podem coincidir.
+        // LI-10 — selecionada tem fundo proprio; em reproducao tem cor propria.
+        // Sao dois estados distintos e podem coincidir.
         if (selected_.count(index))
-            painter.fillRect((kListMargin - 1) * s, y * s, (kWidth - 2 * kListMargin + 2) * s,
-                             (kRowHeight - 1) * s, atlas_.color(QStringLiteral("bevel_dark")));
+            painter.fillRect(0, y * s, kWidth * s, kRowHeight * s, kSelectedRow);
 
         const core::Track& track = playlist.at(index);
         const QString duration = format_ms(track.duration_ms);
         const QString number = QStringLiteral("%1.").arg(index + 1);
+        const int duration_width = skin_.text_width(duration);
+        const int title_x = kListMargin + skin_.text_width(number) + wa::kGlyphWidth;
+        const int available = std::max(0, kWidth - kListMargin - duration_width - 6 - title_x);
 
-        atlas_.draw_text(painter, number, kListMargin, y,
-                         index == current ? green : dim);
-
-        // Reserva a direita para a duracao, mais a folga da barra de rolagem,
-        // e corta o titulo no que REALMENTE sobrar. A conta anterior dividia
-        // pela largura do glifo e ainda deixava o titulo encostar na duracao.
-        const int duration_width = atlas_.text_width(duration);
-        const int title_x = kListMargin + atlas_.text_width(number) + 4;
-        const int reserved = kListMargin + duration_width + 8;
-        const int available = std::max(0, kWidth - reserved - title_x);
-
-        // Com fonte proporcional nao da para dividir pela largura do glifo:
-        // corta-se medindo, tirando um caractere por vez ate caber.
         QString title = QString::fromStdString(track.display_title());
-        if (atlas_.text_width(title) > available) {
-            while (!title.isEmpty() &&
-                   atlas_.text_width(title + QStringLiteral(".")) > available)
-                title.chop(1);
-            title += QStringLiteral(".");
+        if (skin_.text_width(title) > available) {
+            const int fits = std::max(0, available / wa::kGlyphWidth - 1);
+            title = title.left(fits) + QStringLiteral(".");
         }
 
-        atlas_.draw_text(painter, title, title_x, y, index == current ? green : dim);
-        atlas_.draw_text(painter, duration, kWidth - kListMargin - duration_width, y,
-                         index == current ? green : dim);
+        painter.save();
+        // O texto do formato e monocromatico; a cor sai do recorte, entao a
+        // distincao entre faixa atual e demais e feita por composicao.
+        skin_.draw_text(painter, number, {kListMargin, y + 1});
+        skin_.draw_text(painter, title, {title_x, y + 1});
+        skin_.draw_text(painter, duration, {kWidth - kListMargin - duration_width, y + 1});
+        if (index == current)
+            painter.fillRect(0, y * s, 3 * s, kRowHeight * s, kCurrentText);
+        painter.restore();
     }
 
-    // Barra de rolagem: so aparece quando ha o que rolar.
+    // Barra de rolagem, so quando ha o que rolar.
     const int maximum = std::max(0, playlist.size() - rows);
     if (maximum > 0) {
-        const int track_x = kWidth - kListMargin + 1;
-        painter.fillRect(track_x * s, top * s, 3 * s, rows * kRowHeight * s,
-                         atlas_.color(QStringLiteral("bevel_dark")));
-        const int thumb_height = std::max(6, rows * kRowHeight * rows / playlist.size());
-        const int thumb_y = top + (rows * kRowHeight - thumb_height) * scroll_ / maximum;
-        painter.fillRect(track_x * s, thumb_y * s, 3 * s, thumb_height * s, green);
+        const int track_x = kWidth - 5;
+        painter.fillRect(track_x * s, top * s, 3 * s, rows * kRowHeight * s, kFaceShade);
+        const int thumb = std::max(6, rows * kRowHeight * rows / playlist.size());
+        const int thumb_y = top + (rows * kRowHeight - thumb) * scroll_ / maximum;
+        painter.fillRect((track_x - 1) * s, thumb_y * s, 5 * s, thumb * s, kFaceLight);
+        painter.fillRect((track_x - 1) * s, thumb_y * s, 5 * s, s, kBevelLight);
+        painter.fillRect((track_x - 1) * s, (thumb_y + thumb - 1) * s, 5 * s, s, kBevelDark);
     }
 
-    // Rodape: botoes e totais.
+    // Rodape.
     for (int i = 0; i < kButtonCount; ++i) {
         const QRect area = button_rect(i);
-        atlas_.draw(painter, QStringLiteral("pill/wide/normal"), area.x(), area.y());
-        const QString label = QLatin1String(kButtons[i].label);
-        atlas_.draw_text(painter, label, area.x() + (kButtonWidth - atlas_.text_width(label)) / 2,
-                         area.y() + 3);
+        // Mesma peca dos botoes de transporte: contorno escuro, face clara em
+        // degrade, realce no topo-esquerda e tinta escura. Com a face da cor
+        // do painel eles nao pareciam da mesma familia.
+        painter.fillRect(area.x() * s, area.y() * s, area.width() * s, area.height() * s,
+                         kOutline);
+        for (int row = 1; row < area.height() - 1; ++row) {
+            const double t = (row - 1) / double(area.height() - 3);
+            painter.fillRect((area.x() + 1) * s, (area.y() + row) * s, (area.width() - 2) * s, s,
+                             QColor(int(kFaceTop.red() + (kFaceBottom.red() - kFaceTop.red()) * t),
+                                    int(kFaceTop.green() +
+                                        (kFaceBottom.green() - kFaceTop.green()) * t),
+                                    int(kFaceTop.blue() +
+                                        (kFaceBottom.blue() - kFaceTop.blue()) * t)));
+        }
+        painter.fillRect((area.x() + 1) * s, (area.y() + 1) * s, (area.width() - 2) * s, s,
+                         kFaceHighlight);
+        painter.fillRect((area.x() + 1) * s, (area.y() + 1) * s, s, (area.height() - 2) * s,
+                         kFaceHighlight);
+        painter.fillRect((area.x() + 1) * s, (area.bottom() - 1) * s, (area.width() - 2) * s, s,
+                         kFaceShadow);
+        painter.fillRect((area.right() - 1) * s, (area.y() + 1) * s, s, (area.height() - 2) * s,
+                         kFaceShadow);
+        const QString label = QLatin1String(kButtons[i]);
+        skin_.draw_tight_text(painter, label,
+                              {area.x() + (area.width() - skin_.tight_text_width(label) + 1) / 2,
+                               area.y() + (area.height() - wa::kGlyphHeight) / 2 + 1},
+                              kButtonInk);
+    }
+
+    // Alca de redimensionar no canto inferior direito, como na referencia: sem
+    // ela nao ha sinal de que a aresta de baixo arrasta.
+    for (int line = 0; line < 3; ++line) {
+        const int offset = 2 + line * 3;
+        for (int i = 0; i <= offset; ++i)
+            painter.fillRect((kWidth - 3 - i) * s, (logical_height_ - 3 - offset + i) * s, s, s,
+                             kBevelLight);
     }
 
     int unknown = 0;
@@ -218,15 +276,28 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
                                .arg(playlist.size())
                                .arg(format_total_ms(known))
                                .arg(unknown > 0 ? QStringLiteral("+") : QString());
-    atlas_.draw_text(painter, totals, kWidth - kListMargin - atlas_.text_width(totals),
-                     logical_height_ - kButtonHeight - 1);
+    // A CAIXA do relogio e que termina em 258, nao o texto: e ela a aresta que
+    // se ve, e e ela que precisa bater com o fim dos demais elementos.
+    const int clock_width = skin_.text_width(totals) + 10;
+    const int clock_height = wa::kGlyphHeight + 8;
+    const QRect clock(kWidth - kListMargin - clock_width + 1,
+                      footer_top() + (kFooterHeight - clock_height) / 2, clock_width,
+                      clock_height);
+    const int totals_x = clock.x() + 5;
+    const int totals_y = clock.y() + 4;
+    painter.fillRect(clock.x() * s, clock.y() * s, clock.width() * s, clock.height() * s,
+                     kBackground);
+    painter.fillRect(clock.x() * s, clock.y() * s, clock.width() * s, s, kBevelDark);
+    painter.fillRect(clock.x() * s, clock.y() * s, s, clock.height() * s, kBevelDark);
+    painter.fillRect(clock.x() * s, clock.bottom() * s, clock.width() * s, s, kBevelLight);
+    painter.fillRect(clock.right() * s, clock.y() * s, s, clock.height() * s, kBevelLight);
+    skin_.draw_text(painter, totals, {totals_x, totals_y});
 }
 
 void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
     const QPoint p = to_logical(event->pos());
 
-    // Aresta inferior: arrastar redimensiona a lista. Sem isso nao ha como ver
-    // mais que as linhas que couberam na altura inicial.
+    // Aresta inferior redimensiona: sem isso nao ha como ver mais linhas.
     if (p.y() >= logical_height_ - kResizeGrip) {
         resizing_ = true;
         resize_origin_ = event->globalPosition().toPoint().y();
@@ -271,10 +342,7 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
 
     // LI-05 — selecao multipla com os modificadores de sempre.
     if (event->modifiers() & Qt::ControlModifier) {
-        if (selected_.count(row))
-            selected_.erase(row);
-        else
-            selected_.insert(row);
+        if (selected_.count(row)) selected_.erase(row); else selected_.insert(row);
         anchor_ = row;
     } else if ((event->modifiers() & Qt::ShiftModifier) && anchor_ >= 0) {
         selected_.clear();
@@ -295,7 +363,7 @@ void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     const int delta = (event->globalPosition().toPoint().y() - resize_origin_) /
-                      std::max(1, atlas_.scale());
+                      std::max(1, skin_.scale());
     set_logical_height(resize_start_height_ + delta);
     if (on_height_changed) on_height_changed();
 }
@@ -333,9 +401,8 @@ void PlaylistPanel::keyPressEvent(QKeyEvent* event) {
             if (!selected_.empty()) controller_.play_index(*selected_.begin());
             break;
         default: {
-            // LI-09 — busca textual por digitacao. Nao ha caixa de texto: em
-            // 275 px ela custaria uma linha inteira, e digitar direto na lista
-            // e o gesto que o formato compacto pede.
+            // LI-09 — busca por digitacao. Nao ha caixa de texto: em 275 px ela
+            // custaria uma linha inteira.
             const QString text = event->text();
             if ((event->modifiers() & Qt::ControlModifier) || text.isEmpty() ||
                 !text.at(0).isPrint()) {
@@ -353,7 +420,6 @@ void PlaylistPanel::keyPressEvent(QKeyEvent* event) {
             selected_.clear();
             selected_.insert(row);
             anchor_ = row;
-            // Centraliza o resultado, em vez de deixar na borda.
             scroll_ = row - visible_rows() / 2;
             clamp_scroll();
             break;

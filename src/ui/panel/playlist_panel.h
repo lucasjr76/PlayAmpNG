@@ -7,7 +7,7 @@
 #include <set>
 
 #include "core/state/controller.h"
-#include "ui/skin/atlas.h"
+#include "ui/skin/winamp_skin.h"
 
 namespace pang::ui {
 
@@ -20,7 +20,7 @@ public:
     static constexpr int kWidth = 275;
     static constexpr int kMinimumHeight = 116;
 
-    PlaylistPanel(core::Controller& controller, skin::Atlas& atlas, QWidget* parent = nullptr);
+    PlaylistPanel(core::Controller& controller, skin::WinampSkin& skin, QWidget* parent = nullptr);
 
     void set_scale(int scale);
     void set_logical_height(int height);
@@ -54,10 +54,11 @@ private:
     int visible_rows() const;
     int row_at(const QPoint& logical) const;
     QRect button_rect(int index) const;
+    int footer_top() const;
     void clamp_scroll();
 
     core::Controller& controller_;
-    skin::Atlas& atlas_;
+    skin::WinampSkin& skin_;
 
     int logical_height_ = kMinimumHeight;
     int scroll_ = 0;

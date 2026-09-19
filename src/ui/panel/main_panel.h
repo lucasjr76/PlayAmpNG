@@ -3,18 +3,20 @@
 #include <QWidget>
 
 #include <functional>
+#include <vector>
 
 #include "core/dsp/analyzer.h"
 #include "core/state/controller.h"
-#include "ui/skin/atlas.h"
+#include "ui/skin/winamp_skin.h"
 
 namespace pang::ui {
 
 // Painel principal, 275x116 na escala 1x.
 //
-// Tudo e desenhado com sprites do atlas: nao ha QPushButton nem QSlider aqui.
-// O visual do Winamp Classic e pixel art blitada, e uma arvore de widgets
-// tematicos brigaria com o estilo do sistema em vez de reproduzi-lo.
+// Tudo e desenhado a partir do skin carregado, nas coordenadas do formato
+// (ui/skin/winamp_layout.h). Nao ha QPushButton nem QSlider aqui: o visual e
+// pixel art blitada, e uma arvore de widgets tematicos brigaria com o estilo
+// do sistema em vez de reproduzi-lo.
 class MainPanel : public QWidget {
 public:
     static constexpr int kWidth = 275;
@@ -23,24 +25,21 @@ public:
 
     enum class Visualization { Off, Spectrum, Scope };
 
-    MainPanel(core::Controller& controller, core::Engine& engine, skin::Atlas& atlas,
+    MainPanel(core::Controller& controller, core::Engine& engine, skin::WinampSkin& skin,
               QWidget* parent = nullptr);
 
     void set_scale(int scale);
-    int scale() const { return atlas_.scale(); }
+    int scale() const { return skin_.scale(); }
 
-    // AP-11 — modo compacto: so a faixa de titulo, com o tempo e o titulo da
-    // faixa. Os controles somem; a janela vira uma barra.
+    // AP-11 — modo compacto: so a faixa de titulo.
     void set_compact(bool compact);
     bool compact() const { return compact_; }
 
     void set_visualization(Visualization mode);
     Visualization visualization() const { return visualization_; }
 
-    // Chamado pelo temporizador da interface.
     void tick(float dt_seconds);
 
-    // Acionados pelos botoes correspondentes.
     std::function<void()> on_open;
     std::function<void()> on_toggle_equalizer;
     std::function<void()> on_toggle_playlist;
@@ -66,27 +65,21 @@ private:
 
     Hit hit_test(const QPoint& logical) const;
     QPoint to_logical(const QPoint& physical) const;
-    const char* state_for(Hit hit) const;
 
-    void paint_frame(QPainter&);
     void paint_display(QPainter&);
     void paint_visualization(QPainter&);
     void paint_sliders(QPainter&);
     void paint_buttons(QPainter&);
 
-    void apply_slider(Hit hit, int logical_x);
-
     core::Controller& controller_;
     core::Engine& engine_;
-    skin::Atlas& atlas_;
+    skin::WinampSkin& skin_;
     core::dsp::SpectrumAnalyzer analyzer_;
     std::vector<float> capture_;
 
     Visualization visualization_ = Visualization::Spectrum;
     Hit pressed_ = Hit::None;
-    Hit focus_ = Hit::None;
     Hit dragging_ = Hit::None;
-    QPoint drag_origin_;
 
     bool compact_ = false;
     bool show_remaining_ = false;   // PL-15

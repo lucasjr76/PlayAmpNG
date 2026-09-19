@@ -21,11 +21,12 @@ Atualizado no M0. Versões abaixo são as **verificadas na máquina de desenvolv
 | FFmpeg — libavutil | 61.1.101 | idem | Utilitários | idem |
 | FFmpeg — libswresample | 7.1.101 | idem | Reamostragem e conversão para f32 | idem |
 | miniaudio | 0.11.25 | MIT-0 ou domínio público (dupla) | Enumeração de dispositivos e saída de áudio | `FetchContent`, tag fixada |
-| Silkscreen | — | SIL Open Font License 1.1 | Fonte de pixel de toda a interface | Arquivo em `assets/skin/font/`, com `OFL.txt` ao lado |
+| zlib | 1.3.2 | zlib (permissiva) | `inflate` para o carregador de `.wsz`; o formato guarda os bitmaps em deflate cru | Sistema, `find_package(ZLIB)` |
+| Silkscreen | — | SIL Open Font License 1.1 | **Só em tempo de desenvolvimento**: fornece os desenhos da fonte 5 × 6 gravada em `tools/make_wsz.py`. O binário não a carrega — o texto sai de `text.bmp` | Arquivo em `assets/skin/font/`, com `OFL.txt` ao lado |
 
-Nenhuma outra dependência. DSP, FFT, playlist, parsers M3U/PLS e persistência são código próprio.
+Nenhuma outra dependência. DSP, FFT, playlist, parsers M3U/PLS, leitor de ZIP e persistência são código próprio. O leitor de ZIP (`src/ui/skin/zip.cpp`) trata só o que o formato usa — entradas armazenadas e deflate — e delega a descompressão à zlib; trazer uma biblioteca de arquivamento inteira para ler um `.wsz` seria desproporcional.
 
-A Silkscreen substituiu um desenho próprio de 60 glifos em 5 × 7. A fonte desenhada à mão era grosseira, e existem fontes de pixel prontas, bem desenhadas e com licença permissiva — foi trabalho jogado fora. A OFL exige que a licença acompanhe o arquivo, e ela está em `assets/skin/font/OFL.txt`.
+A Silkscreen substituiu um desenho próprio de glifos, três vezes: as versões escritas à mão saíam com forma de letra errada, e a última fazia `PLAYAMPNG` aparecer como `PLRYRMPNG`. Hoje ela não é mais uma dependência de execução — `tools/fontgen.cpp` a rasteriza uma vez em 8 px e grava a tabela 5 × 6 em `tools/make_wsz.py`, que por sua vez gera o `text.bmp` do formato. A OFL exige que a licença acompanhe o arquivo, e ela está em `assets/skin/font/OFL.txt`; ela continua no repositório porque é a fonte de origem da tabela.
 
 ---
 
