@@ -28,6 +28,17 @@ import time
 PULAR = 77
 falhas = []
 
+# O encerramento verificado aqui e por SIGTERM, que e como um logout ou um
+# desligamento pedem ao programa que termine no Unix. No Windows,
+# Popen.terminate() chama TerminateProcess, que MATA o processo sem lhe dar
+# chance de gravar nada — o teste mediria o encerramento forcado, nao o
+# educado. O caminho equivalente no Windows e WM_CLOSE/CTRL_CLOSE_EVENT, e
+# verifica-lo exige outro mecanismo; enquanto isso, pular e honesto.
+if sys.platform.startswith("win"):
+    print("Windows: o encerramento por sinal precisa de outro mecanismo; teste pulado",
+          file=sys.stderr)
+    sys.exit(PULAR)
+
 
 def checar(condicao, descricao):
     if not condicao:

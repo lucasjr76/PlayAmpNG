@@ -33,9 +33,41 @@ find_package(Qt6 6.5 QUIET COMPONENTS DBus)
 qt_standard_project_setup()
 
 # FFmpeg cobre demux, decode, resample, HTTP e ICY (spec 4 e 8).
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
-  libavformat libavcodec libavutil libswresample)
+#
+# Duas rotas de descoberta, porque nao ha uma que funcione nos dois mundos:
+# pkg-config onde ele existe (Linux, macOS via brew), e busca direta onde nao
+# existe (Windows com vcpkg). O ALVO exposto ao resto do build e o mesmo nos
+# dois casos, `pang::ffmpeg`, para que nenhum outro CMakeLists precise saber
+# por qual rota a biblioteca chegou.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+  pkg_check_modules(FFMPEG IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
+endif()
+
+if(TARGET PkgConfig::FFMPEG)
+  add_library(pang_ffmpeg INTERFACE)
+  target_link_libraries(pang_ffmpeg INTERFACE PkgConfig::FFMPEG)
+else()
+  # Sem pkg-config: procura cabecalhos e bibliotecas pelo nome. E o caminho do
+  # vcpkg no Windows, que instala libavformat.lib e afins no prefixo dele.
+  find_path(FFMPEG_INCLUDE_DIR libavformat/avformat.h)
+  set(_ffmpeg_libs "")
+  foreach(component avformat avcodec avutil swresample)
+    find_library(FFMPEG_${component}_LIBRARY NAMES ${component} lib${component})
+    if(NOT FFMPEG_${component}_LIBRARY)
+      message(FATAL_ERROR
+        "FFmpeg: nao encontrei ${component}. No Windows, instale com vcpkg "
+        "(vcpkg install ffmpeg:x64-windows) e passe CMAKE_TOOLCHAIN_FILE.")
+    endif()
+    list(APPEND _ffmpeg_libs ${FFMPEG_${component}_LIBRARY})
+  endforeach()
+  if(NOT FFMPEG_INCLUDE_DIR)
+    message(FATAL_ERROR "FFmpeg: nao encontrei libavformat/avformat.h")
+  endif()
+  add_library(pang_ffmpeg INTERFACE)
+  target_include_directories(pang_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
+  target_link_libraries(pang_ffmpeg INTERFACE ${_ffmpeg_libs})
+endif()
 
 # miniaudio nao e empacotado pelas distros; versao fixada para build reprodutivel.
 FetchContent_Declare(miniaudio
@@ -80,7 +112,7 @@ add_library(pang_core STATIC
   src/core/state/controller.cpp
   src/core/util/log.cpp)
 target_include_directories(pang_core PUBLIC src)
-target_link_libraries(pang_core PUBLIC PkgConfig::FFMPEG)
+target_link_libraries(pang_core PUBLIC pang_ffmpeg)
 set_target_properties(pang_core PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_dependencies(pang_core core_purity)
 

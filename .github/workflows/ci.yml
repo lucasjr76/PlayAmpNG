@@ -29,7 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build pkg-config \
-            qt6-base-dev libgl1-mesa-dev \
+            qt6-base-dev qt6-base-dev-tools libgl1-mesa-dev \
             libavformat-dev libavcodec-dev libavutil-dev libswresample-dev
 
       - name: Dependencias (macOS)
@@ -43,7 +43,6 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.*'
-          modules: ''
 
       - name: FFmpeg (Windows)
         if: matrix.name == 'windows'
@@ -52,14 +51,26 @@ jobs:
           vcpkg install ffmpeg:x64-windows pkgconf:x64-windows
           echo "CMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" >> "$GITHUB_ENV"
 
+      # Os testes de rede, de dispositivo e de barramento sao orquestrados por
+      # Python. Ele ja vem nos runners; a linha existe para falhar cedo e com
+      # mensagem clara se algum dia nao vier.
+      - name: Conferir Python
+        shell: bash
+        run: python3 --version
+
       - name: Configurar
         shell: bash
-        run: cmake -S . -B build -G Ninja
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Compilar
         run: cmake --build build
 
-      # Runner nao tem placa de som: os testes sao headless por construcao e
-      # nao exigem dispositivo de saida.
+      # Runner nao tem placa de som, tela nem barramento de sessao. Os testes
+      # que dependem disso se declaram PULADOS (codigo 77) em vez de reprovar:
+      # a ausencia desses recursos numa maquina de integracao nao e defeito do
+      # player, e reprovar por isso treinaria a equipe a ignorar a suite.
       - name: Testar
-        run: ctest --test-dir build --output-on-failure
+        shell: bash
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --test-dir build --output-on-failure --no-tests=error
