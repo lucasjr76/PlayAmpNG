@@ -31,6 +31,12 @@ find_package(ZLIB REQUIRED)   # leitor de .wsz; ja vem com o Qt
 # Qt e do SDK. /W3 e o nivel que corresponde ao que se pede aqui.
 if(MSVC)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/W3>)
+  # windows.h define min e max como MACRO, e entao qualquer
+  # numeric_limits<T>::max() vira erro de sintaxe. Nao adianta ordenar as
+  # inclusoes: o macro vale do ponto em que windows.h entra ate o fim da
+  # unidade. NOMINMAX desliga os dois. So em C++ — o miniaudio e C e usa as
+  # APIs multimidia antigas, que esperam windows.h completo.
+  add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:NOMINMAX>)
 else()
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall> $<$<COMPILE_LANGUAGE:CXX>:-Wextra>)
 endif()

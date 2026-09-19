@@ -46,8 +46,8 @@
 #include <QVBoxLayout>
 
 #ifdef _WIN32
-// Depois dos cabecalhos do Qt de proposito: windows.h define min/max e outros
-// nomes curtos que atrapalham quem vier antes.
+// NOMINMAX vem do CMake, e nao daqui: windows.h define min e max como macro e
+// quebraria todo numeric_limits<T>::max() da unidade de traducao.
 #include <cstdio>
 #include <windows.h>
 #endif
