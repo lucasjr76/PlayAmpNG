@@ -47,7 +47,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-05 | Próxima faixa | AUTO | M2 | OK (M2) |
 | PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | OK (M2) |
 | PL-07 | Abrir diretório, com busca recursiva opcional | AUTO + MANUAL | M2 | OK (M2) |
-| PL-08 | Abrir URL de áudio | MANUAL | M6 | PENDENTE |
+| PL-08 | Abrir URL de áudio | AUTO | M6 | OK (M6) |
 | PL-09 | Volume com efeito real e rampa suave | MEDIDO | M3 | OK (M3) |
 | PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | OK (M3) |
 | PL-11 | Shuffle ligado/desligado | AUTO | M2 | OK (M2) |
@@ -170,12 +170,12 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | MD-01 | Ler título, artista, álbum, nº da faixa, gênero, ano e duração quando disponíveis | AUTO | M2 | OK (M2) |
 | MD-02 | Sem tags, usar o nome do arquivo | AUTO | M2 | OK (M2) |
 | MD-03 | Janela de propriedades técnicas e localização do arquivo | MANUAL | M6 | PENDENTE |
-| MD-04 | Estados de conexão, buffering, reprodução e erro em stream | MANUAL | M6 | PENDENTE |
-| MD-05 | Leitura de metadados ICY quando fornecidos | MANUAL | M6 | PENDENTE |
-| MD-06 | Tratamento de redirecionamentos HTTP | MANUAL | M6 | PENDENTE |
-| MD-07 | Reconexão com número e intervalo de tentativas limitados | MANUAL | M6 | PENDENTE |
-| MD-08 | Busca temporal desabilitada em fonte não pesquisável | AUTO | M6 | PENDENTE |
-| MD-09 | Stream ao vivo nunca exibido como arquivo de duração finita | AUTO | M6 | PENDENTE |
+| MD-04 | Estados de conexão, buffering, reprodução e erro em stream | MANUAL | M6 | PARCIAL (M6) |
+| MD-05 | Leitura de metadados ICY quando fornecidos | AUTO | M6 | PARCIAL (M6) |
+| MD-06 | Tratamento de redirecionamentos HTTP | AUTO | M6 | OK (M6) |
+| MD-07 | Reconexão com número e intervalo de tentativas limitados | AUTO | M6 | OK (M6) |
+| MD-08 | Busca temporal desabilitada em fonte não pesquisável | AUTO | M6 | OK (M6) |
+| MD-09 | Stream ao vivo nunca exibido como arquivo de duração finita | AUTO | M6 | OK (M6) |
 
 ## IN — Integração e persistência (spec §9)
 
@@ -216,7 +216,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | RB-01 | Arquivo ausente → `Error`, sem crash, playlist intacta | AUTO | M2 | OK (M1) |
 | RB-02 | Arquivo corrompido ou truncado → `Error`, sem crash | AUTO | M2 | OK (M2) |
 | RB-03 | Arquivo sem permissão de leitura → `Error`, sem crash | AUTO | M2 | OK (M2) |
-| RB-04 | Interrupção de stream → reconexão ou `Error` explícito | MANUAL | M6 | PENDENTE |
+| RB-04 | Interrupção de stream → reconexão ou `Error` explícito | AUTO | M6 | OK (M6) |
 | RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | MANUAL | M6 | PENDENTE |
 | RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | OK (M2) |
 | RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | PENDENTE |

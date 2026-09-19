@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 
+struct AVFormatContext;
+
 namespace pang::core {
 
 // Propriedades que a fonte realmente informou.
@@ -21,11 +23,26 @@ struct ProbeResult {
     std::optional<std::int64_t> bitrate_bps;
     bool seekable = false;  // false desabilita a busca temporal (PL-23)
 
+    // MD-09 — fonte ao vivo: sem duracao e sem busca. A interface nunca pode
+    // exibi-la como arquivo de duracao finita, nem mesmo estimando.
+    bool live = false;
+
+    // MD-05 — nome da estacao, quando o servidor ICY o envia.
+    std::optional<std::string> station;
+
     // AU-15 — lidos das tags. Ausentes quando a fonte nao traz: o projeto le
     // ReplayGain, nao calcula (calcular seria um scanner, fora de escopo).
     std::optional<float> replaygain_track_db;
     std::optional<float> replaygain_album_db;
 };
+
+// Deriva as propriedades de uma fonte JA ABERTA.
+//
+// Existe como ponto unico porque probe() e Decoder::open() precisam do mesmo
+// resultado, e enquanto cada um derivava por conta propria eles divergiram: o
+// decodificador nunca marcava `live` nem `station`, e um stream tocava como se
+// fosse arquivo. Duas copias da mesma regra sempre acabam assim.
+ProbeResult describe(AVFormatContext* fmt, int stream_index, const std::string& url);
 
 // Abre url (caminho local ou HTTP/HTTPS) e le as propriedades do melhor fluxo
 // de audio. Em falha devolve nullopt e preenche error.

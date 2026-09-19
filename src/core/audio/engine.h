@@ -126,6 +126,12 @@ public:
     // AU-15 — modo de ReplayGain. A alteracao vale para a proxima carga e, se
     // ja houver faixa aberta, tambem para ela.
     void set_replaygain_mode(ReplayGainMode mode);
+
+    // MD-05 — o que o stream diz estar tocando agora, e o nome da estacao.
+    // Vazios para fonte local. Seguros de ler de qualquer thread.
+    std::string icy_title() const;
+    std::string station() const;
+    bool live() const;
     ReplayGainMode replaygain_mode() const { return replaygain_mode_; }
 
     // Ganho positivo do ReplayGain e limitado a isto. O padrao 0 dB significa
@@ -175,6 +181,7 @@ public:
 private:
     void apply_replaygain(const ProbeResult& info);
     void publish_track_info(const ProbeResult& info);
+    void set_stream_info(const ProbeResult& info);
     void apply_segment(const TrackSegment& segment) noexcept;
     void start_decoder(const std::string& url, State desired);
     void join_decoder();
@@ -242,6 +249,13 @@ private:
 
     mutable std::mutex error_mutex_;
     std::string last_error_;
+
+    // MD-04, MD-05 — estado da fonte de rede. O thread de decodificacao
+    // escreve, a interface le.
+    std::atomic<bool> live_{false};
+    mutable std::mutex stream_mutex_;
+    std::string icy_title_;
+    std::string station_;
 };
 
 }  // namespace pang::core

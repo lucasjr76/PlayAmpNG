@@ -1,5 +1,7 @@
 #include "core/audio/decoder.h"
 
+#include "core/audio/network.h"
+
 #include <algorithm>
 #include <cstring>
 #include <optional>
@@ -88,10 +90,11 @@ bool Decoder::open(const std::string& url, int target_rate, int target_channels,
     fmt_->interrupt_callback.callback = &Decoder::interrupt_cb;
     fmt_->interrupt_callback.opaque = this;
 
-    // Timeout de leitura/escrita para protocolos que o suportam. Em conjunto
-    // com o interrupt callback, garante que nenhuma abertura fica presa.
+    // As mesmas opcoes que o probe usa: lista de protocolos, tempo limite,
+    // reconexao e ICY. Ponto unico em core/audio/network.h — divergir aqui
+    // faria o probe aceitar o que o decodificador recusa.
     AVDictionary* opts = nullptr;
-    av_dict_set(&opts, "rw_timeout", "10000000", 0);  // 10 s em microssegundos
+    apply_network_options(&opts);
 
     int rc = avformat_open_input(&fmt_, url.c_str(), nullptr, &opts);
     av_dict_free(&opts);
@@ -159,18 +162,10 @@ bool Decoder::open(const std::string& url, int target_rate, int target_channels,
     }
 
     info_ = ProbeResult{};
-    info_.format = fmt_->iformat->long_name ? fmt_->iformat->long_name : fmt_->iformat->name;
-    info_.codec = avcodec_get_name(par->codec_id);
-    info_.sample_rate = par->sample_rate;
-    info_.channels = par->ch_layout.nb_channels;
-    if (fmt_->duration != AV_NOPTS_VALUE && fmt_->duration > 0) info_.duration_us = fmt_->duration;
-    if (par->bit_rate > 0)
-        info_.bitrate_bps = par->bit_rate;
-    else if (fmt_->bit_rate > 0)
-        info_.bitrate_bps = fmt_->bit_rate;
-    info_.seekable = fmt_->pb && (fmt_->pb->seekable & AVIO_SEEKABLE_NORMAL);
-
-    read_replaygain(fmt_->metadata, info_.replaygain_track_db, info_.replaygain_album_db);
+    // Ponto unico com o probe: as propriedades da fonte saem da MESMA regra.
+    // Derivar aqui por conta propria foi o que fez o decodificador esquecer de
+    // marcar `live` e `station`, e um stream tocar como se fosse arquivo.
+    info_ = describe(fmt_, stream_index_, url);
     read_replaygain(fmt_->streams[stream_index_]->metadata, info_.replaygain_track_db,
                     info_.replaygain_album_db);
 
@@ -299,6 +294,34 @@ std::size_t Decoder::read(float* out, std::size_t max_frames) {
         written += take;
     }
     return written;
+}
+
+// MD-05 — titulo corrente do stream, que muda ao longo da reproducao.
+//
+// O libavformat publica o bloco ICY inteiro em "icy_metadata_packet", na forma
+// StreamTitle='...';StreamUrl='...'; . Devolve valor so quando MUDOU desde a
+// ultima chamada, para o nivel de cima nao repintar a cada bloco.
+std::optional<std::string> Decoder::take_icy_title() {
+    if (!fmt_) return std::nullopt;
+
+    uint8_t* raw = nullptr;
+    if (av_opt_get(fmt_, "icy_metadata_packet", AV_OPT_SEARCH_CHILDREN, &raw) < 0 || !raw)
+        return std::nullopt;
+    const std::string packet(reinterpret_cast<char*>(raw));
+    av_freep(&raw);
+
+    const std::string key = "StreamTitle='";
+    const std::size_t start = packet.find(key);
+    if (start == std::string::npos) return std::nullopt;
+    const std::size_t from = start + key.size();
+    const std::size_t end = packet.find('\'', from);
+    if (end == std::string::npos) return std::nullopt;
+
+    std::string title = packet.substr(from, end - from);
+    if (title == icy_title_) return std::nullopt;
+    icy_title_ = title;
+    if (title.empty()) return std::nullopt;
+    return title;
 }
 
 bool Decoder::seek(double seconds) {

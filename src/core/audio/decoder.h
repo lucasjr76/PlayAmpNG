@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,9 @@ public:
 
     bool seek(double seconds);
 
+    // MD-05 — titulo corrente do stream, devolvido apenas quando muda.
+    std::optional<std::string> take_icy_title();
+
     const ProbeResult& info() const { return info_; }
 
     // Duracao na taxa alvo. -1 quando a fonte nao informa (stream ao vivo).
@@ -53,6 +57,8 @@ public:
     bool cancelled() const { return cancel_.load(std::memory_order_relaxed); }
 
 private:
+    std::string icy_title_;  // ultimo titulo ICY visto
+
     static int interrupt_cb(void* opaque);
     bool fill_pending();   // decodifica e converte o proximo bloco
     void drain_resampler();

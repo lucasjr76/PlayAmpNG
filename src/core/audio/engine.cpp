@@ -1,5 +1,7 @@
 #include "core/audio/engine.h"
 
+#include "core/audio/network.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -17,6 +19,12 @@ constexpr double kRingSeconds = 2.0;
 
 // Bloco que o decodificador entrega por vez.
 constexpr std::size_t kDecodeChunkFrames = 4096;
+
+// MD-04 — marcas d'agua do estado Buffering, em quadros. Com ~2 s de ring,
+// 0,25 s para entrar e 0,75 s para sair: a histerese e o que impede o estado
+// de piscar a cada bloco quando a rede entrega em rajadas.
+constexpr std::size_t kBufferingLowFrames = 11025;    // 0,25 s a 44,1 kHz
+constexpr std::size_t kBufferingHighFrames = 33075;   // 0,75 s a 44,1 kHz
 
 constexpr double kVolumeRampSeconds = 0.020;  // AU-10
 
@@ -137,6 +145,25 @@ void Engine::set_volume(float linear) { volume_balance_.set_volume(linear); }
 
 void Engine::set_balance(float balance) { volume_balance_.set_balance(balance); }
 
+void Engine::set_stream_info(const ProbeResult& info) {
+    live_.store(info.live, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    station_ = info.station ? *info.station : std::string{};
+    icy_title_.clear();
+}
+
+std::string Engine::icy_title() const {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    return icy_title_;
+}
+
+bool Engine::live() const { return live_.load(std::memory_order_relaxed); }
+
+std::string Engine::station() const {
+    std::lock_guard<std::mutex> lock(stream_mutex_);
+    return station_;
+}
+
 void Engine::publish_track_info(const ProbeResult& info) {
     duration_frames_.store(info.duration_us
                                ? static_cast<std::int64_t>(double(*info.duration_us) *
@@ -217,6 +244,7 @@ void Engine::decode_loop(std::string url, State desired) {
 
         publish_track_info(decoder_.info());
         apply_replaygain(decoder_.info());
+        set_stream_info(decoder_.info());
     }
 
     std::vector<float> chunk(kDecodeChunkFrames * channels_);
@@ -232,8 +260,61 @@ void Engine::decode_loop(std::string url, State desired) {
             continue;
         }
 
+        // MD-04 — em fonte ao vivo o buffer pode esvaziar sem que nada esteja
+        // errado. O estado passa a Buffering e volta a Playing sozinho. A
+        // histerese evita piscar entre os dois a cada bloco.
+        if (live_.load(std::memory_order_relaxed)) {
+            const std::size_t level = ring_.readable() / channels_;
+            const State now = state_.load(std::memory_order_relaxed);
+            if (now == State::Playing && level < kBufferingLowFrames)
+                state_.store(State::Buffering, std::memory_order_relaxed);
+            else if (now == State::Buffering && level >= kBufferingHighFrames)
+                state_.store(State::Playing, std::memory_order_relaxed);
+        }
+
+        if (auto title = decoder_.take_icy_title()) {
+            std::lock_guard<std::mutex> lock(stream_mutex_);
+            icy_title_ = *title;
+        }
+
         const std::size_t want = std::min(room_frames, kDecodeChunkFrames);
-        const std::size_t got = decoder_.read(chunk.data(), want);
+        std::size_t got = decoder_.read(chunk.data(), want);
+
+        // MD-07, RB-04 — fonte ao vivo nao tem fim: leitura vazia e queda de
+        // conexao, nao fim de faixa. Reabre a MESMA url um numero limitado de
+        // vezes, e so entao declara erro. Fonte local cai direto no caminho de
+        // fim de faixa abaixo.
+        if (got == 0 && live_.load(std::memory_order_relaxed) && !url.empty()) {
+            bool recovered = false;
+            for (int attempt = 1; attempt <= kReconnectAttempts && !recovered; ++attempt) {
+                if (thread_quit_.load(std::memory_order_relaxed)) return;
+                state_.store(State::Buffering, std::memory_order_relaxed);
+                log::warn("stream interrompido, tentativa " + std::to_string(attempt) + " de " +
+                          std::to_string(kReconnectAttempts) + " (" + log::redact(url) + ")");
+                std::this_thread::sleep_for(std::chrono::milliseconds(kReconnectDelayMs));
+
+                std::string error;
+                decoder_.close();
+                decoder_.clear_cancel();
+                if (decoder_.open(url, sample_rate_, channels_, error)) {
+                    got = decoder_.read(chunk.data(), want);
+                    recovered = got > 0;
+                }
+            }
+            if (!recovered) {
+                const std::string message = "stream interrompido e nao restabelecido (" +
+                                            log::redact(url) + ")";
+                {
+                    std::lock_guard<std::mutex> lock(error_mutex_);
+                    last_error_ = message;
+                }
+                log::error(message);
+                state_.store(State::Error, std::memory_order_relaxed);
+                return;
+            }
+            state_.store(State::Playing, std::memory_order_relaxed);
+        }
+
         if (got == 0) {
             // AU-13 — fim da faixa. Se ha proxima, emenda aqui: o decodificador
             // e reaberto e continua escrevendo NO MESMO ring, sem esvaziar. O

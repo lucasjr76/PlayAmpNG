@@ -51,6 +51,7 @@ add_custom_target(core_purity ALL
 
 # core/ : C++20 puro. Sem Qt, sem API de sistema operacional. Testavel headless.
 add_library(pang_core STATIC
+  src/core/audio/network.cpp
   src/core/audio/probe.cpp
   src/core/audio/decoder.cpp
   src/core/audio/engine.cpp
@@ -149,6 +150,26 @@ target_compile_definitions(pang_audio_tests PRIVATE
 set_target_properties(pang_audio_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME audio COMMAND pang_audio_tests)
+
+# M6-1 — fonte de rede. O teste sobe um servidor HTTP local de verdade; um
+# mock nao exercitaria o que se quer verificar, que sao as decisoes do
+# libavformat diante de cabecalho ICY, redirecionamento e conexao cortada.
+add_executable(pang_stream_tests tests/test_stream.cpp)
+target_link_libraries(pang_stream_tests PRIVATE pang_core)
+target_compile_definitions(pang_stream_tests PRIVATE
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+set_target_properties(pang_stream_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME stream COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_stream_test.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/stream_server.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/assets/test
+  $<TARGET_FILE:pang_stream_tests>)
+# Prazo curto de proposito: a primeira versao deste teste TRAVOU, porque o
+# libavformat reconectava sozinho e find_stream_info nunca via o fim do fluxo.
+# Sem prazo, um travamento desses pendura a suite em vez de reprova-la.
+set_tests_properties(stream PROPERTIES TIMEOUT 90)
 set_tests_properties(audio PROPERTIES TIMEOUT 120)
 
 add_executable(pang_playlist_tests tests/test_playlist.cpp)
