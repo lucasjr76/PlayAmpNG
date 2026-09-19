@@ -36,40 +36,47 @@ Alvos: **Linux, Windows e macOS**. Linux é o ambiente principal de desenvolvime
 src/
   core/                    C++20 puro. Sem Qt. Sem API de OS. Testável headless.
     audio/
-      decoder.{h,cpp}      libav: demux, decode, resample para f32; I/O cancelável
-      ring.h               buffer circular SPSC lock-free
-      seqlock.h            publicação de estado do áudio para a UI
-      engine.{h,cpp}       callback, cadeia DSP, máquina de estados
-      gapless.{h,cpp}      pré-carga, drenagem do resampler, emenda
+      probe.{h,cpp}        propriedades da fonte; describe() é o ponto único
+      decoder.{h,cpp}      libav: abrir, decodificar, reamostrar, buscar
+      network.{h,cpp}      opções de abertura de fonte remota, lista de protocolos
+      engine.{h,cpp}       ring, gapless por segmentos, estados, reconexão
+      ring.h               SPSC lock-free
+      seqlock.h            publicação do thread de áudio, sem corrida
     dsp/
-      biquad.{h,cpp}       RBJ peaking e shelving
-      equalizer.{h,cpp}    cascata de 10 bandas, preamp, bypass, rampa
-      gain.{h,cpp}         volume, balanço, ReplayGain, rampas
+      biquad.{h,cpp}       coeficientes RBJ
+      equalizer.{h,cpp}    dez bandas + preamp, shelving nas pontas
+      gain.{h,cpp}         volume, balanço, ReplayGain
       limiter.{h,cpp}      lookahead + clamp rígido
-      fft.{h,cpp}          radix-2 real, Hann, truque L/R
+      fft.{h,cpp}          radix-2, janela de Hann
       analyzer.{h,cpp}     barras, escala log, suavização, picos
-    playlist/              model, shuffle, m3u/pls
-    meta/                  tags, icy
-    state/                 player, config
-    util/                  log assíncrono, redação de credenciais, PANG_CHECK
+      presets.{h,cpp}      presets integrados e do usuário
+    playlist/              playlist, shuffle, m3u/pls, track
+    meta/                  tags, scanner assíncrono
+    state/                 player (estados e snapshot), controller
+    util/                  log com redação de credenciais, PANG_CHECK
 
   platform/                ÚNICO lugar onde o OS aparece. Arquivo escolhido pelo CMake.
-    audio_device.{h,cpp}   miniaudio: enumerar, abrir, reabrir após desconexão
+    audio_device.{h,cpp}   miniaudio: enumerar, abrir, detectar parada, reabrir
+    device_recovery.h      política de reabertura — lógica pura, testável sem placa
     integration.h          interface: now-playing, teclas de mídia
     integration_linux.cpp  MPRIS (QtDBus)
-    integration_win.cpp    SMTC
-    integration_mac.cpp    MPNowPlayingInfoCenter / MPRemoteCommandCenter
+    integration_none.cpp   sistemas sem integração ainda (Windows, macOS)
+    miniaudio_impl.c       unidade de tradução do miniaudio
 
   ui/                      Qt 6. Só apresentação e entrada.
-    skin/                  atlas, fonte bitmap
+    skin/
+      winamp_layout.h      a GRADE: margem 14, vão ≥ 3, e a geometria do formato
+      winamp_skin.{h,cpp}  carrega .wsz ou pasta; sprites, fonte, recorte por cor
+      zip.{h,cpp}          leitor de ZIP sobre zlib, só o que o .wsz usa
     panel/                 painéis: player, equalizador, playlist
     shell/
-      integrated.cpp       três painéis em UMA janela — modo garantido
-      detached.cpp         janelas separadas com encaixe — melhor esforço
+      integrated.{h,cpp}   três painéis em UMA janela — modo garantido
       recovery.{h,cpp}     recuperação de janela fora da área visível
-    widget/                controles custom-painted
+    settings.{h,cpp}       gravação atômica; identidade da instância sai daqui
+    single_instance.{h,cpp} IN-08, sobre QLocalServer
     app.cpp                argv, instância única, ciclo de vida
 
+packaging/linux/           .desktop, metainfo, ícones, AppImage e Flatpak
 assets/skin/               PNGs do atlas + JSON de coordenadas
 tests/                     testes de core/, sem áudio e sem janela
 ```

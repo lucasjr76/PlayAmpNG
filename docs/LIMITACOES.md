@@ -1,5 +1,25 @@
 # PlayAmpNG — Limitações conhecidas
 
+EN-08. O que o player **não** faz, e por quê. Cada item traz a razão, e não só o fato.
+
+## Pendentes para distribuição
+
+| Item | Situação |
+|---|---|
+| Flatpak não construído | O manifesto está escrito e o YAML é válido, mas `flatpak-builder` não existe na máquina de referência. Nunca foi executado — e um pacote que nunca foi montado não é um pacote |
+| `url-homepage-missing` no AppStream | O projeto não tem repositório público. O validador confere se o endereço responde, então um link inventado reprovaria igual e ainda mentiria. **Obrigatório antes de submeter ao Flathub** |
+| Windows e macOS | `integration_none.cpp` no lugar de SMTC e MPNowPlayingInfoCenter. O player roda, só não aparece no painel do sistema nem recebe teclas de mídia pelo caminho do ambiente. M8 e M9 |
+
+## Funcionalidades fora de escopo
+
+| Item | Por quê |
+|---|---|
+| Reordenar a playlist arrastando (`LI-04`) | Regressão consciente do M5, ao trocar o painel para desenho em sprites. Registrada em `DEFEITOS.md` como A-12 |
+| Encaixe magnético entre painéis destacados | O protocolo Wayland não informa a posição absoluta da janela ao cliente, então não há como calcular o encaixe. Documentado em `ARCHITECTURE.md §8` |
+| Presets do usuário no equalizador (`EQ-07`) | Criar e salvar funciona; editar e excluir pela interface ficou pendente |
+| Cálculo de ReplayGain | O player **lê** as tags, não calcula. Calcular seria um scanner de biblioteca, outro programa |
+| Velocidade de reprodução variável | Não previsto na especificação, e mexeria no contrato de gapless |
+
 ## Saída com escala fracionária torna o desenho impreciso
 
 O player desenha pixel a pixel e escala por múltiplos inteiros, com vizinho mais próximo. Isso pressupõe que um pixel de arte vire um número **inteiro** de pixels de tela.

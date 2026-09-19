@@ -41,13 +41,16 @@ def wav(caminho, segundos, amplitude):
         w.writeframes(struct.pack("<hh", amplitude, amplitude) * (44100 * segundos))
 
 
-def servico():
+def servico(pid=None):
     r = subprocess.run(["dbus-send", "--session", "--dest=org.freedesktop.DBus",
                         "--print-reply", "/org/freedesktop/DBus",
                         "org.freedesktop.DBus.ListNames"],
                        capture_output=True, text=True, timeout=10)
-    return [l.split('"')[1] for l in r.stdout.splitlines()
-            if "org.mpris.MediaPlayer2.playampng" in l]
+    nomes = [l.split('"')[1] for l in r.stdout.splitlines()
+             if "org.mpris.MediaPlayer2.playampng" in l]
+    if pid is None:
+        return nomes
+    return [n for n in nomes if n.endswith(f"instance{pid}")]
 
 
 def propriedade(svc, nome):
@@ -86,11 +89,15 @@ segundo = os.path.join(tmp, f"pang_dois_{os.getpid()}.wav")
 wav(primeiro, 30, 3000)
 wav(segundo, 30, 1500)
 
-ambiente = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+# Diretório de configuração próprio. A identidade da instância deriva do
+# arquivo de configuração, então isto também dá ao teste uma instância própria:
+# sem isso ele fala com o player que o usuário tiver aberto, e mede outra coisa.
+perfil = tempfile.mkdtemp(prefix="pang_perfil_")
+ambiente = dict(os.environ, QT_QPA_PLATFORM="offscreen", XDG_CONFIG_HOME=perfil)
 proc = subprocess.Popen([binario, primeiro], env=ambiente,
                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 try:
-    if not esperar(lambda: len(servico()) >= 1, 15.0):
+    if not esperar(lambda: len(servico(proc.pid)) >= 1, 15.0):
         proc.terminate()
         erro = proc.stderr.read() if proc.stderr else ""
         if "dispositivo de audio" in erro.lower():
@@ -99,8 +106,11 @@ try:
         print(f"a primeira instancia nao apareceu. stderr:\n{erro}", file=sys.stderr)
         sys.exit(1)
 
-    svc = servico()[0]
-    checar(os.path.basename(primeiro) in metadata(svc),
+    svc = servico(proc.pid)[0]
+    # O servico aparece no barramento ANTES de o arquivo ser aberto e
+    # publicado. Afirmar o metadado na hora e corrida, e foi o que tornou este
+    # teste instavel: ele falhava em 0,7 s, sem chegar perto do prazo.
+    checar(esperar(lambda: os.path.basename(primeiro) in metadata(svc)),
            "a primeira instancia esta tocando o arquivo que recebeu")
 
     # O segundo lancamento deve ENTREGAR e SAIR, nao abrir outra janela.
@@ -115,13 +125,13 @@ try:
         # Nao sair e exatamente o defeito que este teste existe para pegar: o
         # segundo lancamento abriu a propria janela em vez de entregar.
         checar(False, "o segundo lancamento nao terminou: abriu janela propria")
-    checar(len(servico()) == 1,
+    checar(len(servico(proc.pid)) == 1,
            "continua havendo UMA instancia no barramento, nao duas")
 
     # A faixa entregue foi enfileirada. Como a primeira segue tocando, ela
     # aparece ao avancar — enfileirar nao pode cortar o que ja tocava.
     checar(os.path.basename(primeiro) in metadata(svc),
-           "a faixa em reproducao nao foi interrompida pela entrega")
+           "a faixa em reproducao nao foi interrompida pela entrega")  # ja estabelecido acima
 
     # A entrega e assincrona do lado de quem recebe: pedir Next antes de ela
     # ser processada nao avanca nada, e o teste reprovaria por sincronia e nao

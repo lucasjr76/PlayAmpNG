@@ -170,6 +170,37 @@ target_link_libraries(pang_fontgen PRIVATE Qt6::Gui)
 target_compile_definitions(pang_fontgen PRIVATE
   FONT_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin/font/Silkscreen-Regular.ttf")
 
+# -------------------------------------------------------------- instalacao
+#
+# EN-02, EN-04 — a regra de instalacao e uma so; AppImage e Flatpak apenas a
+# invocam com prefixos diferentes. Duas receitas separadas divergiriam, e o
+# pacote de um formato acabaria sem um arquivo que o outro tem.
+include(GNUInstallDirs)
+
+install(TARGETS playampng RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# O skin proprio acompanha o binario: sem ele o player abre sem desenho.
+install(DIRECTORY assets/skin/default/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/playampng/skin/default)
+install(FILES assets/skin/default.wsz
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/playampng/skin)
+
+install(FILES packaging/linux/br.com.playampng.PlayAmpNG.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES packaging/linux/br.com.playampng.PlayAmpNG.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+foreach(size 64 128 256)
+  install(FILES packaging/linux/icon_${size}.png
+          DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps
+          RENAME br.com.playampng.PlayAmpNG.png)
+endforeach()
+
+# A licenca vai junto do binario: e exigencia da propria GPL-3.0, e tambem a
+# do arquivo da fonte usada no skin.
+install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/playampng)
+install(FILES assets/skin/font/OFL.txt
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/playampng RENAME OFL-Silkscreen.txt)
+
 # ------------------------------------------------------------------- testes
 
 # Dois testes precisam de Python para orquestrar o ambiente: o de rede sobe um
@@ -238,6 +269,13 @@ target_link_libraries(pang_playlist_ui_tests PRIVATE Qt6::Widgets ZLIB::ZLIB pan
 target_compile_definitions(pang_playlist_ui_tests PRIVATE
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 add_test(NAME playlist_ui COMMAND pang_playlist_ui_tests)
+
+# IN-09, IN-11 — a sessao entre duas execucoes. Encerra por SIGTERM, que e como
+# um logout pede ao programa que termine.
+add_test(NAME session COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_session.py
+  $<TARGET_FILE:playampng> ${CMAKE_CURRENT_SOURCE_DIR}/assets/test)
+set_tests_properties(session PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
 set_tests_properties(settings PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 # M6-1 — fonte de rede. O teste sobe um servidor HTTP local de verdade; um

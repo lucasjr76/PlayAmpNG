@@ -150,7 +150,7 @@ Windows (SMTC) e macOS (MPNowPlayingInfoCenter) usam `integration_none.cpp` até
 
 ### M7 — Empacotamento Linux e relatório
 
-- AppImage e/ou Flatpak, **com FFmpeg LGPL** ou decisão explícita por GPL-3.0 (risco #6).
+- AppImage e/ou Flatpak, **com FFmpeg LGPL** ou decisão explícita por GPL-3.0 (risco #6 (**resolvido no M7**: o projeto adota GPL-3.0-or-later)).
 - Matriz de formatos efetivamente disponíveis no pacote.
 - `DEPENDENCIES.md` final, `TEST_REPORT.md`, `APROXIMACOES.md`, `LIMITACOES.md`.
 - Teste de execução prolongada.

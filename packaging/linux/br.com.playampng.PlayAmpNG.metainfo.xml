@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>br.com.playampng.PlayAmpNG</id>
+  <name>PlayAmpNG</name>
+  <summary>Audio player in the spirit of Winamp Classic</summary>
+  <summary xml:lang="pt_BR">Reprodutor de áudio no espírito do Winamp Classic</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      A desktop audio player with the layout and proportions of the Winamp 2.x
+      skin format: fixed-size panels, bitmap font, spectrum analyser and a ten
+      band equalizer. Plays MP3, WAV, FLAC, Ogg Vorbis, Opus and AAC, locally
+      or over HTTP streaming, with gapless playback and ReplayGain.
+    </p>
+    <p xml:lang="pt_BR">
+      Reprodutor de áudio com a diagramação e as proporções do formato de skin
+      do Winamp 2.x: painéis de tamanho fixo, fonte bitmap, analisador de
+      espectro e equalizador de dez bandas. Toca MP3, WAV, FLAC, Ogg Vorbis,
+      Opus e AAC, local ou por streaming HTTP, com reprodução sem lacuna e
+      ReplayGain.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">br.com.playampng.PlayAmpNG.desktop</launchable>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+    <category>Player</category>
+  </categories>
+
+  <provides>
+    <binary>playampng</binary>
+    <mediatype>audio/mpeg</mediatype>
+    <mediatype>audio/x-wav</mediatype>
+    <mediatype>audio/flac</mediatype>
+    <mediatype>audio/ogg</mediatype>
+    <mediatype>audio/opus</mediatype>
+    <mediatype>audio/mp4</mediatype>
+  </provides>
+
+  <developer id="br.com.playampng">
+    <name>PlayAmpNG</name>
+  </developer>
+
+  <!-- Sem <url type="homepage"> por ora: o projeto ainda nao tem repositorio
+       publico, e o validador do AppStream confere se o endereco RESPONDE.
+       Inventar um link que devolve 404 reprovaria do mesmo jeito e ainda
+       mentiria. Pendencia registrada em docs/LIMITACOES.md; e obrigatorio
+       antes de submeter ao Flathub. -->
+
+  <content_rating type="oars-1.1"/>
+</component>

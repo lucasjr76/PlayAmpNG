@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=PlayAmpNG
+GenericName=Audio Player
+GenericName[pt_BR]=Reprodutor de áudio
+Comment=Audio player in the spirit of Winamp Classic
+Comment[pt_BR]=Reprodutor de áudio no espírito do Winamp Classic
+Exec=playampng %F
+Icon=br.com.playampng.PlayAmpNG
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+MimeType=audio/mpeg;audio/x-wav;audio/flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/mp4;audio/aac;audio/x-mpegurl;audio/x-scpls;
+StartupWMClass=playampng

@@ -25,12 +25,16 @@
 #include <QActionGroup>
 #include <QMessageBox>
 #include <QTextStream>
+#include <QCryptographicHash>
+#include <QDir>
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QWidget>
 
 #include <algorithm>
+#include <atomic>
+#include <csignal>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -69,7 +73,28 @@ constexpr int kChannels = 2;
 
 }  // namespace
 
+namespace {
+
+// IN-09 — encerramento pelo SISTEMA tambem precisa gravar.
+//
+// QApplication::aboutToQuit nao dispara com SIGTERM, que e como um logout ou
+// um desligamento pedem ao programa que termine. Sem isto, a configuracao e a
+// playlist da sessao se perdiam sempre que o player nao era fechado pelo botao.
+//
+// O tratador so levanta uma bandeira: chamar Qt de dentro dele nao e seguro.
+// Quem realmente encerra e o tique da interface, que ja existe.
+std::atomic<bool> g_termination_requested{false};
+
+extern "C" void request_termination(int) {
+    g_termination_requested.store(true, std::memory_order_relaxed);
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
+    std::signal(SIGTERM, request_termination);
+    std::signal(SIGINT, request_termination);
+
     // O aplicativo faz a PROPRIA escala, em multiplos inteiros e com vizinho
     // mais proximo. Precisa, portanto, receber pixels fisicos 1:1 do Qt.
     //
@@ -102,11 +127,21 @@ int main(int argc, char** argv) {
     // janela: um segundo lancamento que fosse ate la tomaria o dispositivo e
     // piscaria uma janela antes de desistir.
     //
-    // A chave leva o nome do usuario porque o socket vive num diretorio
-    // compartilhado: sem isso, duas contas na mesma maquina disputariam o mesmo
-    // canal e a segunda nunca abriria o player.
+    // A chave deriva do ARQUIVO DE CONFIGURACAO, e nao do nome do usuario.
+    // Duas execucoes com configuracoes diferentes sao dois players: e o que
+    // permite um segundo perfil, e foi o que faltou quando um teste de
+    // execucao prolongada, com configuracao propria, entregou seus arquivos ao
+    // player que o usuario tinha aberto e saiu sem tocar nada.
+    //
+    // O caminho ja inclui o diretorio do usuario, entao duas contas na mesma
+    // maquina continuam separadas.
     pang::ui::SingleInstance instance(
-        QStringLiteral("playampng-%1").arg(qEnvironmentVariable("USER", QStringLiteral("0"))));
+        QStringLiteral("playampng-%1")
+            .arg(QString::fromLatin1(
+                QCryptographicHash::hash(pang::ui::settings::config_file_path().toUtf8(),
+                                         QCryptographicHash::Sha1)
+                    .toHex()
+                    .left(16))));
     if (!instance.primary()) {
         const QStringList paths = parser.positionalArguments();
         if (!paths.isEmpty() && instance.send(paths)) {
@@ -169,11 +204,36 @@ int main(int argc, char** argv) {
     // FORMATO, e o arquivo carregado e a aparencia fixa. Aceita .wsz ou pasta.
     pang::ui::skin::WinampSkin skin;
     QString skin_error;
-    const QString skin_path = QStringLiteral(PLAYAMPNG_SKIN_DIR "/default");
-    if (!skin.load(skin_path, skin_error)) {
-        pang::core::log::error(skin_error.toStdString());
+
+    // EN-04 — o skin e procurado ao lado do BINARIO, e so depois no diretorio
+    // de fontes. Fixar o caminho de compilacao funcionava enquanto o player
+    // rodava da arvore de build; instalado num pacote, aquele caminho nao
+    // existe e a janela abriria sem desenho nenhum.
+    //
+    // A ordem cobre os tres casos: instalado em prefixo (incluindo AppImage e
+    // Flatpak, onde o prefixo e relativo ao executavel), skin ao lado do
+    // binario, e arvore de desenvolvimento.
+    const QString exe_dir = QCoreApplication::applicationDirPath();
+    const QStringList skin_candidates{
+        exe_dir + QStringLiteral("/../share/playampng/skin/default"),
+        exe_dir + QStringLiteral("/skin/default"),
+        QStringLiteral(PLAYAMPNG_SKIN_DIR "/default"),
+    };
+    QString skin_path;
+    for (const QString& candidate : skin_candidates) {
+        if (!QFileInfo::exists(candidate)) continue;
+        if (skin.load(candidate, skin_error)) {
+            skin_path = candidate;
+            break;
+        }
+    }
+    if (skin_path.isEmpty()) {
+        pang::core::log::error("skin nao encontrado em nenhum de: " +
+                               skin_candidates.join(QStringLiteral(", ")).toStdString() +
+                               (skin_error.isEmpty() ? "" : " (" + skin_error.toStdString() + ")"));
         return 1;
     }
+    pang::core::log::info("skin: " + QDir::cleanPath(skin_path).toStdString());
     if (!skin.missing().isEmpty())
         pang::core::log::warn(("skin sem os bitmaps: " +
                                skin.missing().join(QStringLiteral(", ")).toStdString()));
@@ -590,6 +650,28 @@ int main(int argc, char** argv) {
         if (equalizer_panel->isVisible()) equalizer_panel->refresh();
         publish_now_playing();
 
+        if (g_termination_requested.load(std::memory_order_relaxed)) {
+            pang::core::log::info("encerramento pedido pelo sistema");
+            QCoreApplication::quit();  // dispara aboutToQuit, que grava tudo
+            return;
+        }
+
+        // RB-07 — interrupcao de audio vai para o log quando acontece.
+        //
+        // Nao e instrumentacao so de teste: e o que permite a alguem que relata
+        // "o som picota" mandar o log e a conversa comecar com um numero. So
+        // registra quando o contador ANDA, senao o log vira ruido.
+        {
+            static std::uint32_t reported_underruns = 0;
+            const auto snap = engine->snapshot();
+            if (snap.underruns > reported_underruns) {
+                pang::core::log::warn("interrupcoes de audio: " +
+                                      std::to_string(snap.underruns) + " (+" +
+                                      std::to_string(snap.underruns - reported_underruns) + ")");
+                reported_underruns = snap.underruns;
+            }
+        }
+
         // AU-12, RB-05 — vigia o dispositivo no tique que ja existe, em vez de
         // criar um thread so para isso. A reabertura acontece aqui, no thread
         // da interface, e nao dentro do callback do proprio dispositivo.
@@ -651,6 +733,15 @@ int main(int argc, char** argv) {
         saved.playlist_geometry = {0, 0, pang::ui::PlaylistPanel::kWidth,
                                    playlist_panel->logical_height()};
         pang::ui::settings::save(saved);  // IN-09
+
+        // IN-09 — a playlist da sessao, no mesmo formato que o usuario importa
+        // e exporta. Assim a sessao restaurada abre em qualquer outro player, e
+        // o arquivo continua legivel se algo der errado.
+        std::string playlist_error;
+        if (!pang::core::playlist_io::save(
+                pang::ui::settings::session_playlist_path().toStdString(),
+                controller->playlist().tracks(), playlist_error))
+            pang::core::log::warn("playlist da sessao nao foi gravada: " + playlist_error);
     });
 
     // IN-08 — entrega vinda de um segundo lancamento. Enfileira sem
@@ -671,6 +762,21 @@ int main(int argc, char** argv) {
     if (!args.isEmpty()) {
         add_paths(args);
         controller->play_index(0);
+    } else {
+        // IN-11 — a sessao anterior volta PARADA. Retomar o som sozinho ao
+        // abrir e comportamento que surpreende: o usuario abriu o player, nao
+        // pediu para tocar. So a preferencia explicita muda isso.
+        std::string playlist_error;
+        const auto restored = pang::core::playlist_io::load(
+            pang::ui::settings::session_playlist_path().toStdString(), playlist_error);
+        if (!restored.empty()) {
+            for (const auto& track : restored) controller->playlist().add(track.path);
+            controller->playlist_changed();
+            playlist_panel->refresh(/*force=*/true);
+            pang::core::log::info("sessao restaurada: " + std::to_string(restored.size()) +
+                                  " faixa(s)");
+            if (saved.autoplay_on_restore) controller->play_index(0);
+        }
     }
 
     shell.show();

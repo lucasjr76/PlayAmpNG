@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QString>
+
 #include <array>
 #include <string>
 #include <vector>
@@ -48,6 +50,21 @@ struct AppState {
 
 // IN-09 — gravacao atomica (temporario + rename), via QSaveFile.
 bool save(const AppState& state);
+
+// Caminho do arquivo de configuracao em uso.
+//
+// Exposto porque a IDENTIDADE da instancia deriva dele (IN-08): duas execucoes
+// com configuracoes diferentes sao dois players, e nao uma entrega a outra.
+// Derivar do nome do usuario, como a primeira versao fazia, fazia um segundo
+// perfil entregar seus arquivos ao player que ja estava aberto no primeiro.
+QString config_file_path();
+
+// IN-09, IN-11 — caminho da playlist da sessao, ao lado da configuracao.
+//
+// A playlist e gravada em M3U8, o mesmo formato que o usuario importa e
+// exporta: uma sessao restaurada pode ser aberta em qualquer outro player, e o
+// arquivo e legivel se algo der errado.
+QString session_playlist_path();
 
 // IN-10 — arquivo invalido e renomeado para *.bad, padroes sao carregados e o
 // fato vai para o log. O aplicativo nunca se recusa a abrir por configuracao

@@ -13,6 +13,8 @@
 namespace pang::ui::settings {
 namespace {
 
+QString config_path();
+
 QString config_path() {
     const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     QDir().mkpath(directory);
@@ -33,6 +35,15 @@ std::array<float, core::dsp::Equalizer::kBands> bands_from_json(const QJsonArray
 }
 
 }  // namespace
+
+QString config_file_path() { return config_path(); }
+
+QString session_playlist_path() {
+    const QString directory =
+        QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QDir().mkpath(directory);
+    return directory + QStringLiteral("/session.m3u8");
+}
 
 bool save(const AppState& state) {
     QJsonObject eq;

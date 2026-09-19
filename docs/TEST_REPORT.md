@@ -1,4 +1,121 @@
-# PlayAmpNG — Relatório de Execução de Testes
+# Relatório de testes — M7
+
+Gerado na máquina de referência registrada em `DEPENDENCIES.md`. Cada linha abaixo é uma ordem que qualquer pessoa pode repetir: `ctest --test-dir build --output-on-failure`.
+
+## Suíte automatizada
+
+| Teste | Resultado | Tempo |
+|---|---|---|
+| `core` | passou | 0.03 s |
+| `audio` | passou | 0.58 s |
+| `device` | passou | 0.03 s |
+| `device_loss` | passou | 4.61 s |
+| `mpris` | passou | 1.33 s |
+| `single_instance` | passou | 0.64 s |
+| `settings` | passou | 0.04 s |
+| `playlist_ui` | passou | 0.07 s |
+| `session` | passou | 18.28 s |
+| `stream` | passou | 3.25 s |
+| `recovery` | passou | 0.00 s |
+| `layout` | passou | 0.00 s |
+| `skin` | passou | 0.06 s |
+| `visualization` | passou | 0.06 s |
+| `realtime` | passou | 0.04 s |
+| `gapless` | passou | 0.28 s |
+| `dsp` | passou | 0.06 s |
+| `playlist` | passou | 3.19 s |
+| `m0_headless` | passou | 0.03 s |
+
+**19 de 19.** A suíte roda sem tela e sem placa de som. Cinco testes dependem de recursos do ambiente e são **pulados**, não reprovados, onde eles não existirem:
+
+| Teste | Recurso | Sem ele |
+|---|---|---|
+| `stream` | Python 3 | pulado |
+| `device_loss` | `pactl` + servidor de áudio | pulado (código 77) |
+| `mpris` | barramento D-Bus de sessão | pulado (código 77) |
+| `single_instance` | barramento D-Bus de sessão | pulado (código 77) |
+| `session` | barramento D-Bus de sessão | o estado de reprodução não é verificado; o resto roda |
+| `playlist_ui`, `settings` | Qt em modo offscreen | sempre roda |
+
+Pular é uma decisão consciente: a ausência de servidor de áudio numa máquina de integração não é defeito do player, e reprovar por isso treinaria a equipe a ignorar a suíte.
+
+## O que cada teste verifica de verdade
+
+Vários destes testes foram **verificados por mutação** — quebra-se deliberadamente o código que eles cobrem e confere-se que eles reprovam. Um teste que passa com o código quebrado não é teste.
+
+| Teste | Mutação aplicada | Reprovou |
+|---|---|---|
+| `layout` | passo do transporte, balanço invadindo o volume, dígitos encostando, bandas fora da faixa, botões separados | 5 de 5 |
+| `skin` | quadros de slider empilhados na vertical | 52 verificações |
+| `stream` | decodificador derivando `live` por conta própria | sim |
+| `device` | `lost()` deixando de ser idempotente | sim |
+| `device_loss` | detector de parada desligado; destruição do dispositivo morto | sim / travou e foi reprovado por prazo |
+| `settings` | campo que grava e não lê | sim |
+| `mpris` | `Play` e `Stop` desligados do barramento | sim |
+| `single_instance` | segunda instância abrindo janela própria; entrega não enfileirada | sim |
+| `playlist_ui` | seleção que não acompanha a faixa; barra de rolagem insensível | 3 e 2 verificações |
+| `session` | SIGTERM voltando a ser ignorado; sessão restaurada iniciando o áudio | sim |
+
+
+## RB-07 — execução prolongada
+
+Os limites foram definidos em `PLAN.md` **antes** da execução, e não ajustados depois:
+
+| Medida | Limite | Aos 20 min |
+|---|---|---|
+| Interrupções de áudio | zero | **0** |
+| CPU média de um núcleo | < 3% | **1,46%** |
+| Crescimento de memória residente | < 5 MB | **+0,09 MB** |
+| Xruns do PipeWire | — | **0** |
+
+Cenário: reprodução em laço com **equalizador ativo e visualização ligada**, que é o caso mais caro e o que o limite de CPU descreve. Diretório de configuração próprio, para não tocar na sessão do usuário.
+
+A corrida completa de **8 h está em andamento** (`tests/soak.py`, PID registrado no log). O número final entra aqui quando terminar; até lá `RB-07` está marcado **EM CURSO**, e não OK. Vinte minutos não são oito horas, e o requisito pede oito.
+
+O harness mede o que o requisito pede, não o que é fácil: interrupções vêm do contador do próprio player, que agora também vai para o log quando anda — o que serve ao usuário que relata "o som picota" e não só ao teste.
+
+## AU-08 — formatos disponíveis NO PACOTE
+
+Medido tocando cada arquivo **de dentro do AppImage**, e não na máquina de desenvolvimento. É essa a diferença que o requisito pede: a disponibilidade é propriedade do artefato distribuído.
+
+| Formato | Arquivo | No pacote |
+|---|---|---|
+| WAV (PCM) | `tone.wav` | toca |
+| MP3 | `tone.mp3` | toca |
+| FLAC | `tone.flac` | toca |
+| Ogg Vorbis | `tone.ogg` | toca |
+| Opus | `tone.opus` | toca |
+| AAC / M4A | `tone.m4a` | toca |
+
+Os seis formatos exigidos por `AU-01`. O AppImage embute o FFmpeg da distribuição, que é GPL-3.0 — coerente com a licença adotada. Ele traz junto `libx264` e `libx265`, dependências desse FFmpeg, embora um player de áudio não as use.
+
+## EN-04 — pacotes
+
+| Formato | Estado | Evidência |
+|---|---|---|
+| AppImage | **construído e verificado** | 86M, roda isolado com diretório de configuração próprio, carrega o skin de dentro do pacote e toca os seis formatos |
+| Flatpak | **manifesto escrito, NÃO construído** | `flatpak-builder` não está instalado nesta máquina. O YAML é válido e o `.desktop` passa no `desktop-file-validate`; o `metainfo.xml` passa no `appstreamcli` com um aviso conhecido |
+
+O aviso do AppStream é `url-homepage-missing`: o projeto ainda não tem repositório público, e o validador confere se o endereço **responde**. Inventar um link que devolve 404 reprovaria do mesmo jeito e ainda mentiria. Registrado em `LIMITACOES.md` como obrigatório antes de submeter ao Flathub.
+
+Três defeitos que só apareceram ao empacotar de verdade:
+
+| Defeito | Sintoma | Correção |
+|---|---|---|
+| Caminho do skin fixado em tempo de compilação | O pacote instalado abriria **sem desenho**: o caminho apontava para a árvore de fontes, que não existe na máquina do usuário | O skin é procurado ao lado do binário, e só depois no diretório de fontes |
+| Identidade da instância derivada do nome do usuário | O teste de longa duração, com configuração própria, **entregou seus arquivos ao player que o usuário tinha aberto** e saiu sem tocar nada | A identidade deriva do arquivo de configuração: duas configurações são dois players |
+| Plugins de plataforma do Qt incompletos | Só `xcb` era embutido — sessão Wayland sem XWayland não abriria, e o pacote não podia ser verificado sem tela | `wayland`, `offscreen` e `minimal` acrescentados |
+
+## Instabilidade encontrada e corrigida na própria suíte
+
+`single_instance` falhava em cerca de uma execução a cada três, sempre em 0,7 s — muito antes de qualquer prazo. Causa: o serviço aparece no barramento **antes** de o arquivo ser aberto e publicado, e o teste afirmava o metadado no instante seguinte. Passou a esperar pelo evento observável. Confirmado estável em 18 execuções seguidas.
+
+É a mesma regra que este projeto vinha aplicando em toda parte, e que eu mesmo violei ao escrever este teste: amostrar estado num instante arbitrário produz passe **e** reprovação acidentais.
+
+---
+
+## Histórico dos marcos anteriores
+
 
 Registro incremental. Cada etapa acrescenta uma seção. Nada é marcado como aprovado sem ter sido executado.
 

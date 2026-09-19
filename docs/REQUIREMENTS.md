@@ -62,7 +62,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-20 | Display: posição da faixa na playlist | AUTO | M5 | OK (M5) |
 | PL-21 | Barra de progresso acompanha a posição real do backend | MEDIDO | M1 | OK (M1) |
 | PL-22 | Busca temporal quando a fonte suporta | AUTO | M1 | OK (M1) |
-| PL-23 | Busca desabilitada quando a fonte não suporta | AUTO | M6 | PENDENTE |
+| PL-23 | Busca desabilitada quando a fonte não suporta | AUTO | M6 | OK (M6) |
 | PL-24 | Fim da playlist: repeat=off para; repeat=all reinicia; repeat=track repete | AUTO | M2 | OK (M2) |
 | PL-25 | Troca de faixa durante pausa mantém o estado pausado, posição 0 | AUTO | M2 | OK (M2) |
 | PL-26 | Duração, bitrate e progresso nunca são inventados quando ausentes | AUTO | M2 | OK (M2) |
@@ -78,7 +78,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AU-05 | Reprodução real de Ogg Vorbis | AUTO | M1 | OK (M1) |
 | AU-06 | Reprodução real de Opus | AUTO | M1 | OK (M1) |
 | AU-07 | Reprodução real de AAC/M4A | AUTO | M1 | OK (M1) |
-| AU-08 | Disponibilidade efetiva de cada formato documentada por pacote distribuído | MANUAL | M7 | PENDENTE |
+| AU-08 | Disponibilidade efetiva de cada formato documentada por pacote distribuído | MEDIDO | M7 | OK (M7) |
 | AU-09 | Processamento interno em ponto flutuante (f32) | MANUAL | M1 | OK (M1) |
 | AU-10 | Mudanças de ganho com rampa, sem estalo | MEDIDO | M3 | OK (M3) |
 | AU-11 | Seleção de dispositivo de saída | AUTO | M6 | OK (M6) |
@@ -191,7 +191,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | IN-08 | Arquivo passado a uma instância já aberta é enfileirado nela | AUTO | M6 | OK (M6) |
 | IN-09 | Gravação atômica de configuração, playlist, presets e layout | AUTO | M5 | OK (M5) |
 | IN-10 | Configuração inválida → renomeia para `.bad`, carrega padrões, registra log | AUTO | M5 | OK (M5) |
-| IN-11 | Restaurar sessão não inicia áudio, salvo preferência explícita | AUTO | M5 | PENDENTE |
+| IN-11 | Restaurar sessão não inicia áudio, salvo preferência explícita | AUTO | M5 | OK (M7) |
 
 ## AR — Arquitetura e qualidade (spec §10)
 
@@ -219,20 +219,20 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | RB-04 | Interrupção de stream → reconexão ou `Error` explícito | AUTO | M6 | OK (M6) |
 | RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | AUTO | M6 | OK (M6) |
 | RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | OK (M2) |
-| RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | PENDENTE |
+| RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | EM CURSO (M7) — corrida de 8 h em andamento |
 
 ## EN — Entregáveis (spec §12)
 
 | ID | Requisito | Verificação | Etapa | Estado |
 |---|---|---|---|---|
-| EN-01 | Código-fonte organizado conforme a árvore de `ARCHITECTURE.md` | MANUAL | M7 | PENDENTE |
-| EN-02 | Instruções reproduzíveis de instalação, execução e build | MANUAL | M7 | PENDENTE |
-| EN-03 | Dependências com versões e licenças identificadas | MANUAL | M7 | PENDENTE |
-| EN-04 | Pacote executável para Linux (AppImage e/ou Flatpak) | MANUAL | M7 | PENDENTE |
+| EN-01 | Código-fonte organizado conforme a árvore de `ARCHITECTURE.md` | MANUAL | M7 | OK (M7) |
+| EN-02 | Instruções reproduzíveis de instalação, execução e build | MANUAL | M7 | OK (M7) |
+| EN-03 | Dependências com versões e licenças identificadas | MANUAL | M7 | OK (M7) |
+| EN-04 | Pacote executável para Linux (AppImage e/ou Flatpak) | MEDIDO | M7 | PARCIAL (M7) — AppImage construído e verificado; Flatpak com manifesto escrito e não construído |
 | EN-05 | Documento de arquitetura | MANUAL | M0 | OK (M0) |
-| EN-06 | Matriz de requisitos com estado e evidências | MANUAL | M7 | PENDENTE |
-| EN-07 | Testes e relatório de execução | AUTO | M7 | PENDENTE |
-| EN-08 | Limitações conhecidas documentadas | MANUAL | M7 | PENDENTE |
+| EN-06 | Matriz de requisitos com estado e evidências | MANUAL | M7 | OK (M7) |
+| EN-07 | Testes e relatório de execução | AUTO | M7 | OK (M7) |
+| EN-08 | Limitações conhecidas documentadas | MANUAL | M7 | OK (M7) |
 | EN-09 | Pacote executável para Windows | MANUAL | M8 | PENDENTE |
 | EN-10 | Pacote executável para macOS (assinatura e notarização são decisão à parte) | MANUAL | M9 | PENDENTE |
 

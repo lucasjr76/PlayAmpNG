@@ -1,0 +1,53 @@
+# EN-04 — manifesto Flatpak.
+#
+# O runtime do KDE traz Qt 6 e FFmpeg, entao o manifesto nao compila nenhum dos
+# dois. A licenca do projeto e GPL-3.0-or-later (DEPENDENCIES.md), coerente com
+# o FFmpeg do runtime.
+#
+# Construir e instalar:
+#   flatpak install -y flathub org.kde.Platform//6.9 org.kde.Sdk//6.9
+#   flatpak-builder --user --install --force-clean build-flatpak \
+#       packaging/linux/br.com.playampng.PlayAmpNG.yml
+#   flatpak run br.com.playampng.PlayAmpNG
+
+app-id: br.com.playampng.PlayAmpNG
+runtime: org.kde.Platform
+runtime-version: '6.9'
+sdk: org.kde.Sdk
+command: playampng
+
+finish-args:
+  # Janela.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+
+  # Audio.
+  - --socket=pulseaudio
+
+  # PL-08 — abrir URL de audio e ler metadados ICY.
+  - --share=network
+
+  # IN-05 — MPRIS. O nome precisa ser possuido no barramento de sessao, senao
+  # o ambiente nao ve o player e as teclas de midia nao chegam.
+  - --own-name=org.mpris.MediaPlayer2.playampng.*
+
+  # Musica do usuario, somente leitura: o player nao escreve em arquivo de
+  # audio. A playlist e a configuracao ficam no diretorio do proprio aplicativo.
+  - --filesystem=xdg-music:ro
+  - --filesystem=xdg-download:ro
+
+modules:
+  - name: playampng
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    sources:
+      - type: dir
+        path: ../..
+    # miniaudio vem por FetchContent e precisa de rede durante a compilacao;
+    # num build isolado, aponte PANG_MINIAUDIO_DIR para uma copia local.
+    build-options:
+      build-args:
+        - --share=network

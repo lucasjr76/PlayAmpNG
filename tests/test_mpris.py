@@ -47,14 +47,19 @@ def dbus(servico, interface, membro, *args, propriedade=False):
     return r.stdout if r.returncode == 0 else None
 
 
-def servico_do_player():
+def servico_do_player(pid=None):
     r = subprocess.run(["dbus-send", "--session", "--dest=org.freedesktop.DBus",
                         "--print-reply", "/org/freedesktop/DBus",
                         "org.freedesktop.DBus.ListNames"],
                        capture_output=True, text=True, timeout=10)
     for linha in r.stdout.splitlines():
         if "org.mpris.MediaPlayer2.playampng" in linha:
-            return linha.split('"')[1]
+            nome = linha.split('"')[1]
+            # O nome do servico termina em instance<pid>: e assim que o teste
+            # reconhece o player QUE ELE lancou, e nao outro que ja estivesse
+            # no ar.
+            if pid is None or nome.endswith(f"instance{pid}"):
+                return nome
     return None
 
 
@@ -88,11 +93,15 @@ with wave.open(media, "wb") as w:
     quadro = struct.pack("<hh", 3000, 3000)
     w.writeframes(quadro * (44100 * 30))
 
-ambiente = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+# Diretório de configuração próprio. A identidade da instância deriva do
+# arquivo de configuração, então isto também dá ao teste uma instância própria:
+# sem isso ele fala com o player que o usuário tiver aberto, e mede outra coisa.
+perfil = tempfile.mkdtemp(prefix="pang_perfil_")
+ambiente = dict(os.environ, QT_QPA_PLATFORM="offscreen", XDG_CONFIG_HOME=perfil)
 proc = subprocess.Popen([binario, media], env=ambiente,
                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 try:
-    servico = esperar(servico_do_player, 15.0)
+    servico = esperar(lambda: servico_do_player(proc.pid), 15.0)
     if not servico:
         proc.terminate()
         erro = proc.stderr.read() if proc.stderr else ""

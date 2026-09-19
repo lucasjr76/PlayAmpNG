@@ -30,27 +30,28 @@ A Silkscreen substituiu um desenho próprio de glifos, três vezes: as versões 
 
 ---
 
-## ⚠ Aviso de licença do FFmpeg (risco #6 do PLAN.md, confirmado no M0)
+## Licença do projeto: GPL-3.0-or-later
 
-O FFmpeg instalado nesta máquina reporta, em tempo de execução:
+**Decidido no M7**, encerrando o risco #6 aberto no M0.
+
+O FFmpeg desta máquina reporta, em tempo de execução:
 
 ```
 FFmpeg   n9.0.1  (licenca: GPL version 3 or later)
 ```
 
-Ele foi compilado com `--enable-gpl --enable-version3`. **Vincular o binário distribuído contra esse build torna o produto inteiro GPL-3.0.**
+Ele foi compilado com `--enable-gpl --enable-version3`. Vincular contra esse build torna o produto inteiro GPL-3.0 — não por acidente, mas por decisão: **o projeto adota GPL-3.0-or-later**, e o texto está em `LICENSE`.
 
-Consequências práticas:
+As alternativas foram pesadas e recusadas:
 
-- **Desenvolvimento nesta máquina: sem problema.** O binário não é distribuído.
-- **Empacotamento (M7): obrigatório usar um FFmpeg LGPL**, compilado sem `--enable-gpl` e sem `--enable-nonfree`, com vínculo dinâmico. Isso exclui componentes GPL (como `libx264`), que este projeto não usa — é um player de áudio.
-- **Alternativa aceitável:** adotar GPL-3.0 para o projeto inteiro, decisão que precisa ser tomada explicitamente, não herdada por acidente do build da distro.
+| Alternativa | Por que não |
+|---|---|
+| Compilar um FFmpeg LGPL próprio | Poria a receita de build do FFmpeg no repositório e ~20 MB no pacote, para preservar uma liberdade de licenciamento que o projeto não vai exercer |
+| Depender do FFmpeg do sistema, sem embutir | O pacote deixaria de ser autocontido, e `AU-08` — matriz de formatos **do pacote** — viraria "depende da máquina" |
 
-Por isso `pang_probe` imprime `avutil_license()` a cada execução, e o mesmo dado aparece na janela: a licença efetiva é uma propriedade do binário, não do código-fonte, e precisa ser verificável no artefato final.
+Consequência prática: qualquer trabalho derivado deste código também é GPL-3.0 e precisa abrir a fonte. Isso é a escolha, não um efeito colateral.
 
-**Pendência aberta:** decidir entre FFmpeg LGPL próprio e projeto GPL-3.0. Não bloqueia M1–M6.
-
----
+`pang_probe` continua imprimindo `avutil_license()` a cada execução, e o mesmo dado aparece na janela de propriedades: a licença efetiva é propriedade do **binário**, não do código-fonte, e precisa ser verificável no artefato final.
 
 ## Codecs disponíveis nesta máquina
 
