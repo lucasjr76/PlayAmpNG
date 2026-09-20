@@ -45,11 +45,8 @@
     <name>PlayAmpNG</name>
   </developer>
 
-  <!-- Sem <url type="homepage"> por ora: o projeto ainda nao tem repositorio
-       publico, e o validador do AppStream confere se o endereco RESPONDE.
-       Inventar um link que devolve 404 reprovaria do mesmo jeito e ainda
-       mentiria. Pendencia registrada em docs/LIMITACOES.md; e obrigatorio
-       antes de submeter ao Flathub. -->
+  <url type="homepage">https://github.com/lucasjr76/PlayAmpNG</url>
+  <url type="bugtracker">https://github.com/lucasjr76/PlayAmpNG/issues</url>
 
   <content_rating type="oars-1.1"/>
 </component>

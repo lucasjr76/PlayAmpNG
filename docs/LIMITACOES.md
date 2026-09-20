@@ -7,8 +7,8 @@ EN-08. O que o player **não** faz, e por quê. Cada item traz a razão, e não 
 | Item | Situação |
 |---|---|
 | Flatpak não construído | O manifesto está escrito e o YAML é válido, mas `flatpak-builder` não existe na máquina de referência. Nunca foi executado — e um pacote que nunca foi montado não é um pacote |
-| `url-homepage-missing` no AppStream | O projeto não tem repositório público. O validador confere se o endereço responde, então um link inventado reprovaria igual e ainda mentiria. **Obrigatório antes de submeter ao Flathub** |
-| Windows e macOS | `integration_none.cpp` no lugar de SMTC e MPNowPlayingInfoCenter. O player roda, só não aparece no painel do sistema nem recebe teclas de mídia pelo caminho do ambiente. M8 e M9 |
+| AppImage exige glibc recente | O AppImage é montado no Ubuntu 24.04, que tem glibc 2.39, e essa passa a ser a versão **mínima** para executá-lo — Ubuntu 22.04, Debian 12 e derivados não o abrem. É inerente ao formato: quem constrói define o piso. Ampliar o alcance exigiria construir numa base antiga, o que ainda não foi feito |
+| macOS | `integration_none.cpp` no lugar de MPNowPlayingInfoCenter, e nenhum pacote. O player roda, só não aparece no painel do sistema nem recebe teclas de mídia pelo caminho do ambiente. M9 |
 
 ## Funcionalidades fora de escopo
 

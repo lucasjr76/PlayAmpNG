@@ -211,7 +211,7 @@ jobs:
 
             | Sistema | Arquivo |
             |---|---|
-            | Linux x86_64 | `PlayAmpNG-x86_64.AppImage` — `chmod +x` e executar; nao instala nada, nao precisa de root |
+            | Linux x86_64 | `PlayAmpNG-x86_64.AppImage` — `chmod +x` e executar; nao instala nada, nao precisa de root. Exige **glibc 2.39 ou mais novo** (Ubuntu 24.04+), porque e nessa base que ele e montado |
             | Windows x64 | `PlayAmpNG-<versao>-setup.exe` — instala no perfil do usuario, sem pedir administrador |
 
             macOS ainda nao tem pacote.
