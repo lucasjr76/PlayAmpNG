@@ -121,6 +121,26 @@ jobs:
         # identificada em tres minutos.
         run: ctest --test-dir build --output-on-failure --no-tests=error --timeout 180
 
+      # EN-04 — o AppImage tambem e montado no CI, pelo mesmo motivo do
+      # instalador do Windows: um pacote que so sai da maquina de um
+      # desenvolvedor nao e verificavel por mais ninguem.
+      - name: AppImage (Linux)
+        if: matrix.name == 'linux'
+        env:
+          # O Ubuntu 24.04 nao traz mais o libfuse2, e as ferramentas do
+          # linuxdeploy sao elas proprias AppImages. Extrair em vez de montar
+          # dispensa o FUSE e nao precisa de root.
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: packaging/linux/build-appimage.sh
+
+      - name: Publicar AppImage
+        if: matrix.name == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playampng-linux
+          if-no-files-found: error
+          path: dist/PlayAmpNG-x86_64.AppImage
+
       # EN-09 — o instalador e montado no proprio CI para que nunca dependa da
       # maquina de um desenvolvedor. Reaproveita o diretorio `build` ja
       # compilado: o cmake so reconfigura, e nao recompila.
@@ -155,3 +175,53 @@ jobs:
           path: |
             packaging/windows/*-setup.exe
             dist/windows/
+
+  # Publicacao.
+  #
+  # So roda para tag "v*", e o release nasce como RASCUNHO: quem decide torna-lo
+  # publico e uma pessoa, olhando os arquivos, e nao um push. Os binarios sao os
+  # mesmos que a suite acabou de aprovar — nao ha recompilacao aqui, nem upload
+  # da maquina de ninguem.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+
+      - name: Reunir o que se publica
+        run: |
+          set -euo pipefail
+          mkdir -p publicar
+          cp artefatos/playampng-linux/PlayAmpNG-x86_64.AppImage publicar/
+          cp artefatos/playampng-windows/packaging/windows/*-setup.exe publicar/
+          (cd publicar && sha256sum * > SHA256SUMS.txt)
+          ls -l publicar
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: publicar/*
+          body: |
+            Construido e testado pelo CI a partir de ${{ github.sha }}.
+
+            | Sistema | Arquivo |
+            |---|---|
+            | Linux x86_64 | `PlayAmpNG-x86_64.AppImage` — `chmod +x` e executar; nao instala nada, nao precisa de root |
+            | Windows x64 | `PlayAmpNG-<versao>-setup.exe` — instala no perfil do usuario, sem pedir administrador |
+
+            macOS ainda nao tem pacote.
+
+            Confira os arquivos com `SHA256SUMS.txt`.
+
+            ## Licenca
+
+            PlayAmpNG e GPL-3.0-or-later. Os dois pacotes embutem FFmpeg
+            compilado com `--enable-gpl --enable-version3`; o codigo-fonte
+            correspondente do FFmpeg esta em https://github.com/FFmpeg/FFmpeg
+            e os binarios usados vem de https://github.com/BtbN/FFmpeg-Builds.
+            Ver `docs/DEPENDENCIES.md`.
