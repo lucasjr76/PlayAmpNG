@@ -65,9 +65,13 @@ jobs:
           raiz=$(echo "$PWD"/ffmpeg/ffmpeg-*-win64-gpl-shared)
           echo "FFMPEG_ROOT=$raiz" >> "$GITHUB_ENV"
           echo "CMAKE_PREFIX_PATH=$raiz${CMAKE_PREFIX_PATH:+;$CMAKE_PREFIX_PATH}" >> "$GITHUB_ENV"
-          # As DLLs precisam estar no caminho para os testes RODAREM, e nao so
-          # para o link.
-          echo "$raiz/bin" >> "$GITHUB_PATH"
+          # As DLLs precisam estar no PATH para os testes RODAREM, e nao so
+          # para o link — e em FORMATO DO WINDOWS. Este passo roda no bash do
+          # Git for Windows, onde $PWD e "/d/a/...": o cmake aceita, o
+          # carregador de DLL do Windows nao. Foi exatamente isso que fez dez
+          # testes morrerem com 0xC0000135 (DLL nao encontrada) e o ctest
+          # esperar o prazo inteiro por um processo que ja estava morto.
+          echo "$(cygpath -w "$raiz")\bin" >> "$GITHUB_PATH"
           ls "$raiz"
 
       # O leitor de .wsz usa inflate cru do zlib. O Qt para Windows nao expoe
@@ -80,7 +84,10 @@ jobs:
         run: |
           set -euo pipefail
           "$VCPKG_INSTALLATION_ROOT/vcpkg" install zlib:x64-windows
-          echo "ZLIB_ROOT=$VCPKG_INSTALLATION_ROOT/installed/x64-windows" >> "$GITHUB_ENV"
+          instalado="$VCPKG_INSTALLATION_ROOT/installed/x64-windows"
+          echo "ZLIB_ROOT=$instalado" >> "$GITHUB_ENV"
+          # zlib1.dll, pelo mesmo motivo do FFmpeg.
+          echo "$(cygpath -w "$instalado")\bin" >> "$GITHUB_PATH"
 
       # Os testes de rede, de dispositivo e de barramento sao orquestrados por
       # Python. Ele ja vem nos runners; a linha existe para falhar cedo e com
@@ -100,29 +107,6 @@ jobs:
       # que dependem disso se declaram PULADOS (codigo 77) em vez de reprovar:
       # a ausencia desses recursos numa maquina de integracao nao e defeito do
       # player, e reprovar por isso treinaria a equipe a ignorar a suite.
-      # Diagnostico temporario: dez testes travaram no Windows sem imprimir uma
-      # linha, mesmo com a saida sem buffer. Rodando o binario FORA do ctest e
-      # gravando em arquivo, o que ele escreveu sobrevive ao encerramento
-      # forcado — e ai da para ver em que chamada ele para.
-      - name: Onde trava (Windows)
-        if: matrix.name == 'windows'
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          foreach ($exe in @("pang_tests", "pang_skin_tests")) {
-            Write-Host "===== $exe ====="
-            $p = Start-Process -FilePath "build\$exe.exe" -NoNewWindow -PassThru `
-                 -RedirectStandardOutput "$exe.out" -RedirectStandardError "$exe.err"
-            if (-not $p.WaitForExit(45000)) {
-              Write-Host "TRAVOU: ainda vivo depois de 45 s"
-              $p.Kill()
-            } else {
-              Write-Host "terminou com codigo $($p.ExitCode)"
-            }
-            Write-Host "--- stdout ---"; Get-Content "$exe.out" -ErrorAction SilentlyContinue
-            Write-Host "--- stderr ---"; Get-Content "$exe.err" -ErrorAction SilentlyContinue
-          }
-
       - name: Testar
         shell: bash
         env:
