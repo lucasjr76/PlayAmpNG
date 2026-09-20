@@ -219,7 +219,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | RB-04 | Interrupção de stream → reconexão ou `Error` explícito | AUTO | M6 | OK (M6) |
 | RB-05 | Perda do dispositivo de áudio → recuperação ou `Error` explícito | AUTO | M6 | OK (M6) |
 | RB-06 | Carga de playlist extensa sem travar a interface | MEDIDO | M2 | OK (M2) |
-| RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | EM CURSO (M7) — corrida de 8 h em andamento |
+| RB-07 | Execução prolongada: CPU, memória e interrupções de áudio registradas | MEDIDO | M7 | OK (M7) — 8 h: CPU 1,43%, memória −1,18 MB, zero interrupções |
 
 ## EN — Entregáveis (spec §12)
 

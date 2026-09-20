@@ -61,16 +61,18 @@ Vários destes testes foram **verificados por mutação** — quebra-se delibera
 
 Os limites foram definidos em `PLAN.md` **antes** da execução, e não ajustados depois:
 
-| Medida | Limite | Aos 20 min |
-|---|---|---|
-| Interrupções de áudio | zero | **0** |
-| CPU média de um núcleo | < 3% | **1,46%** |
-| Crescimento de memória residente | < 5 MB | **+0,09 MB** |
-| Xruns do PipeWire | — | **0** |
+| Medida | Limite | Aos 20 min | **Às 8 h** |
+|---|---|---|---|
+| Interrupções de áudio | zero | 0 | **0** |
+| CPU média de um núcleo | < 3% | 1,46% | **1,43%** |
+| Crescimento de memória residente | < 5 MB | +0,09 MB | **−1,18 MB** |
+| Xruns do PipeWire | — | 0 | **0** |
 
 Cenário: reprodução em laço com **equalizador ativo e visualização ligada**, que é o caso mais caro e o que o limite de CPU descreve. Diretório de configuração próprio, para não tocar na sessão do usuário.
 
-A corrida completa de **8 h está em andamento** (`tests/soak.py`, PID registrado no log). O número final entra aqui quando terminar; até lá `RB-07` está marcado **EM CURSO**, e não OK. Vinte minutos não são oito horas, e o requisito pede oito.
+A corrida completa de **8 h terminou dentro dos limites** (`tests/soak.py`): memória residente de 121,6 MB no início e 120,4 MB no fim. O crescimento negativo não é ruído de medição nem melhoria a comemorar — é o alocador devolvendo ao sistema o que o carregamento inicial da playlist reservou e não voltou a usar. O que o número mostra é a ausência do que se procurava: nas oito horas não houve acumulação.
+
+Nenhuma medida foi tomada em instante arbitrário: o harness amostra a cada cinco minutos e o resultado é a série inteira, no log. Vinte minutos não eram oito horas, e por isso `RB-07` ficou **EM CURSO** até aqui em vez de ser dado por bom cedo demais.
 
 O harness mede o que o requisito pede, não o que é fácil: interrupções vêm do contador do próprio player, que agora também vai para o log quando anda — o que serve ao usuário que relata "o som picota" e não só ao teste.
 
