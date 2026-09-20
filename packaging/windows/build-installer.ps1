@@ -8,6 +8,9 @@
 
 param(
     [Parameter(Mandatory = $true)][string]$FfmpegRoot,
+    # Onde mora zlib1.dll. Vazio quando o zlib do sistema for estatico ou ja
+    # estiver no PATH; a conferencia no fim do script avisa se faltar.
+    [string]$ZlibRoot = $env:ZLIB_ROOT,
     [string]$Saida = "dist\windows",
     [string]$BuildDir = "build-windows"
 )
@@ -41,9 +44,34 @@ Copy-Item -Recurse "assets\skin\default" "$Saida\skin\default"
 # diz qual biblioteca falta.
 Copy-Item "$FfmpegRoot\bin\*.dll" $Saida
 
+# O zlib nao e do Qt nem do FFmpeg, entao nenhum dos dois o traz. O leitor de
+# .wsz depende dele.
+if ($ZlibRoot -and (Test-Path "$ZlibRoot\bin")) {
+    Copy-Item "$ZlibRoot\bin\zlib*.dll" $Saida -ErrorAction SilentlyContinue
+}
+
 # windeployqt resolve Qt: plugins de plataforma, estilos e dependencias.
 windeployqt --release --no-translations --no-opengl-sw --no-system-d3d-compiler `
             "$Saida\playampng.exe"
+
+# Conferencia de dependencias.
+#
+# Uma DLL que falta nao da erro na montagem: da erro na MAQUINA DO USUARIO, na
+# forma de um 0xC0000135 que nem diz qual biblioteca falta. Foi assim que dez
+# testes morreram no CI ate alguem ler o codigo de saida. Conferir aqui custa
+# dez linhas e transforma isso numa falha com nome, antes de empacotar.
+#
+# Cobre o que o executavel importa diretamente; as dependencias das proprias
+# DLLs do Qt vem com elas pelo windeployqt.
+$sistema = Join-Path $env:WINDIR "System32"
+$dependencias = & dumpbin /nologo /dependents "$Saida\playampng.exe" |
+                Select-String -Pattern '^\s+(\S+\.dll)$' |
+                ForEach-Object { $_.Matches[0].Groups[1].Value }
+$faltando = $dependencias | Where-Object {
+    -not (Test-Path (Join-Path $Saida $_)) -and -not (Test-Path (Join-Path $sistema $_))
+}
+if ($faltando) { throw "DLL ausente no pacote: $($faltando -join ', ')" }
+Write-Host "dependencias conferidas: $($dependencias.Count), nenhuma faltando"
 
 Write-Host "`ndiretorio de distribuicao:"
 Get-ChildItem $Saida | Select-Object Name, Length | Format-Table
