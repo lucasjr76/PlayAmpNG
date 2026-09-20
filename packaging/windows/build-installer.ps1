@@ -46,8 +46,11 @@ Copy-Item "$FfmpegRoot\bin\*.dll" $Saida
 
 # O zlib nao e do Qt nem do FFmpeg, entao nenhum dos dois o traz. O leitor de
 # .wsz depende dele.
+# Copia tudo o que houver ali: o nome do arquivo varia conforme quem construiu
+# o zlib — o do vcpkg se chama z.dll, e nao zlib1.dll, e um glob por "zlib*"
+# deixava o pacote sem ele.
 if ($ZlibRoot -and (Test-Path "$ZlibRoot\bin")) {
-    Copy-Item "$ZlibRoot\bin\zlib*.dll" $Saida -ErrorAction SilentlyContinue
+    Copy-Item "$ZlibRoot\bin\*.dll" $Saida
 }
 
 # windeployqt resolve Qt: plugins de plataforma, estilos e dependencias.
@@ -67,9 +70,14 @@ $sistema = Join-Path $env:WINDIR "System32"
 $dependencias = & dumpbin /nologo /dependents "$Saida\playampng.exe" |
                 Select-String -Pattern '^\s+(\S+\.dll)$' |
                 ForEach-Object { $_.Matches[0].Groups[1].Value }
-$faltando = $dependencias | Where-Object {
-    -not (Test-Path (Join-Path $Saida $_)) -and -not (Test-Path (Join-Path $sistema $_))
-}
+# Os conjuntos de API (api-ms-win-*, ext-ms-*) sao nomes virtuais resolvidos
+# pelo proprio Windows; nao existem como arquivo e procura-los da falso
+# positivo.
+$faltando = $dependencias |
+    Where-Object { $_ -notlike "api-ms-win-*" -and $_ -notlike "ext-ms-*" } |
+    Where-Object {
+        -not (Test-Path (Join-Path $Saida $_)) -and -not (Test-Path (Join-Path $sistema $_))
+    }
 if ($faltando) { throw "DLL ausente no pacote: $($faltando -join ', ')" }
 Write-Host "dependencias conferidas: $($dependencias.Count), nenhuma faltando"
 
