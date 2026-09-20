@@ -176,6 +176,41 @@ jobs:
             packaging/windows/*-setup.exe
             dist/windows/
 
+  # EN-04 — Flatpak.
+  #
+  # Job proprio, e nao um passo do Linux, porque baixa o runtime e o SDK do KDE
+  # (alguns gigabytes) e nao deve atrasar o retorno da suite. Fora de
+  # pull_request pelo mesmo motivo.
+  flatpak:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.kde.Platform//6.9 org.kde.Sdk//6.9
+
+      # Sem --share=network no build: o manifesto declara tudo o que entra,
+      # fixado por commit. E o requisito do Flathub e a condicao para o pacote
+      # ser reprodutivel.
+      - name: Construir
+        run: |
+          flatpak-builder --user --force-clean --repo=repo-flatpak \
+            build-flatpak packaging/linux/br.com.playampng.PlayAmpNG.yml
+          flatpak build-bundle repo-flatpak PlayAmpNG.flatpak \
+            br.com.playampng.PlayAmpNG
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playampng-flatpak
+          if-no-files-found: error
+          path: PlayAmpNG.flatpak
+
   # Publicacao.
   #
   # So roda para tag "v*", e o release nasce como RASCUNHO: quem decide torna-lo
@@ -183,7 +218,7 @@ jobs:
   # mesmos que a suite acabou de aprovar — nao ha recompilacao aqui, nem upload
   # da maquina de ninguem.
   release:
-    needs: build
+    needs: [build, flatpak]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -199,6 +234,7 @@ jobs:
           mkdir -p publicar
           cp artefatos/playampng-linux/PlayAmpNG-x86_64.AppImage publicar/
           cp artefatos/playampng-windows/packaging/windows/*-setup.exe publicar/
+          cp artefatos/playampng-flatpak/PlayAmpNG.flatpak publicar/
           (cd publicar && sha256sum * > SHA256SUMS.txt)
           ls -l publicar
 
@@ -213,6 +249,7 @@ jobs:
             |---|---|
             | Linux x86_64 | `PlayAmpNG-x86_64.AppImage` — `chmod +x` e executar; nao instala nada, nao precisa de root. Exige **glibc 2.39 ou mais novo** (Ubuntu 24.04+), porque e nessa base que ele e montado |
             | Windows x64 | `PlayAmpNG-<versao>-setup.exe` — instala no perfil do usuario, sem pedir administrador |
+            | Linux (Flatpak) | `PlayAmpNG.flatpak` — `flatpak install --user PlayAmpNG.flatpak`; nao tem o piso de glibc do AppImage, porque roda sobre o runtime do KDE |
 
             macOS ainda nao tem pacote.
 

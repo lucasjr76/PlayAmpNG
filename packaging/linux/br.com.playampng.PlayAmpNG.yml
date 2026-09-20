@@ -9,6 +9,9 @@
 #   flatpak-builder --user --install --force-clean build-flatpak \
 #       packaging/linux/br.com.playampng.PlayAmpNG.yml
 #   flatpak run br.com.playampng.PlayAmpNG
+#
+# O build nao usa rede: e requisito do Flathub e condicao para o pacote ser
+# reprodutivel. Tudo o que entra esta declarado em sources, fixado por commit.
 
 app-id: br.com.playampng.PlayAmpNG
 runtime: org.kde.Platform
@@ -43,11 +46,18 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # O miniaudio vem por FetchContent, que baixaria durante a compilacao. O
+      # Flathub PROIBE rede no build, e com razao: um pacote cujo conteudo
+      # depende do que um servidor responder naquele instante nao e
+      # reprodutivel. FETCHCONTENT_SOURCE_DIR_<NOME> e o mecanismo do proprio
+      # CMake para apontar uma copia ja presente — nenhum codigo novo no
+      # projeto. A copia vem da source abaixo, fixada por commit.
+      - -DFETCHCONTENT_SOURCE_DIR_MINIAUDIO=/run/build/playampng/miniaudio
     sources:
       - type: dir
         path: ../..
-    # miniaudio vem por FetchContent e precisa de rede durante a compilacao;
-    # num build isolado, aponte PANG_MINIAUDIO_DIR para uma copia local.
-    build-options:
-      build-args:
-        - --share=network
+      - type: git
+        url: https://github.com/mackron/miniaudio.git
+        tag: '0.11.25'
+        commit: 9634bedb5b5a2ca38c1ee7108a9358a4e233f14d
+        dest: miniaudio
