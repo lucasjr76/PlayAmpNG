@@ -60,6 +60,7 @@ packaging/linux/build-appimage.sh          # -> dist/PlayAmpNG-x86_64.AppImage
 flatpak install -y flathub org.kde.Platform//6.9 org.kde.Sdk//6.9
 flatpak-builder --user --install --force-clean build-flatpak \
     packaging/linux/br.com.playampng.PlayAmpNG.yml
+flatpak run br.com.playampng.PlayAmpNG
 ```
 
 O script do AppImage baixa `linuxdeploy` e `appimagetool` na primeira execução e não exige root.

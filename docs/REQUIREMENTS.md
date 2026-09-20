@@ -228,7 +228,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | EN-01 | Código-fonte organizado conforme a árvore de `ARCHITECTURE.md` | MANUAL | M7 | OK (M7) |
 | EN-02 | Instruções reproduzíveis de instalação, execução e build | MANUAL | M7 | OK (M7) |
 | EN-03 | Dependências com versões e licenças identificadas | MANUAL | M7 | OK (M7) |
-| EN-04 | Pacote executável para Linux (AppImage e/ou Flatpak) | MEDIDO | M7 | PARCIAL (M7) — AppImage construído e verificado; Flatpak com manifesto escrito e não construído |
+| EN-04 | Pacote executável para Linux (AppImage e/ou Flatpak) | MEDIDO | M7 | OK (M7 AppImage, M8 Flatpak) — ambos construídos pelo CI; AppImage executado e verificado, Flatpak ainda não executado |
 | EN-05 | Documento de arquitetura | MANUAL | M0 | OK (M0) |
 | EN-06 | Matriz de requisitos com estado e evidências | MANUAL | M7 | OK (M7) |
 | EN-07 | Testes e relatório de execução | AUTO | M7 | OK (M7) |

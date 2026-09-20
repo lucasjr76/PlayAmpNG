@@ -6,7 +6,7 @@ EN-08. O que o player **não** faz, e por quê. Cada item traz a razão, e não 
 
 | Item | Situação |
 |---|---|
-| Flatpak não construído | O manifesto está escrito e o YAML é válido, mas `flatpak-builder` não existe na máquina de referência. Nunca foi executado — e um pacote que nunca foi montado não é um pacote |
+| Flatpak construído, não executado | O CI monta o bundle a cada mudança, e a compilação corre sem rede, como o Flathub exige. Mas ninguém ainda **rodou** o pacote resultante: montar prova que o manifesto está correto, não que o player abre dentro do sandbox. Os pontos que só a execução revela são o acesso ao PipeWire e o nome MPRIS no barramento |
 | AppImage exige glibc recente | O AppImage é montado no Ubuntu 24.04, que tem glibc 2.39, e essa passa a ser a versão **mínima** para executá-lo — Ubuntu 22.04, Debian 12 e derivados não o abrem. É inerente ao formato: quem constrói define o piso. Ampliar o alcance exigiria construir numa base antiga, o que ainda não foi feito |
 | macOS | `integration_none.cpp` no lugar de MPNowPlayingInfoCenter, e nenhum pacote. O player roda, só não aparece no painel do sistema nem recebe teclas de mídia pelo caminho do ambiente. M9 |
 
