@@ -184,7 +184,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | IN-01 | Atalhos de teclado documentados | MANUAL | M6 | OK (M6) |
 | IN-02 | Todos os controles operáveis por teclado | MANUAL | M6 | OK (M5) |
 | IN-03 | Nomes acessíveis e tooltips | MANUAL | M6 | OK (M6) |
-| IN-04 | Integração com teclas multimídia | AUTO | M6 | OK (M6) |
+| IN-04 | Integração com teclas multimídia | AUTO | M6 | OK no Linux (M6); PARCIAL no Windows (M8) — SMTC implementado, compila e liga no CI, comportamento não verificado em máquina real |
 | IN-05 | Integração MPRIS no Linux | AUTO | M6 | OK (M6) |
 | IN-06 | Opção de manter a janela acima das demais | MANUAL | M6 | OK (M6) |
 | IN-07 | Abertura de arquivos por argumentos de linha de comando | AUTO | M1 | OK (M1) |
@@ -233,7 +233,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | EN-06 | Matriz de requisitos com estado e evidências | MANUAL | M7 | OK (M7) |
 | EN-07 | Testes e relatório de execução | AUTO | M7 | OK (M7) |
 | EN-08 | Limitações conhecidas documentadas | MANUAL | M7 | OK (M7) |
-| EN-09 | Pacote executável para Windows | MANUAL | M8 | PENDENTE |
+| EN-09 | Pacote executável para Windows | MANUAL | M8 | OK (M8) — instalador NSIS gerado pelo CI, com conferência de dependências; instalação e execução não verificadas em máquina real |
 | EN-10 | Pacote executável para macOS (assinatura e notarização são decisão à parte) | MANUAL | M9 | PENDENTE |
 
 ## FE — Fora de escopo (spec §12, tratados como extensões)
