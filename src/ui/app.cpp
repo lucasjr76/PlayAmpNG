@@ -12,6 +12,7 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
+#include <QFile>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
@@ -49,6 +50,7 @@
 // NOMINMAX vem do CMake, e nao daqui: windows.h define min e max como macro e
 // quebraria todo numeric_limits<T>::max() da unidade de traducao.
 #include <cstdio>
+#include <string_view>
 #include <windows.h>
 #endif
 
@@ -100,21 +102,51 @@ extern "C" void request_termination(int) {
 }  // namespace
 
 #ifdef _WIN32
-// O binario do Windows e de subsistema GUI, e por isso nasce SEM console: o
-// log em stderr some, inclusive a linha que diz se a integracao com o painel
-// de midia subiu. Quem roda pelo PowerShell recebe o log no proprio terminal;
-// quem abre pelo atalho continua sem console, como deve ser.
+// O binario do Windows e de subsistema GUI e nasce SEM console, entao o log em
+// stderr some — inclusive a linha que diz se a integracao com o painel de
+// midia subiu.
+//
+// Anexar ao console de quem chamou parece a solucao obvia, e foi a primeira
+// que este arquivo teve. Ela tem um preco que nao estava a vista: o processo
+// passa a ser MEMBRO daquele console, e fechar a janela do terminal mata o
+// player junto. Um player de audio nao pode depender de um terminal aberto.
+//
+// Por isso o padrao e gravar o log em ARQUIVO, ao lado da configuracao, e o
+// console so entra quando pedido com --console — que e quando alguem esta
+// justamente olhando o terminal e aceita a amarracao.
 void attach_parent_console() {
     if (!AttachConsole(ATTACH_PARENT_PROCESS)) return;
     FILE* dummy = nullptr;
     freopen_s(&dummy, "CONOUT$", "w", stderr);
     freopen_s(&dummy, "CONOUT$", "w", stdout);
 }
+
+// A flag e lida a mao, e nao pelo QCommandLineParser, porque a decisao precisa
+// valer ANTES de existir um QApplication — senao o que for registrado ate la
+// se perde.
+bool wants_console(int argc, char** argv) {
+    for (int i = 1; i < argc; ++i)
+        if (std::string_view(argv[i]) == "--console") return true;
+    return false;
+}
+
+// Guarda a execucao anterior como .1 antes de comecar a atual. Uma so, porque
+// quem investiga um defeito quer a corrida que falhou e a anterior, nao um
+// historico que cresce sozinho no disco do usuario.
+void redirect_log_to_file(const QString& config_path) {
+    const QString log = QFileInfo(config_path).absolutePath() +
+                        QStringLiteral("/playampng.log");
+    QFile::remove(log + QStringLiteral(".1"));
+    QFile::rename(log, log + QStringLiteral(".1"));
+    FILE* dummy = nullptr;
+    freopen_s(&dummy, log.toLocal8Bit().constData(), "w", stderr);
+}
 #endif
 
 int main(int argc, char** argv) {
 #ifdef _WIN32
-    attach_parent_console();
+    const bool console = wants_console(argc, argv);
+    if (console) attach_parent_console();
 #endif
     std::signal(SIGTERM, request_termination);
     std::signal(SIGINT, request_termination);
@@ -145,7 +177,21 @@ int main(int argc, char** argv) {
     parser.addPositionalArgument(QStringLiteral("arquivos"),
                                  QStringLiteral("arquivos, diretorios ou URLs"),
                                  QStringLiteral("[arquivos...]"));
+#ifdef _WIN32
+    // Declarada para aparecer no --help e para o parser nao recusar a linha de
+    // comando; quem a le de fato e wants_console, la em cima.
+    parser.addOption({QStringLiteral("console"),
+                      QStringLiteral("Escreve o log no terminal que chamou, em vez do arquivo. "
+                                     "Fechar o terminal encerra o player.")});
+#endif
     parser.process(app);
+
+#ifdef _WIN32
+    // Depois do parser, porque so aqui se sabe se o usuario pediu o terminal, e
+    // depois de setApplicationName, porque o caminho da configuracao depende
+    // dele.
+    if (!console) redirect_log_to_file(pang::ui::settings::config_file_path());
+#endif
 
     // IN-08 — instancia unica, decidida ANTES de abrir dispositivo de audio ou
     // janela: um segundo lancamento que fosse ate la tomaria o dispositivo e

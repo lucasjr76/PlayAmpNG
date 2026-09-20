@@ -69,6 +69,8 @@ No Windows, com Qt e o ambiente do MSVC no `PATH`:
 packaging\windows\build-installer.ps1 -FfmpegRoot C:\ffmpeg
 ```
 
+No Windows o log vai para `playampng.log`, ao lado da configuração em `%LOCALAPPDATA%\PlayAmpNG`; a execução anterior fica como `playampng.log.1`. Para vê-lo ao vivo no terminal, `playampng.exe --console` — nesse modo o player fica preso ao terminal e fechá-lo encerra o player.
+
 Monta `dist\windows\`, um diretório que já roda por si só, e — se `makensis` estiver disponível — o instalador `PlayAmpNG-<versão>-setup.exe`. O instalador não pede administrador: instala em `%LOCALAPPDATA%`, as associações de arquivo são opcionais e desmarcadas, e desinstalar não apaga a configuração do usuário. O zlib do Windows vem do vcpkg (`vcpkg install zlib:x64-windows`, depois `ZLIB_ROOT`); o Qt para Windows não traz cabeçalho de zlib.
 
 ### Regerar a arte do skin
