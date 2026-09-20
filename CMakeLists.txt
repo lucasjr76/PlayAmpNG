@@ -204,6 +204,16 @@ target_compile_definitions(playampng PRIVATE
   PLAYAMPNG_VERSION="${PROJECT_VERSION}"
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 
+# No Windows, um alvo do qt_add_executable nasce como aplicacao de CONSOLE. O
+# sistema abre uma janela de terminal ao lado da janela do player, e fechar
+# aquela janela mata o player — foi exatamente o que apareceu no primeiro
+# teste em maquina real. WIN32_EXECUTABLE marca o binario como aplicacao de
+# janela, que e o que ele e.
+#
+# So o player. As ferramentas e os binarios de teste escrevem no terminal de
+# proposito, e marca-los assim faria a saida deles sumir.
+set_target_properties(playampng PROPERTIES WIN32_EXECUTABLE TRUE)
+
 # Renderizador headless dos paineis, para medir alinhamento em pixel.
 qt_add_executable(pang_render
   tools/render_panels.cpp

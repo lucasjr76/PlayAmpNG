@@ -97,6 +97,18 @@ $faltando = $dependencias |
 if ($faltando) { throw "DLL ausente no pacote: $($faltando -join ', ')" }
 Write-Host "dependencias conferidas: $($dependencias.Count), nenhuma faltando"
 
+# Subsistema. Um binario marcado como console faz o Windows abrir uma janela de
+# terminal junto com a do player, e fechar aquela janela mata o player. O
+# defeito nao aparece em nenhum teste automatizado: so quem abre o programa na
+# propria maquina ve. Uma linha de dumpbin o pega aqui.
+$subsistema = & dumpbin /nologo /headers "$Saida\playampng.exe" |
+              Select-String -Pattern 'subsystem \(Windows (\w+)\)' |
+              Select-Object -First 1
+if (-not $subsistema) { throw "nao foi possivel ler o subsistema do executavel" }
+$tipo = $subsistema.Matches[0].Groups[1].Value
+if ($tipo -ne "GUI") { throw "playampng.exe e subsistema $tipo; deveria ser GUI" }
+Write-Host "subsistema: Windows GUI (sem janela de terminal)"
+
 Write-Host "`ndiretorio de distribuicao:"
 Get-ChildItem $Saida | Select-Object Name, Length | Format-Table
 
