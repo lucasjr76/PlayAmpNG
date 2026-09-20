@@ -134,7 +134,14 @@ jobs:
       - name: Instalador (Windows)
         if: matrix.name == 'windows'
         shell: pwsh
-        run: packaging/windows/build-installer.ps1 -FfmpegRoot "$env:FFMPEG_ROOT" -BuildDir build
+        run: |
+          packaging/windows/build-installer.ps1 -FfmpegRoot "$env:FFMPEG_ROOT" -BuildDir build
+          # O script degrada com aviso quando falta NSIS, o que e certo para
+          # quem so quer o diretorio. No CI, nao: aqui o instalador E o
+          # entregavel, e um aviso passaria despercebido.
+          if (-not (Get-ChildItem packaging/windows/*-setup.exe -ErrorAction SilentlyContinue)) {
+            throw "instalador nao foi gerado"
+          }
 
       - name: Publicar instalador
         if: matrix.name == 'windows'

@@ -57,6 +57,22 @@ if ($ZlibRoot -and (Test-Path "$ZlibRoot\bin")) {
 windeployqt --release --no-translations --no-opengl-sw --no-system-d3d-compiler `
             "$Saida\playampng.exe"
 
+# Runtime do MSVC ao lado do executavel.
+#
+# O windeployqt resolve isso deixando o vc_redist.exe no diretorio, o que aqui
+# nao serve: instalar o redistribuivel pede administrador, e este instalador
+# nao pede. Sem o runtime, numa maquina que nunca teve Visual Studio o player
+# nao abre — e o sintoma e o mesmo 0xC0000135 que nao nomeia a biblioteca.
+# A Microsoft admite o modo "app-local": as DLLs ao lado do binario.
+$redist = Get-ChildItem "$env:VCToolsRedistDir\x64\Microsoft.VC*.CRT\*.dll" -ErrorAction SilentlyContinue
+if ($redist) {
+    Copy-Item $redist.FullName $Saida
+    Remove-Item "$Saida\vc_redist*.exe" -ErrorAction SilentlyContinue
+    Write-Host "runtime do MSVC: $($redist.Count) DLL(s) ao lado do executavel"
+} else {
+    Write-Warning "runtime do MSVC nao encontrado; o pacote depende de a maquina ja te-lo"
+}
+
 # Conferencia de dependencias.
 #
 # Uma DLL que falta nao da erro na montagem: da erro na MAQUINA DO USUARIO, na
@@ -85,9 +101,19 @@ Write-Host "`ndiretorio de distribuicao:"
 Get-ChildItem $Saida | Select-Object Name, Length | Format-Table
 
 # O instalador e opcional: sem NSIS, o diretorio acima ja roda.
-if (Get-Command makensis -ErrorAction SilentlyContinue) {
-    makensis "/DVERSION=$versao" "/DSOURCE_DIR=$((Resolve-Path $Saida).Path)" `
-             packaging\windows\playampng.nsi
+#
+# O pacote do Chocolatey instala o NSIS mas nao o poe no PATH, entao procurar
+# so por Get-Command dava "nao encontrado" com o NSIS instalado do lado.
+$makensis = (Get-Command makensis -ErrorAction SilentlyContinue).Source
+if (-not $makensis) {
+    $makensis = @("$env:ProgramFiles\NSIS\makensis.exe",
+                  "${env:ProgramFiles(x86)}\NSIS\makensis.exe") |
+                Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+if ($makensis) {
+    & $makensis "/DVERSION=$versao" "/DSOURCE_DIR=$((Resolve-Path $Saida).Path)" `
+                packaging\windows\playampng.nsi
+    if ($LASTEXITCODE -ne 0) { throw "makensis falhou com codigo $LASTEXITCODE" }
     Write-Host "instalador: packaging\windows\PlayAmpNG-$versao-setup.exe"
 } else {
     Write-Warning "makensis nao encontrado: instalador nao gerado, diretorio de distribuicao pronto"
