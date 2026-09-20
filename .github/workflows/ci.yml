@@ -62,7 +62,11 @@ jobs:
           url=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip
           curl -sL -o ffmpeg.zip "$url"
           7z x -y -offmpeg ffmpeg.zip > /dev/null
-          raiz=$(echo "$PWD"/ffmpeg/ffmpeg-*-win64-gpl-shared)
+          # Forma MISTA ("D:/a/..."), e nao a do MSYS ("/d/a/..."): o bash, o
+          # cmake e o PowerShell entendem todos a primeira, e so o bash entende
+          # a segunda. Publicar o caminho MSYS fez o PowerShell do instalador
+          # procurar em "D:\d\a\..." e nao achar as DLLs do FFmpeg.
+          raiz=$(cygpath -m "$(echo "$PWD"/ffmpeg/ffmpeg-*-win64-gpl-shared)")
           echo "FFMPEG_ROOT=$raiz" >> "$GITHUB_ENV"
           echo "CMAKE_PREFIX_PATH=$raiz${CMAKE_PREFIX_PATH:+;$CMAKE_PREFIX_PATH}" >> "$GITHUB_ENV"
           # As DLLs precisam estar no PATH para os testes RODAREM, e nao so
