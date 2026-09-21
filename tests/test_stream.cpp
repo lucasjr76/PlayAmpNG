@@ -207,10 +207,16 @@ void served_over_http(int port) {
             controller.playlist().add(auth + "/engasga");
             controller.playlist_changed();
             controller.play_index(0);
-            // Consome sem ritmo: o trecho de 4 s acaba em bem menos que o prazo.
+            // Consome em blocos grandes, bem acima do tempo real, para o trecho
+            // de 4 s acabar muito antes do prazo QUALQUER que seja a resolucao
+            // do sleep. Com 512 quadros por espera de 10 ms o consumo ficava
+            // abaixo do tempo real no CI do macOS, e o buffer nao secava a
+            // tempo — a mesma armadilha que ja tinha sido corrigida no teste do
+            // MD-05, e que faltou aplicar aqui.
+            std::vector<float> big(4096 * 2);
             const bool buffering = wait_for(
                 [&] {
-                    engine.render(block.data(), 512);
+                    engine.render(big.data(), 4096);
                     return controller.now_playing_status() == "[BUFFER]";
                 },
                 std::chrono::seconds(10));
