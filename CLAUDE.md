@@ -31,7 +31,7 @@ ctest --test-dir build --output-on-failure
 
 A suíte roda sem tela e sem placa de som. Testes que dependem de PulseAudio, D-Bus ou do Linux se declaram **pulados** (código 77) onde o recurso falta.
 
-O CI (`.github/workflows/ci.yml`) constrói e testa nos três sistemas, e monta AppImage, Flatpak e o instalador do Windows. Tag `v*` publica um release como **rascunho**.
+O CI (`.github/workflows/ci.yml`) constrói e testa nos três sistemas, e monta AppImage, Flatpak, o instalador do Windows e o `.dmg` do macOS. Tag `v*` publica um release como **rascunho**. O Qt do CI é o oficial no Windows (6.8) e no macOS (6.10 — o 6.8 liga o AGL, removido do Xcode 26).
 
 ## Regras de trabalho
 
@@ -67,13 +67,13 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 |---|---|
 | M0–M7 | concluídos |
 | M8 — Windows | concluído: instalador NSIS, integração SMTC, verificados em máquina real |
-| M9 — macOS | não iniciado. O CI compila e testa no macOS, mas não há pacote nem integração com o painel de mídia, e ninguém no projeto tem um Mac para verificar |
+| M9 — macOS | parcial: o CI monta o `.dmg` (Apple Silicon, sem assinatura da Apple) e o abre no runner; falta a integração com o painel de mídia, e ninguém no projeto tem um Mac para verificar |
 
 **Pendentes**
 
 | Requisito | O que falta |
 |---|---|
-| EN-10 | Pacote macOS (M9) |
+| EN-10 | Verificar o `.dmg` num Mac de verdade; integração com o painel de mídia do macOS (M9) |
 
 **Decisões de plataforma que parecem defeito e não são**
 

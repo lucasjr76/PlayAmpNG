@@ -18,12 +18,16 @@ A linha curta em âmbar abaixo do tempo é o medidor de redução do limitador: 
 
 ## Baixar e rodar
 
-```sh
-chmod +x PlayAmpNG-x86_64.AppImage
-./PlayAmpNG-x86_64.AppImage
-```
+Os pacotes estão em **[Releases](https://github.com/lucasjr76/PlayAmpNG/releases)**. Todos são construídos e testados pelo CI a partir do mesmo commit, e acompanham um `SHA256SUMS.txt`.
 
-O AppImage carrega as bibliotecas de que precisa, inclusive Qt e FFmpeg. Não instala nada e não precisa de root.
+| Sistema | Arquivo | Como usar |
+|---|---|---|
+| Linux | `PlayAmpNG-x86_64.AppImage` | `chmod +x` e executar. Não instala nada, não precisa de root. Exige glibc 2.39 ou mais novo (Ubuntu 24.04+) |
+| Linux | `PlayAmpNG.flatpak` | `flatpak install --user PlayAmpNG.flatpak`. Sem o piso de glibc do AppImage |
+| Windows | `PlayAmpNG-<versão>-setup.exe` | Instala no perfil do usuário, sem pedir administrador |
+| macOS (Apple Silicon) | `PlayAmpNG-<versão>-macos-arm64.dmg` | Arrastar para Aplicativos. **Sem assinatura da Apple:** na primeira abertura, clique com o botão direito no app e escolha *Abrir* |
+
+O pacote do macOS é montado e aberto pelo CI, mas **ainda não foi testado por uma pessoa num Mac** — relatos são bem-vindos. Macs com processador Intel não são atendidos por ele.
 
 ## Compilar a partir da fonte
 

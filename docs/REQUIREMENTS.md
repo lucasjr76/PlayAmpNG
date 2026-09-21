@@ -234,7 +234,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | EN-07 | Testes e relatório de execução | AUTO | M7 | OK (M7) |
 | EN-08 | Limitações conhecidas documentadas | MANUAL | M7 | OK (M7) |
 | EN-09 | Pacote executável para Windows | MANUAL | M8 | OK (M8) — instalador NSIS gerado pelo CI, com conferência de dependências e de subsistema; instalado e executado em máquina real |
-| EN-10 | Pacote executável para macOS (assinatura e notarização são decisão à parte) | MANUAL | M9 | PENDENTE |
+| EN-10 | Pacote executável para macOS (assinatura e notarização são decisão à parte) | MANUAL | M9 | PARCIAL (M9) — `.dmg` montado pelo CI, com vínculos conferidos e o app aberto no runner carregando o skin de dentro do pacote; não testado por uma pessoa num Mac, sem assinatura da Apple, só Apple Silicon |
 
 ## FE — Fora de escopo (spec §12, tratados como extensões)
 
