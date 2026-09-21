@@ -24,8 +24,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AP-05 | Botões com estados normal, pressionado, ativo, desabilitado e foco | MANUAL | M5 | OK (M5) |
 | AP-06 | Três painéis: principal, equalizador, playlist | MANUAL | M5 | OK (M5) |
 | AP-07 | Exibição e ocultação independentes de cada painel | AUTO + MANUAL | M5 | OK (M5) |
-| AP-08 | Encaixe magnético entre janelas destacadas (limiar 10 px), onde a plataforma permite | MANUAL | M5 | PENDENTE |
-| AP-09 | Janelas destacadas encostadas movem-se como grupo, onde a plataforma permite | MANUAL | M5 | PENDENTE |
+| AP-08 | Encaixe magnético entre janelas destacadas (limiar 10 px), onde a plataforma permite | AUTO | M5 | OK (M8) — geometria e arraste verificados em teste headless; indisponível no Wayland, ver AP-18 |
+| AP-09 | Janelas destacadas encostadas movem-se como grupo, onde a plataforma permite | AUTO | M5 | OK (M8) — grupo é o fecho transitivo de "encostado"; verificado com janelas de topo reais |
 | AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | OK (M5) |
 | AP-11 | Modo compacto (barra) | MANUAL | M5 | OK (M5) |
 | AP-12 | Escala inteira 1×/2×/3× sem recorte de texto | MANUAL | M5 | OK (M5) |
@@ -34,7 +34,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AP-15 | Ausência de seleção de skins, importação de temas ou personalização estrutural | MANUAL | M5 | OK (M5) |
 | AP-16 | Atlas de sprites redesenhado, sem redistribuir assets de terceiros | MANUAL | M5 | OK (M5) |
 | AP-17 | Modo integrado: três painéis em uma janela, funcional em todas as plataformas, inclusive Wayland | MANUAL | M5 | OK (M5) |
-| AP-18 | Modo destacado: onde o encaixe é indisponível, a opção aparece desabilitada com explicação, nunca aceita o clique sem efeito | MANUAL | M5 | PENDENTE |
+| AP-18 | Modo destacado: onde o encaixe é indisponível, a opção aparece desabilitada com explicação, nunca aceita o clique sem efeito | AUTO + MANUAL | M5 | OK (M8) — recusa em `set_detached()`, para o atalho concordar com o menu; verificado em sessão Wayland real |
 
 ## PL — Player principal (spec §3)
 
