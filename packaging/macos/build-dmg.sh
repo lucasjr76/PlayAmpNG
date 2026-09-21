@@ -41,9 +41,16 @@ deploy="$(command -v macdeployqt || echo "$(brew --prefix qt@6)/bin/macdeployqt"
 echo "conferindo vinculos"
 falhas=0
 while IFS= read -r arquivo; do
-    if otool -L "$arquivo" | tail -n +2 | grep -E '(/opt/homebrew|/usr/local)/' >/dev/null; then
+    # Numa biblioteca, a primeira entrada do otool -L e a IDENTIDADE dela, e
+    # nao uma dependencia: nao carrega nada. A primeira versao desta
+    # conferencia a contava, e acusava libbrotlicommon por um nome que nenhum
+    # carregamento usa.
+    proprio="$(otool -D "$arquivo" 2>/dev/null | tail -n +2)"
+    fora="$(otool -L "$arquivo" | tail -n +2 | awk '{print $1}' | grep -vxF "${proprio:-@@}" \
+            | grep -E '^(/opt/homebrew|/usr/local)/' || true)"
+    if [ -n "$fora" ]; then
         echo "  aponta para a maquina de build: ${arquivo#$app/}"
-        otool -L "$arquivo" | grep -E '(/opt/homebrew|/usr/local)/' | sed 's/^/      /'
+        echo "$fora" | sed 's/^/      /'
         falhas=$((falhas + 1))
     fi
 done < <(find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) -exec sh -c 'file "$1" | grep -q Mach-O && echo "$1"' _ {} \;)
@@ -52,6 +59,15 @@ if [ "$falhas" -gt 0 ]; then
     exit 1
 fi
 echo "  nenhum vinculo para fora do pacote"
+
+# Assinatura local (ad-hoc). O macdeployqt reescreve as bibliotecas e invalida
+# as assinaturas delas, e no Apple Silicon um binario com assinatura invalida
+# e MORTO ao abrir. Nao substitui a assinatura com conta de desenvolvedor —
+# o macOS ainda pede confirmacao na primeira abertura —, mas sem ela o app nem
+# chega a abrir.
+codesign --force --deep --sign - "$app"
+codesign --verify --deep --strict "$app"
+echo "  assinatura local valida"
 
 # ----------------------------------------------- conferencia 2: skin do pacote
 # Le o log do stderr, e nao do arquivo: no macOS o Qt grava a configuracao em

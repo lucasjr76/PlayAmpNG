@@ -35,8 +35,7 @@ jobs:
       - name: Dependencias (macOS)
         if: matrix.name == 'macos'
         run: |
-          brew install ninja pkg-config ffmpeg qt@6
-          echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@6)" >> "$GITHUB_ENV"
+          brew install ninja pkg-config ffmpeg
 
       # O gerador Ninja precisa do ambiente do MSVC no PATH. Sem isto o cmake
       # nao acha cl.exe e a configuracao falha antes de qualquer compilacao.
@@ -44,8 +43,12 @@ jobs:
         if: matrix.name == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Qt (Windows)
-        if: matrix.name == 'windows'
+      # Qt oficial tambem no macOS, e nao o do Homebrew. O do Homebrew vem
+      # fatiado em pacotes separados (qtbase, qtsvg, qtpdf...), e o
+      # macdeployqt nao resolvia as bibliotecas entre eles: o pacote saia com
+      # plugins quebrados. O oficial vem inteiro.
+      - name: Qt (Windows e macOS)
+        if: matrix.name == 'windows' || matrix.name == 'macos'
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.*'
