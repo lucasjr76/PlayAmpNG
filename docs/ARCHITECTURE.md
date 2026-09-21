@@ -385,6 +385,8 @@ O desenho corrigido tem dois modos:
 
 **Modo destacado (melhor esforço, por plataforma).** Painéis como janelas de topo independentes, com encaixe magnético de 10 px e movimento em grupo.
 
+O movimento em grupo é **assimétrico**, como no Winamp: arrastar o painel principal leva junto tudo o que estiver encostado nele, direta ou indiretamente; arrastar uma janela secundária move só ela, e é assim que se desprende uma do conjunto. A primeira implementação formava o grupo a partir de qualquer janela arrastada, e o resultado, relatado em uso, foi que nada nunca se separava — puxar a playlist trazia o player inteiro atrás. Magnético em toda direção não é magnetismo, é cola.
+
 | Plataforma | Destacado | Encaixe / movimento em grupo |
 |---|---|---|
 | Windows | sim | sim |

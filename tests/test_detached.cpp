@@ -149,6 +149,36 @@ int main(int argc, char** argv) {
         release_mouse_at(press + QPoint(100, 50));
     }
 
+    // ------------------------------------------------------- desencaixar
+    //
+    // O defeito que este bloco guarda foi relatado em uso real: as janelas
+    // grudavam e nao havia como separa-las. A causa era formar o grupo a
+    // partir de qualquer janela arrastada — puxar a secundaria trazia a
+    // principal junto, e o conjunto so crescia.
+    {
+        // Equalizador encostado na base do principal.
+        const QRect principal = shell.frameGeometry();
+        eq_panel->move(principal.left(), principal.bottom() + 1);
+        pl_panel->move(4000, 4000);
+        app.processEvents();
+
+        const QPoint principal_antes = shell.pos();
+        const QPoint press = eq_panel->pos() + QPoint(10, 5);
+        PANG_CHECK(eq_panel->on_title_drag(press), "arraste da secundaria iniciado");
+
+        // Bem alem do limiar, senao o ima a traria de volta — e isso seria
+        // correto, e nao o defeito que se procura aqui.
+        const QPoint longe(500, 400);
+        move_mouse_to(press + longe);
+
+        PANG_CHECK(shell.pos() == principal_antes,
+                   "AP-09: arrastar a secundaria NAO leva o painel principal junto");
+        PANG_CHECK(!pang::ui::shell::touching(shell.frameGeometry(),
+                                              eq_panel->frameGeometry()),
+                   "e as duas ficam de fato separadas");
+        release_mouse_at(press + longe);
+    }
+
     // ------------------------------------- janela solta nao viaja com o grupo
     {
         pl_panel->move(3000, 3000);

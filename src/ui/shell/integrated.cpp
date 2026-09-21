@@ -150,8 +150,17 @@ bool IntegratedShell::begin_title_drag(QWidget* panel, const QPoint& global) {
     const int index = windows.indexOf(window);
     if (index < 0) return false;
 
-    // AP-09 — quem esta encostado vem junto; o resto vira ima para o encaixe.
-    const QVector<int> group = group_of(index, geometries);
+    // AP-09 — o conjunto e ASSIMETRICO, e tem de ser.
+    //
+    // So o painel principal arrasta quem esta encostado nele. Arrastar uma
+    // janela secundaria move apenas ela, e e assim que se DESPRENDE uma do
+    // grupo. A primeira versao formava o grupo a partir de qualquer janela, e
+    // o resultado era que nada nunca se separava: puxar a playlist trazia o
+    // player inteiro atras. Magnetico para sempre nao e magnetico, e cola.
+    //
+    // E tambem o gesto classico do Winamp, que e a referencia deste projeto.
+    const QVector<int> group =
+        window == this ? group_of(index, geometries) : QVector<int>{index};
 
     dragging_ = window;
     drag_origin_ = global;

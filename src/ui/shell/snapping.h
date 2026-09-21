@@ -45,6 +45,11 @@ bool touching(const QRect& a, const QRect& b);
 
 // AP-09 — indices das janelas que se movem junto com `origin`, incluindo ele.
 //
+// Quem chama decide QUANDO usar isto: no player, so o arraste do painel
+// principal forma conjunto. Arrastar uma janela secundaria move apenas ela, e
+// e assim que se desprende uma do grupo — sem essa assimetria as janelas
+// grudam e nunca mais se separam.
+//
 // E o fecho TRANSITIVO de `touching`: com o painel principal, o equalizador
 // colado nele e a playlist colada no equalizador, arrastar o principal leva os
 // tres. Parar no vizinho direto deixaria a playlist para tras, que e
