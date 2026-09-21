@@ -43,15 +43,24 @@ jobs:
         if: matrix.name == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Qt (Windows)
+        if: matrix.name == 'windows'
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+
       # Qt oficial tambem no macOS, e nao o do Homebrew. O do Homebrew vem
       # fatiado em pacotes separados (qtbase, qtsvg, qtpdf...), e o
       # macdeployqt nao resolvia as bibliotecas entre eles: o pacote saia com
       # plugins quebrados. O oficial vem inteiro.
-      - name: Qt (Windows e macOS)
-        if: matrix.name == 'windows' || matrix.name == 'macos'
+      #
+      # 6.10, e nao o 6.8 do Windows: o 6.8 liga o framework AGL, que a Apple
+      # removeu do SDK do Xcode 26 — "ld: framework 'AGL' not found".
+      - name: Qt (macOS)
+        if: matrix.name == 'macos'
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.*'
+          version: '6.10.*'
 
       # FFmpeg pronto, e nao compilado pelo vcpkg. O vcpkg constroi da fonte e
       # leva dezenas de minutos por execucao, o que inviabiliza iterar; o build
