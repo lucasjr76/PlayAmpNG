@@ -1,6 +1,9 @@
 #include "ui/panel/equalizer_panel.h"
 
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QWindow>
 #include <QPainter>
@@ -165,29 +168,92 @@ void EqualizerPanel::paintEvent(QPaintEvent*) {
 
 void EqualizerPanel::open_preset_menu() {
     QMenu menu(this);
+
+    // Cada acao carrega o proprio efeito, em vez de o menu devolver um texto
+    // que depois se compara com os nomes de novo. Com excluir e salvar no
+    // mesmo menu, a comparacao por texto teria de distinguir tres tipos de
+    // item pelo rotulo — e rotulo e o que muda quando alguem ajusta a
+    // interface.
     const auto& builtin = core::dsp::builtin_presets();
-    for (const auto& preset : builtin) menu.addAction(QString::fromStdString(preset.name));
-    if (!user_presets_.empty()) {
-        menu.addSeparator();
-        for (const auto& preset : user_presets_)
-            menu.addAction(QStringLiteral("* %1").arg(QString::fromStdString(preset.name)));
+    for (const auto& preset : builtin) {
+        QAction* action = menu.addAction(QString::fromStdString(preset.name));
+        connect(action, &QAction::triggered, this, [this, preset] {
+            core::dsp::apply(equalizer_, core::dsp::from_preset(preset));
+            last_user_preset_.clear();
+            update();
+        });
     }
 
-    QAction* chosen = menu.exec(QCursor::pos());
-    if (!chosen) return;
-    const QString name = chosen->text();
-    for (const auto& preset : builtin)
-        if (QString::fromStdString(preset.name) == name) {
-            core::dsp::apply(equalizer_, core::dsp::from_preset(preset));
-            update();
-            return;
+    if (!user_presets_.empty()) {
+        menu.addSeparator();
+        for (const auto& preset : user_presets_) {
+            QAction* action = menu.addAction(QStringLiteral("* %1").arg(QString::fromStdString(preset.name)));
+            connect(action, &QAction::triggered, this, [this, preset] {
+                core::dsp::apply(equalizer_, core::dsp::from_preset(preset));
+                last_user_preset_ = preset.name;
+                update();
+            });
         }
-    for (const auto& preset : user_presets_)
-        if (QStringLiteral("* %1").arg(QString::fromStdString(preset.name)) == name) {
-            core::dsp::apply(equalizer_, core::dsp::from_preset(preset));
-            update();
+    }
+
+    // EQ-07 — criar, editar e excluir.
+    menu.addSeparator();
+    connect(menu.addAction(QStringLiteral("Salvar ajuste atual...")), &QAction::triggered, this,
+            [this] { save_current_as_preset(); });
+
+    QMenu* remove = menu.addMenu(QStringLiteral("Excluir preset"));
+    remove->setEnabled(!user_presets_.empty());
+    for (const auto& preset : user_presets_) {
+        const std::string name = preset.name;
+        connect(remove->addAction(QString::fromStdString(name)), &QAction::triggered, this,
+                [this, name] { delete_preset(name); });
+    }
+
+    menu.exec(QCursor::pos());
+}
+
+void EqualizerPanel::save_current_as_preset() {
+    bool ok = false;
+    const QString typed = QInputDialog::getText(
+        this, QStringLiteral("Salvar preset"),
+        QStringLiteral("Nome do preset (um nome existente e substituido):"), QLineEdit::Normal,
+        QString::fromStdString(last_user_preset_), &ok);
+    if (!ok) return;
+
+    const core::dsp::EqState state = core::dsp::capture(equalizer_);
+    core::dsp::EqPreset preset;
+    preset.name = typed.toStdString();
+    preset.preamp_db = state.preamp_db;
+    preset.bands = state.bands;
+
+    switch (core::dsp::save_user_preset(user_presets_, preset)) {
+        case core::dsp::SaveResult::EmptyName:
+            QMessageBox::information(this, QStringLiteral("Salvar preset"),
+                                     QStringLiteral("O nome nao pode ficar em branco."));
             return;
-        }
+        case core::dsp::SaveResult::BuiltinName:
+            QMessageBox::information(
+                this, QStringLiteral("Salvar preset"),
+                QStringLiteral("\"%1\" e o nome de um preset integrado. Escolha outro.")
+                    .arg(typed.trimmed()));
+            return;
+        case core::dsp::SaveResult::Added:
+        case core::dsp::SaveResult::Replaced:
+            last_user_preset_ = typed.trimmed().toStdString();
+            if (on_presets_changed) on_presets_changed();
+            return;
+    }
+}
+
+void EqualizerPanel::delete_preset(const std::string& name) {
+    // Excluir nao se desfaz: o preset some do arquivo de configuracao na hora.
+    const auto answer = QMessageBox::question(
+        this, QStringLiteral("Excluir preset"),
+        QStringLiteral("Excluir o preset \"%1\"?").arg(QString::fromStdString(name)));
+    if (answer != QMessageBox::Yes) return;
+    if (!core::dsp::remove_user_preset(user_presets_, name)) return;
+    if (last_user_preset_ == name) last_user_preset_.clear();
+    if (on_presets_changed) on_presets_changed();
 }
 
 void EqualizerPanel::mousePressEvent(QMouseEvent* event) {

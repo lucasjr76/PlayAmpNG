@@ -40,6 +40,15 @@ int main(int argc, char** argv) {
     written.replaygain_mode = 1;
     written.autoplay_on_restore = true;
     written.audio_device = "Placa de teste (analogico)";
+
+    // EQ-07 — presets do usuario, com os valores que costumam se perder:
+    // negativos, fracionarios e um nome com acento.
+    pang::core::dsp::EqPreset meu;
+    meu.name = "Fone de ouvido à noite";
+    meu.preamp_db = -3.5f;
+    for (int i = 0; i < pang::core::dsp::Equalizer::kBands; ++i)
+        meu.bands[static_cast<std::size_t>(i)] = -6.0f + 1.25f * i;
+    written.user_presets = {meu};
     written.scale = 3;
     written.visualization = 1;
     written.playlist_visible = false;
@@ -63,6 +72,12 @@ int main(int argc, char** argv) {
                "retomada automatica persiste");
     // AU-11 — o campo novo desta etapa.
     PANG_CHECK(read.audio_device == written.audio_device, "dispositivo de saida persiste");
+    PANG_CHECK(read.user_presets.size() == 1, "EQ-07: preset do usuario persiste");
+    if (read.user_presets.size() == 1) {
+        PANG_CHECK(read.user_presets[0].name == meu.name, "com o nome intacto, acento incluido");
+        PANG_CHECK(read.user_presets[0].preamp_db == meu.preamp_db, "e o pre-amplificador");
+        PANG_CHECK(read.user_presets[0].bands == meu.bands, "e as dez bandas");
+    }
     PANG_CHECK(read.scale == written.scale, "escala persiste");
     PANG_CHECK(read.visualization == written.visualization, "visualizacao persiste");
     PANG_CHECK(read.playlist_visible == written.playlist_visible, "playlist visivel persiste");

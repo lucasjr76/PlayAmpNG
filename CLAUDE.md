@@ -55,7 +55,7 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 ## Estado — setembro de 2026
 
-161 requisitos OK, 21 testes, CI verde em Linux, Windows e macOS.
+162 requisitos OK, 21 testes, CI verde em Linux, Windows e macOS.
 
 | Marco | Situação |
 |---|---|
@@ -67,7 +67,6 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 | Requisito | O que falta |
 |---|---|
-| EQ-07 | Interface para criar, salvar e excluir presets do equalizador. A persistência já existe; o menu hoje só aplica |
 | AR-05 | Avaliar os logs de diagnóstico contra o requisito. Melhoraram muito no M8, mas nunca foram conferidos formalmente |
 | MD-04, MD-05, AR-06, AR-09 | Parciais do M6, todos no caminho de streaming. Convém tratá-los juntos |
 | EN-10 | Pacote macOS (M9) |

@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 #include "core/dsp/biquad.h"
 #include "core/dsp/equalizer.h"
 #include "core/dsp/gain.h"
 #include "core/dsp/limiter.h"
+#include "core/dsp/presets.h"
 #include "core/util/check.h"
 
 using namespace pang::core;
@@ -384,9 +386,51 @@ void test_biquad_identity_and_stability() {
     PANG_CHECK(maximum < 10.0f, "filtro com Q no teto nao diverge em regime permanente");
 }
 
+// EQ-07 — a colecao de presets do usuario.
+void test_user_presets() {
+    using namespace pang::core::dsp;
+    std::vector<EqPreset> meus;
+    const auto preset = [](const std::string& nome, float preamp) {
+        EqPreset p;
+        p.name = nome;
+        p.preamp_db = preamp;
+        return p;
+    };
+
+    PANG_CHECK(save_user_preset(meus, preset("Carro", 1.0f)) == SaveResult::Added,
+               "nome novo e acrescentado");
+    PANG_CHECK(meus.size() == 1, "e fica na lista");
+
+    // Editar = salvar de novo com o mesmo nome.
+    PANG_CHECK(save_user_preset(meus, preset("Carro", 4.0f)) == SaveResult::Replaced,
+               "mesmo nome substitui, e e assim que se edita");
+    PANG_CHECK(meus.size() == 1 && meus[0].preamp_db == 4.0f,
+               "a lista nao cresce, e o valor novo vale");
+
+    // O caso que um == ingenuo erraria.
+    PANG_CHECK(save_user_preset(meus, preset("  carro ", 2.0f)) == SaveResult::Replaced,
+               "caixa e espacos nas pontas nao criam um segundo 'Carro'");
+    PANG_CHECK(meus.size() == 1, "continua um so");
+    PANG_CHECK(meus[0].name == "carro", "o nome guardado e o aparado");
+
+    PANG_CHECK(save_user_preset(meus, preset("   ", 0.0f)) == SaveResult::EmptyName,
+               "nome so de espacos e recusado");
+    PANG_CHECK(save_user_preset(meus, preset("", 0.0f)) == SaveResult::EmptyName,
+               "nome vazio e recusado");
+
+    PANG_CHECK(save_user_preset(meus, preset("rock", 0.0f)) == SaveResult::BuiltinName,
+               "nao da para criar um 'Rock' ao lado do integrado");
+    PANG_CHECK(meus.size() == 1, "recusas nao mexem na lista");
+
+    PANG_CHECK(remove_user_preset(meus, "CARRO"), "remove ignorando a caixa");
+    PANG_CHECK(meus.empty(), "e a lista fica vazia");
+    PANG_CHECK(!remove_user_preset(meus, "Carro"), "remover o que nao existe devolve falso");
+}
+
 }  // namespace
 
 int main() {
+    test_user_presets();
     test_q_table();
     test_biquad_identity_and_stability();
     test_equalizer_response();

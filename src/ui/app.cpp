@@ -354,6 +354,8 @@ int main(int argc, char** argv) {
 
     auto* main_panel = new pang::ui::MainPanel(*controller, *engine, skin);
     auto* equalizer_panel = new pang::ui::EqualizerPanel(engine->equalizer(), saved.user_presets, skin);
+    // EQ-07 — preset criado ou excluido grava na hora, e nao so ao fechar.
+    equalizer_panel->on_presets_changed = [&] { pang::ui::settings::save(saved); };
     auto* playlist_panel = new pang::ui::PlaylistPanel(*controller, skin);
     playlist_panel->set_logical_height(saved.playlist_geometry[3] > 0
                                            ? saved.playlist_geometry[3]

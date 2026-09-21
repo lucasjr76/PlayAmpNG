@@ -1,5 +1,7 @@
 #include "core/dsp/presets.h"
 
+#include <algorithm>
+
 namespace pang::core::dsp {
 
 const std::vector<EqPreset>& builtin_presets() {
@@ -41,6 +43,56 @@ EqState from_preset(const EqPreset& preset) {
     state.preamp_db = preset.preamp_db;
     state.bands = preset.bands;
     return state;
+}
+
+namespace {
+
+std::string trimmed(const std::string& text) {
+    const auto first = text.find_first_not_of(" \t");
+    if (first == std::string::npos) return {};
+    const auto last = text.find_last_not_of(" \t");
+    return text.substr(first, last - first + 1);
+}
+
+// So ASCII: tolower com acentos depende da localidade da maquina, e um nome
+// que colide numa maquina e nao em outra seria pior que nao ignorar a caixa.
+bool same_name(const std::string& a, const std::string& b) {
+    if (a.size() != b.size()) return false;
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        const auto x = static_cast<unsigned char>(a[i]);
+        const auto y = static_cast<unsigned char>(b[i]);
+        const auto lx = (x >= 'A' && x <= 'Z') ? x + 32 : x;
+        const auto ly = (y >= 'A' && y <= 'Z') ? y + 32 : y;
+        if (lx != ly) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+SaveResult save_user_preset(std::vector<EqPreset>& presets, EqPreset preset) {
+    preset.name = trimmed(preset.name);
+    if (preset.name.empty()) return SaveResult::EmptyName;
+
+    for (const EqPreset& builtin : builtin_presets())
+        if (same_name(builtin.name, preset.name)) return SaveResult::BuiltinName;
+
+    for (EqPreset& existing : presets)
+        if (same_name(existing.name, preset.name)) {
+            existing = std::move(preset);
+            return SaveResult::Replaced;
+        }
+
+    presets.push_back(std::move(preset));
+    return SaveResult::Added;
+}
+
+bool remove_user_preset(std::vector<EqPreset>& presets, const std::string& name) {
+    const auto it = std::find_if(presets.begin(), presets.end(),
+                                 [&](const EqPreset& p) { return same_name(p.name, name); });
+    if (it == presets.end()) return false;
+    presets.erase(it);
+    return true;
 }
 
 }  // namespace pang::core::dsp

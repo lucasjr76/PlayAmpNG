@@ -131,7 +131,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | EQ-04 | Bypass retira a equalização: após o crossfade, saída do estágio bit a bit igual à entrada | AUTO | M3 | OK (M3) |
 | EQ-05 | Reset para resposta plana | AUTO | M3 | OK (M3) |
 | EQ-06 | Presets integrados | MANUAL | M3 | OK (M3) |
-| EQ-07 | Criar, editar, salvar e excluir presets do usuário | MANUAL | M5 | PENDENTE |
+| EQ-07 | Criar, editar, salvar e excluir presets do usuário | AUTO + MANUAL | M5 | OK (M8) — regras de nome e persistência verificadas por teste; gravação imediata, não só ao fechar |
 | EQ-08 | Mudanças aplicadas suavemente durante reprodução, sem estalo | MEDIDO | M3 | OK (M3) |
 | EQ-09 | Persistência dos ajustes entre sessões | AUTO | M3 | OK (M3) |
 | EQ-10 | Tipo de filtro, largura de banda e Q documentados | MANUAL | M0 | OK (M0) |

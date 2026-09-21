@@ -34,6 +34,11 @@ public:
     void set_scale(int scale);
     void refresh();
 
+    // EQ-07 — a colecao de presets do usuario mudou e deve ser gravada JA.
+    // Um preset e criado de proposito; esperar o encerramento do player para
+    // grava-lo perderia o trabalho se o processo fosse morto antes.
+    std::function<void()> on_presets_changed;
+
 protected:
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -43,6 +48,15 @@ protected:
 
 
 private:
+    // EQ-07 — nome sugerido ao salvar: o do ultimo preset do usuario
+    // aplicado. E o que transforma "salvar como" em "editar" sem um comando a
+    // mais: aplica, ajusta as bandas, salva, confirma o nome que ja vem
+    // preenchido.
+    std::string last_user_preset_;
+
+    void save_current_as_preset();
+    void delete_preset(const std::string& name);
+
     int slider_at(const QPoint& logical) const;   // -1 preamp, 0..9 bandas, -2 nenhum
     QRect slider_rect(int index) const;
     void apply_slider(int index, int logical_y);
