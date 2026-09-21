@@ -1,6 +1,7 @@
 #include "ui/shell/integrated.h"
 
 #include <QApplication>
+#include <QCloseEvent>
 #include <QCursor>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -117,8 +118,15 @@ void IntegratedShell::set_detached(bool detached) {
     const Qt::WindowFlags flags = Qt::Dialog | Qt::FramelessWindowHint;
     for (QWidget* panel : {static_cast<QWidget*>(equalizer_), static_cast<QWidget*>(playlist_)}) {
         if (detached_) {
-            panel->setParent(nullptr);
-            panel->setWindowFlags(flags);
+            // Janela propria, mas com a principal como DONA. A primeira versao
+            // usava setParent(nullptr): janelas independentes, que nao
+            // minimizavam junto e, pior, sobreviviam ao fechamento da
+            // principal — relatado em uso, no Windows, sobravam equalizador e
+            // playlist sem a janela principal e sem jeito de traze-la de
+            // volta. Com dono, o sistema as trata como parte do mesmo
+            // programa: minimizam junto e nao ganham entrada propria na barra
+            // de tarefas.
+            panel->setParent(this, flags);
         } else {
             panel->setWindowFlags(Qt::Widget);
             panel->setParent(this);
@@ -194,6 +202,21 @@ bool IntegratedShell::begin_title_drag(QWidget* panel, const QPoint& global) {
     // arraste no meio.
     qApp->installEventFilter(this);
     return true;
+}
+
+// Fechar a janela principal fecha o player, como no Winamp. As janelas
+// destacadas sao escondidas antes: assim nenhuma fica aberta e orfa, e o
+// aplicativo encerra pelo caminho normal — o de "ultima janela fechada" —,
+// que e o que grava configuracao e sessao.
+//
+// Redundante com o dono dado em set_detached(): medido no backend sem tela, o
+// Qt ja esconde as janelas com dono quando a dona fecha, e o teste passa sem
+// estas duas linhas. Ficam porque a medida nao foi feita no Windows, onde o
+// defeito apareceu — e o teste nao distingue uma protecao da outra.
+void IntegratedShell::closeEvent(QCloseEvent* event) {
+    equalizer_->hide();
+    playlist_->hide();
+    QWidget::closeEvent(event);
 }
 
 bool IntegratedShell::eventFilter(QObject* watched, QEvent* event) {

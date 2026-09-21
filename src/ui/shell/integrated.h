@@ -63,6 +63,7 @@ public:
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     // Janelas de topo existentes no modo destacado, na ordem em que aparecem.

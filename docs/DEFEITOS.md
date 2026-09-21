@@ -12,6 +12,16 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-30 — Fechar a janela principal deixava equalizador e playlist órfãos
+
+**Observado em uso, no Windows:** no modo destacado, fechar a janela principal deixava o equalizador e a playlist abertos, sem a principal e sem jeito de trazê-la de volta.
+
+**Causa:** as janelas destacadas eram criadas sem dono — independentes, para o sistema —, e o × da principal só a fechava. Como as outras continuavam visíveis, o aplicativo não encerrava. Era exatamente o que o modo integrado impede por construção, e o modo destacado reintroduziu. Minimizar tinha a mesma raiz: minimizava só a principal.
+
+**Correção:** as janelas destacadas têm a principal como dona — minimizam junto e não ganham entrada própria na barra de tarefas —, e fechar a principal as esconde e encerra o player pelo caminho normal, que grava configuração e sessão.
+
+**Verificado:** o teste roda o laço de eventos, fecha a principal e confere que o aplicativo encerra sozinho; a implementação antiga fica rodando até o prazo do teste. A primeira versão do teste esperava o aviso de "última janela fechada" sem rodar o laço — o Qt só o emite com o laço rodando — e reprovava com o código correto.
+
 ### C-29 — Redimensionar a playlist destacada a arrancava de volta para baixo das outras
 
 **Observado em uso, no Windows:** com a playlist posta ao lado do painel principal, puxar a borda para redimensioná-la fazia a janela voltar para baixo do equalizador, impedindo o redimensionamento.

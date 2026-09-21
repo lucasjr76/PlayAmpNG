@@ -10,6 +10,8 @@
 // isso que a plataforma e consultada em tempo de execucao.
 
 #include <QApplication>
+#include <QGuiApplication>
+#include <QTimer>
 #include <QMouseEvent>
 
 #include <cstdio>
@@ -225,6 +227,32 @@ int main(int argc, char** argv) {
                    "ao destacar, o equalizador comeca logo abaixo do principal");
         PANG_CHECK(pl_panel->pos().y() == eq_panel->frameGeometry().bottom() + 1,
                    "e a playlist logo abaixo do equalizador");
+    }
+
+    // ------------------------------- fechar a principal fecha o player
+    //
+    // Relatado em uso, no Windows: fechar a janela principal no modo
+    // destacado deixava equalizador e playlist abertos e orfaos, sem jeito de
+    // trazer a principal de volta. As janelas destacadas eram independentes,
+    // e o aplicativo so encerra quando nao sobra janela visivel.
+    //
+    // Por ultimo no teste: depois disto nao ha mais o que exercitar.
+    //
+    // Verifica o EFEITO — o aplicativo encerrar —, e nao um sinal: o Qt so
+    // avisa "ultima janela fechada" com o laco de eventos rodando, e a
+    // primeira versao deste bloco esperava o aviso sem rodar o laco, e
+    // reprovava com o codigo correto. Aqui o laco roda; se o aplicativo nao
+    // encerrar sozinho, o prazo o encerra com o codigo 99.
+    {
+        PANG_CHECK(eq_panel->isVisible() && pl_panel->isVisible(),
+                   "antes de fechar, as janelas destacadas estao abertas");
+        QTimer::singleShot(0, &shell, [&] { shell.close(); });
+        QTimer::singleShot(3000, &app, [&] { app.exit(99); });
+        const int saida = app.exec();
+
+        PANG_CHECK(!eq_panel->isVisible() && !pl_panel->isVisible(),
+                   "fechar a principal nao deixa janela destacada aberta e orfa");
+        PANG_CHECK(saida != 99, "e o aplicativo encerra sozinho, sem precisar do prazo");
     }
 
     return pang::check::exit_code();
