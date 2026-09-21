@@ -509,9 +509,74 @@ void test_broken_files() {
                "arquivo ausente devolve tags vazias, sem lancar");
 }
 
+// LI-04 com LI-05 — reordenar uma SELECAO, que nao e repetir o move de um.
+void test_move_selection() {
+    const auto montar = [] {
+        Playlist pl;
+        for (const char* nome : {"a", "b", "c", "d", "e"})
+            pl.add(std::string("/musica/") + nome + ".mp3");
+        return pl;
+    };
+    const auto ordem = [](const Playlist& pl) {
+        std::string s;
+        for (int i = 0; i < pl.size(); ++i) s += pl.at(i).path.substr(8, 1);
+        return s;
+    };
+
+    {   // Para cima: o destino nao muda, porque nada selecionado estava antes.
+        Playlist pl = montar();
+        pl.move(std::vector<int>{3, 4}, 1);
+        PANG_CHECK(ordem(pl) == "adebc", "d e e vao para antes de b, nessa ordem");
+    }
+
+    {   // Para BAIXO: o caso que erra sem o desconto de indices.
+        //
+        // Tirar a e b da lista faz tudo andar duas casas para tras. Sem
+        // descontar, o destino 4 apontaria para depois de e, e o erro cresce
+        // com o tamanho da selecao — que e o que torna o defeito confuso na
+        // tela: com um item arrastado, quase acerta; com cinco, vai longe.
+        Playlist pl = montar();
+        pl.move(std::vector<int>{0, 1}, 4);
+        PANG_CHECK(ordem(pl) == "cdabe", "a e b entram antes de e, e nao no fim");
+    }
+
+    {   // Selecao descontinua mantem a ordem relativa, e nao a de clique.
+        Playlist pl = montar();
+        pl.move(std::vector<int>{4, 0}, 2);
+        PANG_CHECK(ordem(pl) == "baecd", "a antes de e, como estavam na lista");
+    }
+
+    {   // Soltar dentro da propria selecao nao pode embaralhar nada.
+        Playlist pl = montar();
+        pl.move(std::vector<int>{1, 2}, 2);
+        PANG_CHECK(ordem(pl) == "abcde", "mover para onde ja estava nao muda a lista");
+    }
+
+    {   // Entradas invalidas nao podem corromper a lista nem derrubar o player.
+        Playlist pl = montar();
+        pl.move(std::vector<int>{-1, 99}, 2);
+        PANG_CHECK(ordem(pl) == "abcde", "indices fora da lista sao ignorados");
+        pl.move(std::vector<int>{1, 1, 1}, 0);
+        PANG_CHECK(ordem(pl) == "bacde", "indice repetido conta uma vez so");
+        pl.move(std::vector<int>{}, 0);
+        PANG_CHECK(ordem(pl) == "bacde", "selecao vazia nao faz nada");
+        pl.move(std::vector<int>{0}, 999);
+        PANG_CHECK(ordem(pl) == "acdeb", "destino alem do fim vai para o fim");
+    }
+
+    {   // LI-04 com a identidade estavel: reordenar nao pode fazer o player
+        //  perder a faixa que esta tocando.
+        Playlist pl = montar();
+        const std::uint64_t id = pl.at(0).id;
+        pl.move(std::vector<int>{0}, 5);
+        PANG_CHECK(pl.index_of(id) == 4, "o id acompanha o item para a nova posicao");
+    }
+}
+
 }  // namespace
 
 int main() {
+    test_move_selection();
     test_playlist_basics();
     test_duration_and_title();
     test_sort_and_find();

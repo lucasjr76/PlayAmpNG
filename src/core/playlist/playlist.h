@@ -36,6 +36,18 @@ public:
     // LI-04 — reordenacao. Move o item de `from` para a posicao `to`.
     void move(int from, int to);
 
+    // LI-04 com LI-05 — move um CONJUNTO de itens para antes da linha
+    // `before`, preservando a ordem relativa entre eles.
+    //
+    // `before` e uma posicao ENTRE linhas, e nao um indice de item: vai de 0
+    // (antes de tudo) a size() (depois de tudo). E assim que um arraste se
+    // descreve — o usuario solta entre duas linhas, nao em cima de uma.
+    //
+    // Mover varios nao e repetir o move de um: cada movimento desloca os
+    // indices dos seguintes, e aplicar em sequencia embaralha a selecao. Aqui
+    // os indices sao todos lidos ANTES de qualquer mudanca.
+    void move(std::vector<int> indices, int before);
+
     // LI-08 — ordenacao estavel; itens sem o campo vao para o fim.
     void sort(SortKey key, bool ascending);
 

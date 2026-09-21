@@ -1,5 +1,6 @@
 #include "core/playlist/playlist.h"
 
+#include <iterator>
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -104,6 +105,41 @@ void Playlist::move(int from, int to) {
     Track moved = std::move(tracks_[static_cast<std::size_t>(from)]);
     tracks_.erase(tracks_.begin() + from);
     tracks_.insert(tracks_.begin() + to, std::move(moved));
+}
+
+void Playlist::move(std::vector<int> indices, int before) {
+    std::sort(indices.begin(), indices.end());
+    indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+    indices.erase(std::remove_if(indices.begin(), indices.end(),
+                                 [this](int i) { return i < 0 || i >= size(); }),
+                  indices.end());
+    if (indices.empty()) return;
+    before = std::clamp(before, 0, size());
+
+    // O destino muda quando ha selecionados ANTES dele: ao tira-los da lista,
+    // tudo o que vinha depois anda para tras. Sem este desconto, arrastar para
+    // baixo erra por exatamente a quantidade de itens arrastados — e o erro
+    // cresce com a selecao, que e o que torna o defeito confuso na tela.
+    int destination = before;
+    for (int index : indices)
+        if (index < before) --destination;
+
+    // Rede de seguranca, e nao correcao do calculo acima: um destino fora do
+    // intervalo aqui seria comportamento indefinido no insert, e um teste que
+    // reprova por SEGFAULT diz muito menos do que um que reprova mostrando a
+    // ordem errada.
+    destination = std::clamp(destination, 0, size() - static_cast<int>(indices.size()));
+
+    std::vector<Track> moved;
+    moved.reserve(indices.size());
+    for (int index : indices) moved.push_back(std::move(tracks_[static_cast<std::size_t>(index)]));
+
+    // De tras para frente: apagar da frente invalidaria os indices seguintes.
+    for (auto it = indices.rbegin(); it != indices.rend(); ++it)
+        tracks_.erase(tracks_.begin() + *it);
+
+    tracks_.insert(tracks_.begin() + destination, std::make_move_iterator(moved.begin()),
+                   std::make_move_iterator(moved.end()));
 }
 
 void Playlist::sort(SortKey key, bool ascending) {
