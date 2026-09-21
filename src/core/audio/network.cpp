@@ -2,7 +2,13 @@
 
 extern "C" {
 #include <libavutil/dict.h>
+#include <libavutil/log.h>
 }
+
+#include <cstdarg>
+#include <mutex>
+
+#include "core/util/log.h"
 
 #include <algorithm>
 #include <cctype>
@@ -59,6 +65,39 @@ void apply_network_options(AVDictionary** opts) {
 
     // Alguns servidores recusam cliente sem identificacao.
     av_dict_set(opts, "user_agent", "PlayAmpNG", 0);
+}
+
+namespace {
+
+// O FFmpeg entrega uma linha em pedacos — o prefixo "[mp3 @ 0x...]" numa
+// chamada e o texto em outra — e so a ultima traz a quebra de linha. Juntar
+// por thread evita que duas threads decodificando ao mesmo tempo misturem
+// pedacos uma da outra.
+void ffmpeg_callback(void* avcl, int level, const char* format, va_list args) {
+    if (level > av_log_get_level()) return;
+
+    thread_local std::string pending;
+    thread_local int print_prefix = 1;
+    char piece[1024];
+    av_log_format_line2(avcl, level, format, args, piece, sizeof piece, &print_prefix);
+    pending += piece;
+
+    std::size_t newline;
+    while ((newline = pending.find('\n')) != std::string::npos) {
+        const std::string line = pending.substr(0, newline);
+        pending.erase(0, newline + 1);
+        if (!line.empty()) log::warn("ffmpeg: " + log::redact_text(line));
+    }
+}
+
+}  // namespace
+
+void route_ffmpeg_log() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        av_log_set_level(AV_LOG_ERROR);
+        av_log_set_callback(ffmpeg_callback);
+    });
 }
 
 }  // namespace pang::core

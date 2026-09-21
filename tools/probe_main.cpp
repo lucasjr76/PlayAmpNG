@@ -15,6 +15,7 @@
 #include <string>
 #include <thread>
 
+#include "core/util/log.h"
 #include "core/audio/engine.h"
 #include "core/audio/probe.h"
 #include "platform/audio_device.h"
@@ -41,7 +42,9 @@ void print_environment() {
 void print_probe(const std::string& url) {
     std::string error;
     const auto r = pang::core::probe(url, error);
-    std::printf("\n%s\n", url.c_str());
+    // AR-06 — a ferramenta tambem nao ecoa credencial: a saida dela vai parar
+    // em relato de defeito do mesmo jeito que o log do player.
+    std::printf("\n%s\n", pang::core::log::redact(url).c_str());
     if (!r) {
         std::printf("  erro: %s\n", error.c_str());
         return;

@@ -1,5 +1,7 @@
 #include "core/meta/tags.h"
 
+#include "core/audio/network.h"
+
 #include <charconv>
 #include <cstdlib>
 
@@ -33,7 +35,7 @@ Track read_tags(const std::string& path) {
     Track t;
     t.path = path;
 
-    av_log_set_level(AV_LOG_ERROR);
+    route_ffmpeg_log();
 
     AVFormatContext* fmt = nullptr;
     if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) return t;

@@ -76,6 +76,30 @@ Nenhuma medida foi tomada em instante arbitrário: o harness amostra a cada cinc
 
 O harness mede o que o requisito pede, não o que é fácil: interrupções vêm do contador do próprio player, que agora também vai para o log quando anda — o que serve ao usuário que relata "o som picota" e não só ao teste.
 
+## AR-05 — logs úteis para diagnóstico
+
+"Útil" não se avalia lendo o log; avalia-se contra as perguntas que quem investiga um relato precisa responder. Cada pergunta foi conferida contra o código **e** contra uma execução real.
+
+| Pergunta de quem investiga | Antes | Agora |
+|---|---|---|
+| Que versão, em que sistema, com que Qt e FFmpeg? | nada — o log não dizia nem a versão | cabeçalho, escrito antes de abrir o áudio |
+| Que dispositivo de áudio, em que taxa? | nada | linha `audio:` com backend, nome e taxa |
+| Quando aconteceu? | nenhuma linha tinha hora | `HH:MM:SS.mmm` em toda linha |
+| Qual arquivo falhou ao decodificar? | "erro ao decodificar: …", sem o arquivo | fonte incluída, redigida |
+| O som sumiu e voltou sozinho? | só a falha definitiva era registrada | cada transição: perdida, restabelecida, falhou — com a causa |
+| O player abriu mas não toca? | a falha aparecia numa janela e **não** no log | registrada, com o backend |
+| Onde está o log? | só no Windows havia arquivo | `playampng.log` ao lado da configuração, nos três sistemas; a execução anterior como `.1` |
+| O que o FFmpeg disse? | direto no stderr, sem hora, fora do arquivo | pelo mesmo log, com hora e redação |
+| Há credencial no log? (AR-06) | redação no código do player; o FFmpeg passava por fora | FFmpeg também redigido; medido com URLs de senha e token em cinco cenários de rede: zero ocorrências |
+
+Um aviso que aparecia em **toda** abertura — `skin sem os bitmaps: eq_ex, pledit` — foi retirado: eram bitmaps que nenhum sprite usa. Um aviso sempre presente ensina a ignorar avisos.
+
+**A análise encontrou dois defeitos que não eram do log** (`DEFEITOS.md` C-22 e C-23): o dispositivo de áudio era reaberto a cada troca de faixa, o que só apareceu quando o log passou a registrar as transições da saída; e um segundo lançamento do player destruía o log da instância aberta.
+
+**Verificação automatizada:** a redação em texto livre e o roteamento do FFmpeg para o arquivo têm teste (`test_audio`), com cinco mutações detectadas — sem o roteamento, sem redação, sem juntar linhas entregues em pedaços, sem o filtro de nível, redigindo só a primeira URL da linha. Um teste anterior desse bloco era vácuo: só conferia uma linha registrada por ele mesmo, e passaria com o roteamento quebrado.
+
+**Limite declarado:** que o FFmpeg nunca escreva credencial não foi provado para todo caminho; foi medido nos cinco cenários de rede da suíte, e a redação em texto livre é a proteção para os demais.
+
 ## AU-08 — formatos disponíveis NO PACOTE
 
 Medido tocando cada arquivo **de dentro do AppImage**, e não na máquina de desenvolvimento. É essa a diferença que o requisito pede: a disponibilidade é propriedade do artefato distribuído.

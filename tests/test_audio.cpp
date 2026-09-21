@@ -16,6 +16,13 @@
 #include "core/audio/seqlock.h"
 #include "core/util/check.h"
 #include "core/util/log.h"
+#include "core/audio/network.h"
+
+extern "C" {
+#include <libavutil/log.h>
+}
+
+#include <cstdio>
 
 using namespace std::chrono_literals;
 using pang::core::Engine;
@@ -293,7 +300,71 @@ void test_redaction() {
 
 }  // namespace
 
+// AR-06 — redacao dentro de texto livre, que e o que chega do FFmpeg.
+void test_redaction_in_text() {
+    using pang::core::log::redact_text;
+
+    const std::string a = redact_text(
+        "Opening 'http://usuario:segredo@radio.example/a.ts?token=xyz' for reading");
+    PANG_CHECK(a.find("segredo") == std::string::npos, "senha dentro de uma frase e removida");
+    PANG_CHECK(a.find("xyz") == std::string::npos, "token dentro de uma frase e removido");
+    PANG_CHECK(a.find("Opening '") == 0 && a.find("' for reading") != std::string::npos,
+               "o texto em volta, e as aspas, ficam intactos");
+
+    const std::string b = redact_text("duas: http://a:1@x/ e https://b:2@y/?auth=3 fim");
+    PANG_CHECK(b.find(":1@") == std::string::npos && b.find(":2@") == std::string::npos &&
+                   b.find("auth=3") == std::string::npos,
+               "cada URL da linha e redigida, nao so a primeira");
+    PANG_CHECK(b.find(" fim") != std::string::npos, "o que vem depois da ultima URL se mantem");
+
+    PANG_CHECK(redact_text("Header missing") == "Header missing",
+               "linha sem URL passa sem alteracao");
+}
+
+// AR-05 — as mensagens do FFmpeg chegam ao arquivo de log, com hora.
+//
+// Antes iam direto ao stderr, por fora do log do player: sem hora, sem o
+// arquivo, e sem a redacao. O teste chama o av_log DIRETAMENTE, em vez de
+// provocar um erro real do FFmpeg: a primeira versao abria um arquivo
+// inexistente, que nao faz o FFmpeg escrever nada, e so conferia uma linha
+// registrada pelo proprio teste — passava com o roteamento quebrado.
+void test_ffmpeg_reaches_the_log_file() {
+    std::FILE* file = std::tmpfile();
+    PANG_CHECK(file != nullptr, "arquivo temporario criado");
+    if (!file) return;
+    pang::core::log::set_file(file);
+    pang::core::route_ffmpeg_log();
+
+    av_log(nullptr, AV_LOG_ERROR, "falha em %s\n", "http://usuario:SEGREDO@radio.example/s");
+    // Uma linha entregue em dois pedacos, como o FFmpeg faz com o prefixo.
+    av_log(nullptr, AV_LOG_ERROR, "primeira metade, ");
+    av_log(nullptr, AV_LOG_ERROR, "segunda metade\n");
+    // Abaixo do nivel escolhido: nao pode aparecer.
+    av_log(nullptr, AV_LOG_WARNING, "aviso que deve ser filtrado\n");
+
+    std::fflush(file);
+    std::rewind(file);
+    std::string contents;
+    char chunk[512];
+    while (std::fgets(chunk, sizeof chunk, file)) contents += chunk;
+    pang::core::log::set_file(nullptr);  // fecha o temporario
+
+    PANG_CHECK(contents.find("ffmpeg: falha em http://***@radio.example/s") != std::string::npos,
+               "a mensagem do FFmpeg chega ao arquivo, redigida");
+    PANG_CHECK(contents.find("SEGREDO") == std::string::npos,
+               "nenhuma credencial vinda do FFmpeg chega ao arquivo");
+    PANG_CHECK(contents.find("ffmpeg: primeira metade, segunda metade") != std::string::npos,
+               "uma linha entregue em pedacos vira UMA linha no log");
+    PANG_CHECK(contents.find("filtrado") == std::string::npos,
+               "o que esta abaixo do nivel do FFmpeg nao entra");
+    const bool stamped = contents.size() > 13 && contents[2] == ':' && contents[5] == ':' &&
+                         contents[8] == '.' && contents[12] == ' ';
+    PANG_CHECK(stamped, "cada linha comeca com a hora, com milissegundos");
+}
+
 int main() {
+    test_redaction_in_text();
+    test_ffmpeg_reaches_the_log_file();
     test_format("tone.wav", "WAV");
     test_format("tone.mp3", "MP3");
     test_format("tone.flac", "FLAC");

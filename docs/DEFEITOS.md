@@ -6,14 +6,41 @@ Lista viva. Cada item diz quem observou, o que foi medido e onde foi corrigido. 
 
 ## Abertos
 
-| # | Observação | Origem | Situação |
-|---|---|---|---|
-| A-11 | Encaixe magnético entre painéis destacados | — | Indisponível no Wayland por restrição de protocolo (`ARCHITECTURE.md §8`) |
-| A-12 | `LI-04` — reordenar a playlist arrastando | Regressão consciente do M5 | A reimplementar no painel em sprites |
+Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéis destacados (A-11) existe onde a plataforma permite posicionar janelas, e no Wayland a opção aparece desabilitada com a razão (AP-08, AP-09, AP-18); arrastar para reordenar a playlist (A-12) foi reimplementado no painel em sprites (LI-04).
 
 ---
 
 ## Corrigidos
+
+### C-23 — Segundo lançamento destruía o log da instância aberta
+
+**Encontrado na análise do AR-05, lendo o código.** O arquivo de log era aberto antes da verificação de instância única. Abrir um arquivo pelo gerenciador com o player já aberto inicia um segundo processo, que só entrega o arquivo à janela existente e sai — mas antes renomeava o log da instância em uso para `.1` e truncava o arquivo. O log de diagnóstico se perdia justamente num uso comum.
+
+**Correção:** o arquivo só é aberto depois de decidido que esta instância vai continuar rodando.
+
+### C-22 — Dispositivo de áudio reaberto a cada troca de faixa
+
+**Encontrado no primeiro log que registrou as transições da saída de áudio (AR-05).** Numa abertura normal, sem ninguém desconectar nada:
+
+```
+10:04:37.212 [info] audio: PulseAudio, "GB205 ...", 44100 Hz
+10:04:37.310 [aviso] saida de audio perdida; reabrindo:
+10:04:37.787 [info] saida de audio restabelecida
+10:04:38.387 [aviso] saida de audio perdida; reabrindo:
+```
+
+**Causa, medida com instrumentação:** ao carregar uma faixa o controlador suspende o dispositivo; o miniaudio avisa `stopped`; e o tratador da notificação lia **todo** `stopped` como perda. O detector de parada já distinguia parada proposital de perda — a rota da notificação não. Duas rotas para a mesma decisão, divergindo: a sexta vez neste projeto.
+
+```
+DIAG suspend
+DIAG notificacao tipo=1     <- "stopped", provocado pelo proprio suspend
+DIAG resume
+[aviso] saida de audio perdida; reabrindo
+```
+
+**Correção:** as duas rotas consultam a mesma intenção (`expected_running`). A linha de perda também passa a dizer qual rota disparou — antes saía com a razão em branco.
+
+**Verificado:** a abertura não registra mais nenhuma perda; o teste com remoção real de dispositivo (`device_loss`, via `pactl`) continua detectando a perda verdadeira. **Por mutação:** a notificação volta a ignorar a intenção e `test_device` reprova três vezes, uma por troca de faixa simulada.
 
 ### C-21 — Sessão restaurada aparecia inteira sem duração
 

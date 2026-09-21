@@ -16,6 +16,17 @@ namespace pang::core {
 // O chamador e dono do dicionario e o libera com av_dict_free.
 void apply_network_options(AVDictionary** opts);
 
+// AR-05, AR-06 — as mensagens do FFmpeg passam pelo log do player.
+//
+// Antes elas iam direto para o stderr, por fora de tudo: sem hora, sem o
+// arquivo de log e sem a redacao de credenciais. Idempotente e seguro de
+// chamar de qualquer thread; e chamado por quem abre uma fonte, e nao uma vez
+// no main, para que core/ funcione igual num teste que nunca passa pelo main.
+//
+// Tambem e o unico lugar que fixa o nivel do FFmpeg — que antes era repetido
+// em probe, decoder e leitor de tags.
+void route_ffmpeg_log();
+
 // Protocolos que o libavformat pode usar. Tudo o mais e recusado.
 //
 // Sem essa lista, uma entrada de playlist pode pedir "concat:", "subfile:" ou

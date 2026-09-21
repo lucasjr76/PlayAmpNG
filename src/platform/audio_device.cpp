@@ -66,6 +66,20 @@ struct Channel {
     void* user = nullptr;
     std::atomic<std::uint64_t> frames{0};
     std::atomic<bool> lost{false};
+
+    // O dispositivo DEVERIA estar tocando. Falso entre suspend() e resume().
+    //
+    // Existe porque ha duas rotas que declaram o dispositivo perdido — o
+    // detector de parada e a notificacao do miniaudio — e so a primeira sabia
+    // distinguir parada proposital de perda. A segunda recebia o "stopped"
+    // que o proprio suspend() provoca e mandava reabrir: a cada troca de
+    // faixa o player fechava e reabria o dispositivo de audio. Ninguem via;
+    // o defeito apareceu no primeiro log que registrou as transicoes.
+    //
+    // Atomico porque a notificacao chega num thread do backend. Medido no
+    // PulseAudio: o "stopped" chega antes de resume() voltar a marcar
+    // verdadeiro, entao nao ha janela em que ele seja lido como perda.
+    std::atomic<bool> expected_running{true};
 };
 
 struct AudioOutput::Impl {
@@ -143,6 +157,10 @@ struct AudioOutput::Impl {
         if (!ch) return;
         switch (note->type) {
             case ma_device_notification_type_stopped:
+                // Parada que o proprio player pediu nao e perda.
+                if (ch->expected_running.load(std::memory_order_relaxed))
+                    ch->lost.store(true, std::memory_order_relaxed);
+                break;
             case ma_device_notification_type_interruption_began:
                 ch->lost.store(true, std::memory_order_relaxed);
                 break;
@@ -256,8 +274,13 @@ AudioOutput::Health AudioOutput::poll(int elapsed_ms) {
             break;
     }
 
-    if (impl_->channel && impl_->channel->lost.exchange(false, std::memory_order_relaxed))
+    // AR-05 — cada rota registra a propria causa. A linha "saida de audio
+    // perdida" saia com a razao em branco, e sem saber QUAL das duas deteccoes
+    // disparou nao haveria como achar o defeito descrito em Channel.
+    if (impl_->channel && impl_->channel->lost.exchange(false, std::memory_order_relaxed)) {
+        impl_->error = "o sistema avisou que o dispositivo parou";
         impl_->recovery.lost();
+    }
 
     // Parada: o dispositivo deveria estar puxando quadros e nao esta.
     if (impl_->running && impl_->open && impl_->channel) {
@@ -269,6 +292,8 @@ AudioOutput::Health AudioOutput::poll(int elapsed_ms) {
             impl_->stalled_ms += elapsed_ms;
             if (impl_->stalled_ms >= Impl::kStallMs) {
                 impl_->stalled_ms = 0;
+                impl_->error = "o dispositivo deixou de pedir audio por " +
+                               std::to_string(Impl::kStallMs) + " ms";
                 impl_->recovery.lost();
             }
         }
@@ -333,6 +358,7 @@ void AudioOutput::suspend() {
     // running vira falso ANTES de parar: pausado, o dispositivo deixa de puxar
     // de proposito, e o detector de parada nao pode confundir isso com perda.
     impl_->running = false;
+    if (impl_->channel) impl_->channel->expected_running.store(false, std::memory_order_relaxed);
     if (impl_->open && impl_->device) ma_device_stop(impl_->device.get());
 }
 
@@ -342,6 +368,7 @@ void AudioOutput::resume() {
         impl_->channel ? impl_->channel->frames.load(std::memory_order_relaxed) : 0;
     impl_->stalled_ms = 0;
     impl_->running = impl_->open;
+    if (impl_->channel) impl_->channel->expected_running.store(true, std::memory_order_relaxed);
 }
 
 void AudioOutput::close() {

@@ -201,7 +201,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AR-02 | Estados explícitos: Stopped, Loading, Playing, Paused, Buffering, Error | AUTO | M1 | OK (M1) |
 | AR-03 | Resposta assíncrona de geração antiga é descartada sem efeito | AUTO | M2 | OK (M2) |
 | AR-04 | Interface reflete o estado confirmado pelo backend, inclusive em falha | AUTO | M1 | OK (M1) |
-| AR-05 | Logs úteis para diagnóstico | MANUAL | M1 | PENDENTE |
+| AR-05 | Logs úteis para diagnóstico | AUTO + MANUAL | M1 | OK (M8) — avaliado contra nove perguntas de diagnóstico; ver TEST_REPORT |
 | AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | PARCIAL (M1) — funcao de redacao verificada; integracao com streaming em M6 |
 | AR-07 | `core/` não inclui Qt nem API de sistema operacional | AUTO (verificação de build) | M0 | OK (M0) |
 | AR-08 | `core/` permanece único e compartilhado, sem API de sistema, e passa na íntegra a suíte nos três sistemas | AUTO | M8/M9 | OK (M8) — CI verde em Linux, Windows e macOS; `core_purity` confere 41 arquivos a cada build. Quatro testes se declaram PULADOS fora do Linux (`device_loss`, `mpris`, `single_instance`, `session`) porque exigem PulseAudio ou D-Bus — nenhum deles é de `core/` |

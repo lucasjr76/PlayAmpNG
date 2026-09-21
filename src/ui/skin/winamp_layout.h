@@ -262,10 +262,15 @@ constexpr QPoint band_at(int band) {
 
 // Nome de arquivo de cada bitmap, sem extensao. O formato aceita .bmp e, em
 // skins mais novos, .png — por isso o nome vem sem sufixo.
+//
+// So os que algum sprite deste arquivo USA. A lista ja teve eq_ex e pledit,
+// do formato original, que nenhum sprite referencia — o player desenha a
+// playlist e o equalizador por conta propria. Ausentes, eles geravam um aviso
+// em TODA abertura sem efeito nenhum, e um aviso que sempre aparece ensina a
+// ignorar avisos.
 constexpr const char* kBitmaps[] = {
     "main",     "cbuttons", "titlebar", "numbers",  "text",     "volume",
     "balance",  "posbar",   "shufrep",  "monoster", "playpaus", "eqmain",
-    "eq_ex",    "pledit",
 };
 
 }  // namespace pang::ui::skin::winamp

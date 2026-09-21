@@ -41,7 +41,7 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Teste de mutação em toda lógica nova.** Quebrar o código de propósito e confirmar que o teste reprova. Um teste que continua verde sem a regra que diz testar é vácuo, e isso já aconteceu aqui mais de uma vez.
 
-**Duas rotas para a mesma operação sempre divergem.** Aconteceu cinco vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste. A correção é unificar numa rota só, não remendar a que quebrou.
+**Duas rotas para a mesma operação sempre divergem.** Aconteceu seis vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, e as duas rotas que declaram o dispositivo de áudio perdido. A correção é unificar numa rota só, não remendar a que quebrou.
 
 **Esperar o evento, nunca amostrar num instante arbitrário.** Testes que dormem um tempo fixo e depois conferem o estado são intermitentes.
 
@@ -51,11 +51,13 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Nada pessoal ou da máquina no repositório.** O repositório é público: nenhum caminho de diretório pessoal, nome de usuário, e-mail ou dado de configuração local em código, documentação ou mensagem de commit.
 
+**O log fica em `playampng.log`, ao lado da configuração**, nos três sistemas, com a execução anterior em `.1`. Toda linha tem hora. É o primeiro lugar a olhar num relato de defeito.
+
 **Testes precisam devolver `pang::check::exit_code()`.** `PANG_CHECK` registra a falha e segue; o `main` que devolve 0 descarta o registro.
 
 ## Estado — setembro de 2026
 
-162 requisitos OK, 21 testes, CI verde em Linux, Windows e macOS.
+163 requisitos OK, 21 testes, CI verde em Linux, Windows e macOS.
 
 | Marco | Situação |
 |---|---|
@@ -67,7 +69,6 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 | Requisito | O que falta |
 |---|---|
-| AR-05 | Avaliar os logs de diagnóstico contra o requisito. Melhoraram muito no M8, mas nunca foram conferidos formalmente |
 | MD-04, MD-05, AR-06, AR-09 | Parciais do M6, todos no caminho de streaming. Convém tratá-los juntos |
 | EN-10 | Pacote macOS (M9) |
 

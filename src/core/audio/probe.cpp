@@ -64,7 +64,7 @@ ProbeResult describe(AVFormatContext* fmt, int stream_index, const std::string& 
 }
 
 std::optional<ProbeResult> probe(const std::string& url, std::string& error) {
-    av_log_set_level(AV_LOG_ERROR);
+    route_ffmpeg_log();
 
     FormatCloser fmt;
     AVDictionary* opts = nullptr;

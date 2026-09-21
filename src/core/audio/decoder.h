@@ -59,6 +59,11 @@ public:
 private:
     std::string icy_title_;  // ultimo titulo ICY visto
 
+    // AR-05 — a fonte aberta, ja redigida, para as mensagens de erro. Um
+    // "erro ao decodificar" sem dizer de qual arquivo manda quem investiga
+    // adivinhar qual das faixas da playlist e a corrompida.
+    std::string source_;
+
     static int interrupt_cb(void* opaque);
     bool fill_pending();   // decodifica e converte o proximo bloco
     void drain_resampler();

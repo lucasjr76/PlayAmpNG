@@ -179,10 +179,12 @@ int main(int argc, char** argv) {
                "skin inexistente falha em vez de carregar vazio");
     PANG_CHECK(!missing_error.isEmpty(), "a falha traz mensagem de diagnostico");
 
-    std::printf("  bitmaps ausentes no skin padrao: %s\n",
-                from_directory.missing().isEmpty()
-                    ? "nenhum dos obrigatorios"
-                    : qPrintable(from_directory.missing().join(QStringLiteral(", "))));
+    // O skin padrao traz todos os bitmaps que o player usa. Antes isto so
+    // imprimia a lista, e dois ausentes apareciam em toda execucao sem
+    // reprovar nada — eram bitmaps que nenhum sprite usava.
+    PANG_CHECK(from_directory.missing().isEmpty(),
+               qPrintable(QStringLiteral("skin padrao sem bitmaps usados: %1")
+                              .arg(from_directory.missing().join(QStringLiteral(", ")))));
 
     return pang::check::exit_code();
 }

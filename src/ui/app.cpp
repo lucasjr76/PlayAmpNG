@@ -31,6 +31,7 @@
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QSysInfo>
 
 #include <QWidget>
 
@@ -131,18 +132,34 @@ bool wants_console(int argc, char** argv) {
     return false;
 }
 
+#endif
+
+// AR-05 — log em arquivo, nos tres sistemas.
+//
+// Ate aqui so o Windows gravava arquivo, e por freopen do stderr. No Linux o
+// log ia para o stderr e dali para o journal, ou para lugar nenhum, conforme o
+// lancador; nenhum usuario acharia. Agora e uma rota so: o arquivo fica ao
+// lado da configuracao, e o stderr continua recebendo as mesmas linhas.
+//
 // Guarda a execucao anterior como .1 antes de comecar a atual. Uma so, porque
 // quem investiga um defeito quer a corrida que falhou e a anterior, nao um
 // historico que cresce sozinho no disco do usuario.
-void redirect_log_to_file(const QString& config_path) {
-    const QString log = QFileInfo(config_path).absolutePath() +
-                        QStringLiteral("/playampng.log");
+QString open_log_file(const QString& config_path) {
+    const QString log = QFileInfo(config_path).absolutePath() + QStringLiteral("/playampng.log");
+    QDir().mkpath(QFileInfo(log).absolutePath());
     QFile::remove(log + QStringLiteral(".1"));
     QFile::rename(log, log + QStringLiteral(".1"));
-    FILE* dummy = nullptr;
-    freopen_s(&dummy, log.toLocal8Bit().constData(), "w", stderr);
-}
+#ifdef _WIN32
+    // _wfopen, e nao fopen: fopen no Windows le o caminho na pagina de codigo
+    // ANSI, e um nome de usuario com acento no caminho faria o arquivo nao
+    // abrir — sem erro nenhum, so sem log.
+    std::FILE* file = _wfopen(reinterpret_cast<const wchar_t*>(log.utf16()), L"w");
+#else
+    std::FILE* file = std::fopen(QFile::encodeName(log).constData(), "w");
 #endif
+    pang::core::log::set_file(file);
+    return file ? log : QString();
+}
 
 int main(int argc, char** argv) {
 #ifdef _WIN32
@@ -187,13 +204,6 @@ int main(int argc, char** argv) {
 #endif
     parser.process(app);
 
-#ifdef _WIN32
-    // Depois do parser, porque so aqui se sabe se o usuario pediu o terminal, e
-    // depois de setApplicationName, porque o caminho da configuracao depende
-    // dele.
-    if (!console) redirect_log_to_file(pang::ui::settings::config_file_path());
-#endif
-
     // IN-08 — instancia unica, decidida ANTES de abrir dispositivo de audio ou
     // janela: um segundo lancamento que fosse ate la tomaria o dispositivo e
     // piscaria uma janela antes de desistir.
@@ -228,12 +238,33 @@ int main(int argc, char** argv) {
         pang::core::log::warn("a instancia existente nao respondeu; abrindo outra janela");
     }
 
+    // So agora, e nao antes da verificacao de instancia unica. Aberto antes, um
+    // segundo lancamento — que so entrega os arquivos a janela aberta e sai —
+    // renomeava o log da instancia em uso para .1 e truncava o arquivo. Abrir
+    // um arquivo pelo gerenciador com o player aberto destruia o log de
+    // diagnostico, e o Windows ja fazia isso.
+    const QString log_path = open_log_file(pang::ui::settings::config_file_path());
+
     // A configuracao e lida antes do audio porque o dispositivo de saida
     // escolhido pelo usuario (AU-11) e um dado dela: abrir no padrao e trocar
     // depois faria o player soar um instante no lugar errado.
     pang::ui::settings::AppState saved = pang::ui::settings::load();
 
     // ------------------------------------------------------------- audio
+
+    // AR-05 — quem le um log recebido de outra pessoa precisa saber, antes de
+    // qualquer outra linha, O QUE estava rodando e ONDE. O log nao dizia nem a
+    // versao do player. Escrito antes de abrir o audio, para existir tambem
+    // quando e justamente o audio que falha.
+    pang::core::log::info(QStringLiteral("PlayAmpNG %1 — %2, Qt %3 (%4)")
+                              .arg(QStringLiteral(PLAYAMPNG_VERSION), QSysInfo::prettyProductName(),
+                                   QString::fromLatin1(qVersion()),
+                                   QGuiApplication::platformName())
+                              .toStdString());
+    pang::core::log::info("FFmpeg " + pang::core::ffmpeg_version() + " (" +
+                          pang::core::ffmpeg_license() + ")");
+    if (!log_path.isEmpty())
+        pang::core::log::info("log: " + QDir::toNativeSeparators(log_path).toStdString());
 
     pang::platform::AudioOutput output;
     struct Bridge {
@@ -252,6 +283,8 @@ int main(int argc, char** argv) {
     std::string device_error;
     if (!output.start(kPreferredRate, kChannels, render, &bridge, device_error,
                       saved.audio_device)) {
+        pang::core::log::error("sem dispositivo de audio (" + pang::platform::backend_name() +
+                               "): " + device_error);
         QWidget failure;
         failure.setWindowTitle(QStringLiteral("PlayAmpNG"));
         failure.setStyleSheet(QStringLiteral("background:#2a2a2a; color:#00ff7f;"));
@@ -261,6 +294,10 @@ int main(int argc, char** argv) {
         failure.show();
         return app.exec();
     }
+
+    pang::core::log::info("audio: " + pang::platform::backend_name() + ", \"" +
+                          output.device_name() + "\", " + std::to_string(output.sample_rate()) +
+                          " Hz" + (saved.audio_device.empty() ? " (padrao do sistema)" : ""));
 
     auto engine = std::make_unique<pang::core::Engine>(output.sample_rate(), output.channels());
     bridge.engine = engine.get();
@@ -782,20 +819,31 @@ int main(int argc, char** argv) {
         // AU-12, RB-05 — vigia o dispositivo no tique que ja existe, em vez de
         // criar um thread so para isso. A reabertura acontece aqui, no thread
         // da interface, e nao dentro do callback do proprio dispositivo.
-        static bool device_failure_reported = false;
-        switch (output.poll(100)) {
-            case pang::platform::AudioOutput::Health::Failed:
-                if (!device_failure_reported) {
-                    device_failure_reported = true;
+        //
+        // AR-05 — cada TRANSICAO vai para o log, e nao so a falha definitiva.
+        // Um dispositivo que cai e e reaberto sozinho e o caso tipico de "o som
+        // sumiu um instante e voltou": antes nao deixava rastro nenhum, e o
+        // relato ficava sem evidencia. So a mudanca de estado e registrada, e
+        // nao cada tique, senao o log vira ruido.
+        using Health = pang::platform::AudioOutput::Health;
+        static Health previous = Health::Ok;
+        const Health now = output.poll(100);
+        if (now != previous) {
+            switch (now) {
+                case Health::Recovering:
+                    pang::core::log::warn("saida de audio perdida; reabrindo: " +
+                                          output.last_error());
+                    break;
+                case Health::Failed:
                     pang::core::log::error("saida de audio: " + output.last_error());
                     engine->pause();  // RB-05 — para explicitamente, nao em silencio
-                }
-                break;
-            case pang::platform::AudioOutput::Health::Ok:
-                device_failure_reported = false;
-                break;
-            default:
-                break;
+                    break;
+                case Health::Ok:
+                    pang::core::log::info("saida de audio restabelecida: \"" +
+                                          output.device_name() + "\"");
+                    break;
+            }
+            previous = now;
         }
     });
     slow_timer->start(100);

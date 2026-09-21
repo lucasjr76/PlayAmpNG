@@ -5,6 +5,7 @@
 // estivesse misturada, so daria para exercita-la desconectando um fone na mao.
 
 #include <cstdio>
+#include <algorithm>
 #include <set>
 #include <string>
 
@@ -123,6 +124,39 @@ void enumeration_is_consistent() {
     // O invariante que interessa ao player e "no maximo um", ja conferido.
 }
 
+// AU-12, AR-05 — parar de proposito nao e perder o dispositivo.
+//
+// O defeito que este bloco guarda so apareceu quando o log passou a registrar
+// as transicoes da saida: a cada troca de faixa o controlador suspende o
+// dispositivo, o miniaudio avisa "stopped", e o player reabria o dispositivo
+// achando que ele tinha caido. Duas vezes em toda abertura do programa.
+//
+// Precisa de dispositivo de verdade; sem um, nao ha o que exercitar e o bloco
+// se declara pulado em vez de passar calado.
+void suspend_is_not_a_loss() {
+    using pang::platform::AudioOutput;
+    AudioOutput output;
+    std::string error;
+    auto silence = [](void*, float* out, std::uint32_t frames) {
+        std::fill(out, out + frames * 2, 0.0f);
+    };
+    if (!output.start(44100, 2, silence, nullptr, error)) {
+        std::printf("  suspender/retomar: PULADO, sem dispositivo (%s)\n", error.c_str());
+        return;
+    }
+
+    // Tres ciclos, como tres trocas de faixa. O aviso do backend chega DENTRO
+    // da parada, entao o primeiro poll depois de retomar ja o enxerga — nao
+    // ha espera arbitraria aqui.
+    for (int ciclo = 0; ciclo < 3; ++ciclo) {
+        output.suspend();
+        output.resume();
+        PANG_CHECK(output.poll(100) == AudioOutput::Health::Ok,
+                   "suspender e retomar nao e lido como perda do dispositivo");
+    }
+    output.close();
+}
+
 }  // namespace
 
 int main() {
@@ -133,5 +167,6 @@ int main() {
     repeated_loss_does_not_restart_the_count();
     reset_allows_a_fresh_start();
     enumeration_is_consistent();
+    suspend_is_not_a_loss();
     return pang::check::exit_code();
 }

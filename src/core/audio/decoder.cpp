@@ -77,10 +77,11 @@ bool Decoder::open(const std::string& url, int target_rate, int target_channels,
                    std::string& error) {
     close();
     clear_cancel();
+    source_ = log::redact(url);
     target_rate_ = target_rate;
     target_channels_ = target_channels;
 
-    av_log_set_level(AV_LOG_ERROR);
+    route_ffmpeg_log();
 
     fmt_ = avformat_alloc_context();
     if (!fmt_) {
@@ -254,7 +255,7 @@ bool Decoder::fill_pending() {
         }
 
         if (rc != AVERROR(EAGAIN)) {
-            log::error("erro ao decodificar: " + av_error(rc));
+            log::error("erro ao decodificar: " + av_error(rc) + " (" + source_ + ")");
             drain_resampler();
             return pending_frames_ > 0;
         }

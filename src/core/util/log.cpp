@@ -1,6 +1,8 @@
 #include "core/util/log.h"
 
 #include <array>
+#include <chrono>
+#include <ctime>
 #include <cctype>
 #include <cstdio>
 #include <mutex>
@@ -26,9 +28,41 @@ std::mutex& sink_mutex() {
     return m;
 }
 
+std::FILE* g_file = nullptr;
+
+// AR-05 — hora local com milissegundos em cada linha.
+//
+// Sem ela o log nao responde a pergunta mais comum de um relato: "o som parou
+// as 15h". Tambem e o que mostra, numa reconexao, que as tentativas estao de
+// fato espacadas — antes o log dizia "tentativa 1, 2, 3" sem dizer se foram
+// em um segundo ou em um minuto.
+//
+// ponytail: std::localtime usa um buffer estatico e nao e reentrante. Aqui e
+// chamado sempre sob sink_mutex, e nada mais no programa o usa; se algum dia
+// usar, trocar por std::chrono::zoned_time quando as tres bibliotecas-padrao
+// suportarem current_zone().
+void stamp(char (&buffer)[16]) {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t seconds = std::chrono::system_clock::to_time_t(now);
+    const auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now.time_since_epoch()).count() % 1000;
+    const std::tm* local = std::localtime(&seconds);
+    std::snprintf(buffer, sizeof buffer, "%02d:%02d:%02d.%03d", local ? local->tm_hour : 0,
+                  local ? local->tm_min : 0, local ? local->tm_sec : 0, static_cast<int>(millis));
+}
+
 void emit(const char* level, std::string_view message) {
     std::lock_guard<std::mutex> lock(sink_mutex());
-    std::fprintf(stderr, "[%s] %.*s\n", level, static_cast<int>(message.size()), message.data());
+    char when[16];
+    stamp(when);
+    const int size = static_cast<int>(message.size());
+    std::fprintf(stderr, "%s [%s] %.*s\n", when, level, size, message.data());
+    if (g_file) {
+        std::fprintf(g_file, "%s [%s] %.*s\n", when, level, size, message.data());
+        // Sem esvaziar a cada linha, o que um travamento interrompe e
+        // justamente o fim do log — as linhas que explicariam o travamento.
+        std::fflush(g_file);
+    }
 }
 
 }  // namespace
@@ -71,6 +105,37 @@ std::string redact(std::string_view url) {
     }
 
     return out;
+}
+
+std::string redact_text(std::string_view text) {
+    std::string out;
+    std::size_t pos = 0;
+    while (pos < text.size()) {
+        const std::size_t scheme = text.find("://", pos);
+        if (scheme == std::string_view::npos) break;
+
+        // O inicio da URL e o inicio da palavra que contem o "://".
+        std::size_t start = scheme;
+        while (start > pos && !std::isspace(static_cast<unsigned char>(text[start - 1])) &&
+               text[start - 1] != '\'' && text[start - 1] != '"' && text[start - 1] != '(')
+            --start;
+        std::size_t end = scheme + 3;
+        while (end < text.size() && !std::isspace(static_cast<unsigned char>(text[end])) &&
+               text[end] != '\'' && text[end] != '"' && text[end] != ')')
+            ++end;
+
+        out.append(text.substr(pos, start - pos));
+        out += redact(text.substr(start, end - start));
+        pos = end;
+    }
+    out.append(text.substr(pos));
+    return out;
+}
+
+void set_file(std::FILE* file) {
+    std::lock_guard<std::mutex> lock(sink_mutex());
+    if (g_file) std::fclose(g_file);
+    g_file = file;
 }
 
 void info(std::string_view message) { emit("info", message); }
