@@ -123,6 +123,23 @@ void indice_invalido_nao_quebra() {
     PANG_CHECK(group_of(-1, janelas).isEmpty(), "indice negativo devolve vazio");
 }
 
+// AP-18 — de que plataformas se pode esperar encaixe.
+void a_plataforma_decide_o_encaixe() {
+    using pang::ui::shell::snapping_available;
+
+    PANG_CHECK(!snapping_available(QStringLiteral("wayland")),
+               "Wayland nao deixa o cliente posicionar a propria janela");
+
+    // O caso que um teste ingenuo erraria: sob XWayland o backend e xcb, e o
+    // posicionamento funciona. Decidir por XDG_SESSION_TYPE daria "wayland" e
+    // desabilitaria o recurso sem motivo.
+    PANG_CHECK(snapping_available(QStringLiteral("xcb")),
+               "X11 permite, inclusive quando a sessao e Wayland com XWayland");
+
+    PANG_CHECK(snapping_available(QStringLiteral("windows")), "Windows permite");
+    PANG_CHECK(snapping_available(QStringLiteral("cocoa")), "macOS permite");
+}
+
 #define RUN(f)                       \
     do {                             \
         std::printf("-> %s\n", #f);  \
@@ -142,5 +159,6 @@ int main() {
     RUN(o_grupo_e_transitivo);
     RUN(grupo_de_janela_isolada_e_ela_mesma);
     RUN(indice_invalido_nao_quebra);
+    RUN(a_plataforma_decide_o_encaixe);
     return pang::check::exit_code();
 }

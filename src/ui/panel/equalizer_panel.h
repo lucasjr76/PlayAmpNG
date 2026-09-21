@@ -2,6 +2,8 @@
 
 #include <QWidget>
 
+#include <functional>
+
 #include <vector>
 
 #include "core/dsp/equalizer.h"
@@ -14,6 +16,14 @@ namespace pang::ui {
 // do formato: preamp em 21,38 e as dez bandas a partir de 78 com passo 18.
 class EqualizerPanel : public QWidget {
 public:
+    // AP-08 — quem assume o arraste da faixa de titulo.
+    //
+    // Devolve true quando o shell tomou conta e vai aplicar encaixe. Quando
+    // devolve false — ou nao existe — cai no startSystemMove(), que entrega o
+    // arraste ao compositor: e o unico caminho no Wayland, e la nao ha encaixe
+    // porque o cliente nao sabe nem define a propria posicao.
+    std::function<bool(const QPoint& global)> on_title_drag;
+
     static constexpr int kWidth = 275;
     static constexpr int kHeight = 116;
 
@@ -29,6 +39,8 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
+
+
 
 private:
     int slider_at(const QPoint& logical) const;   // -1 preamp, 0..9 bandas, -2 nenhum

@@ -52,6 +52,15 @@ public:
     // quem monta o menu e o shell, que ja conhece o AudioOutput.
     std::function<void(const QPoint&)> on_context_menu;
 
+    // AP-08 — quem assume o arraste da faixa de titulo.
+    //
+    // Devolve true quando o shell tomou conta e vai aplicar encaixe. Quando
+    // devolve false — ou nao existe — cai no startSystemMove(), que entrega o
+    // arraste ao compositor: e o unico caminho no Wayland, e la nao ha encaixe
+    // porque o cliente nao sabe nem define a propria posicao.
+    std::function<bool(const QPoint& global)> on_title_drag;
+
+
 protected:
     void contextMenuEvent(QContextMenuEvent*) override;
 

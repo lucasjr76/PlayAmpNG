@@ -1,5 +1,8 @@
 #pragma once
 
+#include <QPoint>
+#include <QRect>
+#include <QVector>
 #include <QWidget>
 
 #include <functional>
@@ -52,7 +55,25 @@ public:
 
     std::function<void()> on_layout_changed;
 
+    // AP-08, AP-09 — arraste com encaixe. Chamado pelos paineis quando o
+    // usuario pega a faixa de titulo; devolve false quando nao ha o que fazer
+    // aqui (modo integrado, ou plataforma que nao deixa posicionar), e ai o
+    // painel entrega o arraste ao compositor.
+    bool begin_title_drag(QWidget* panel, const QPoint& global);
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
+    // Janelas de topo existentes no modo destacado, na ordem em que aparecem.
+    QVector<QWidget*> detached_windows();
+
+    QWidget* dragging_ = nullptr;
+    QPoint drag_origin_;                 // cursor, em coordenadas de tela
+    QVector<QWidget*> drag_group_;       // o que se move junto
+    QVector<QRect> drag_group_start_;    // geometria inicial de cada um
+    QVector<QRect> drag_others_;         // o que fica parado, e serve de ima
+
     MainPanel* main_;
     EqualizerPanel* equalizer_;
     PlaylistPanel* playlist_;

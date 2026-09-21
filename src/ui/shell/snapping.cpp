@@ -1,5 +1,7 @@
 #include "ui/shell/snapping.h"
 
+#include <QGuiApplication>
+
 #include <cstdlib>
 
 namespace pang::ui::shell {
@@ -91,6 +93,25 @@ QVector<int> group_of(int origin, const QVector<QRect>& windows) {
         }
     }
     return group;
+}
+
+bool snapping_available(const QString& platform_name) {
+    // O Wayland com XWayland aparece como "xcb", e ali o posicionamento
+    // FUNCIONA — por isso a pergunta e sobre o BACKEND em uso, e nao sobre a
+    // sessao do usuario. Ler XDG_SESSION_TYPE daria a resposta errada para
+    // quem roda o player sob XWayland.
+    return platform_name != QLatin1String("wayland");
+}
+
+bool platform_can_position_windows() {
+    return snapping_available(QGuiApplication::platformName());
+}
+
+QString snapping_unavailable_reason() {
+    if (platform_can_position_windows()) return {};
+    return QStringLiteral(
+        "O Wayland nao deixa o programa posicionar as proprias janelas, "
+        "entao nao ha encaixe entre elas.");
 }
 
 }  // namespace pang::ui::shell

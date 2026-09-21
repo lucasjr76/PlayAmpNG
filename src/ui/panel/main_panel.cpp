@@ -529,6 +529,7 @@ void MainPanel::mousePressEvent(QMouseEvent* event) {
     }
     if (hit == Hit::Titlebar) {
         // Wayland nao deixa o cliente mover a propria janela; o compositor faz.
+        if (on_title_drag && on_title_drag(event->globalPosition().toPoint())) return;
         if (window()->windowHandle()) window()->windowHandle()->startSystemMove();
         return;
     }

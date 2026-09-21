@@ -2,6 +2,7 @@
 
 #include <QPoint>
 #include <QRect>
+#include <QString>
 #include <QVector>
 
 namespace pang::ui::shell {
@@ -49,5 +50,28 @@ bool touching(const QRect& a, const QRect& b);
 // tres. Parar no vizinho direto deixaria a playlist para tras, que e
 // exatamente o defeito que um usuario nota na primeira tentativa.
 QVector<int> group_of(int origin, const QVector<QRect>& windows);
+
+// AP-18 — se a plataforma deixa o cliente posicionar a propria janela.
+//
+// No Wayland nao deixa: o xdg-shell nao expoe posicao absoluta nem aceita
+// posicionamento pelo cliente, e o Qt nao contorna restricao de compositor.
+// Sem posicionar, nao ha encaixe nem movimento em grupo — e a interface nao
+// pode oferecer um controle que nao funciona.
+//
+// Decidido em tempo de EXECUCAO, e nao de compilacao: o mesmo binario roda em
+// X11 e em Wayland, e um #ifdef responderia pela maquina que compilou.
+bool platform_can_position_windows();
+
+// A decisao em si, separada de quem pergunta ao Qt.
+//
+// Existe para ser TESTAVEL: nao da para subir uma sessao Wayland num teste, e
+// depender de QGuiApplication::platformName() faria a regra so ser exercitada
+// na plataforma em que o teste roda. Recebe o nome como o Qt o informa —
+// minusculo e estavel: "wayland", "xcb", "windows", "cocoa", "offscreen".
+bool snapping_available(const QString& platform_name);
+
+// Frase curta para a interface explicar por que a opcao esta desabilitada.
+// Vazia quando o encaixe esta disponivel.
+QString snapping_unavailable_reason();
 
 }  // namespace pang::ui::shell

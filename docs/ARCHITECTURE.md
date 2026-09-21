@@ -390,9 +390,11 @@ O desenho corrigido tem dois modos:
 | Windows | sim | sim |
 | macOS | sim | sim |
 | Linux X11 | sim | sim |
-| Linux Wayland | sim, posicionado pelo compositor | **não** — indisponível, opção desabilitada com explicação na interface |
+| Linux Wayland | **não** | **não** — opção desabilitada com explicação na interface |
 
-A interface não oferece um controle que não funciona: no Wayland, a opção de destacar aparece com o encaixe explicitamente marcado como indisponível, em vez de aceitar o clique e não fazer nada.
+A interface não oferece um controle que não funciona: no Wayland a opção de destacar aparece **desabilitada**, com a razão escrita ao lado, em vez de aceitar o clique e não fazer nada.
+
+Uma versão anterior desta tabela dizia que o modo destacado funcionava no Wayland, "posicionado pelo compositor". Não funcionava: sem posicionar, destacar produz três janelas espalhadas onde o compositor quiser, que não encaixam e não se movem juntas — o clique sem efeito que AP-18 proíbe. A recusa vive em `set_detached()`, e não só no menu, para que o atalho `Ctrl+D` concorde com o que a interface mostra.
 
 ### Recuperação de janela fora da área visível
 

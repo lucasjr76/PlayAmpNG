@@ -338,6 +338,24 @@ target_compile_definitions(pang_playlist_ui_tests PRIVATE
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 add_test(NAME playlist_ui COMMAND pang_playlist_ui_tests)
 
+# AP-08, AP-09 — arraste com encaixe, com janelas de topo de verdade. O
+# test_snapping cobre a geometria; este cobre a LIGACAO entre ela e as janelas.
+qt_add_executable(pang_detached_tests
+  tests/test_detached.cpp
+  src/ui/shell/integrated.cpp
+  src/ui/shell/snapping.cpp
+  src/ui/panel/main_panel.cpp
+  src/ui/panel/equalizer_panel.cpp
+  src/ui/panel/playlist_panel.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp)
+target_link_libraries(pang_detached_tests PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core)
+target_compile_definitions(pang_detached_tests PRIVATE
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
+add_test(NAME detached COMMAND pang_detached_tests)
+set_tests_properties(detached PROPERTIES
+  TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # IN-09, IN-11 — a sessao entre duas execucoes. Encerra por SIGTERM, que e como
 # um logout pede ao programa que termine.
 add_test(NAME session COMMAND ${Python3_EXECUTABLE}
@@ -396,7 +414,7 @@ set_target_properties(pang_vis_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC 
 
 add_executable(pang_snapping_tests tests/test_snapping.cpp src/ui/shell/snapping.cpp)
 target_include_directories(pang_snapping_tests PRIVATE src)
-target_link_libraries(pang_snapping_tests PRIVATE Qt6::Core)
+target_link_libraries(pang_snapping_tests PRIVATE Qt6::Gui)
 set_target_properties(pang_snapping_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME snapping COMMAND pang_snapping_tests)

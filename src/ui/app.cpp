@@ -66,6 +66,7 @@
 #include "ui/panel/main_panel.h"
 #include "ui/panel/playlist_panel.h"
 #include "ui/shell/integrated.h"
+#include "ui/shell/snapping.h"
 #include "ui/settings.h"
 #include "ui/single_instance.h"
 #include "ui/shell/recovery.h"
@@ -367,7 +368,6 @@ int main(int argc, char** argv) {
     // juntos, tem a mesma largura, e nao ha janela primaria para se perder.
     pang::ui::shell::IntegratedShell shell(main_panel, equalizer_panel, playlist_panel, skin);
     shell.setWindowTitle(QStringLiteral("PlayAmpNG"));
-    shell.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
     shell.set_equalizer_visible(saved.equalizer_visible);
     shell.set_playlist_visible(saved.playlist_visible);
     if (saved.detached) shell.set_detached(true);
@@ -541,7 +541,7 @@ int main(int argc, char** argv) {
             "\nJanela\n"
             "  Ctrl+1/2/3    escala 1x, 2x, 3x\n"
             "  Ctrl+W        modo barra\n"
-            "  Ctrl+D        separar ou juntar os paineis\n"
+            "  Ctrl+D        separar ou juntar os paineis (onde ha encaixe)\n"
             "  Ctrl+E        equalizador\n"
             "  Ctrl+P        playlist\n"
             "  Ctrl+T        manter acima das demais janelas\n"
@@ -601,11 +601,34 @@ int main(int argc, char** argv) {
         QAction* properties = menu.addAction(QStringLiteral("Propriedades da faixa"));
         properties->setEnabled(controller->current_index() >= 0);
 
+        // AP-18 — a opcao existe sempre, mas NUNCA aceita o clique sem efeito.
+        // Onde o encaixe nao e possivel ela aparece desabilitada e dizendo por
+        // que: um item que some deixa o usuario procurando, e um que aceita o
+        // clique e nao faz nada e pior ainda.
+        menu.addSeparator();
+        const QString sem_encaixe = pang::ui::shell::snapping_unavailable_reason();
+        QAction* detach = menu.addAction(QStringLiteral("Separar os paineis em janelas"));
+        detach->setCheckable(true);
+        detach->setChecked(shell.detached());
+        if (!sem_encaixe.isEmpty()) {
+            detach->setEnabled(false);
+            detach->setToolTip(sem_encaixe);
+            QAction* porque = menu.addAction(sem_encaixe);
+            porque->setEnabled(false);
+        }
+        // Sem isto o tooltip de um item desabilitado nunca aparece, e a
+        // explicacao ficaria escrita num lugar que ninguem le.
+        menu.setToolTipsVisible(true);
+
         QAction* shortcuts = menu.addAction(QStringLiteral("Atalhos de teclado"));
 
         QAction* chosen = menu.exec(at);
         if (chosen == properties) {
             show_properties();
+            return;
+        }
+        if (chosen == detach) {
+            shell.set_detached(detach->isChecked());
             return;
         }
         if (chosen == shortcuts) {

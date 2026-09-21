@@ -434,8 +434,10 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
 
     const int row = row_at(p);
     if (row < 0) {
-        if (p.y() < kTitlebarHeight && window()->windowHandle())
-            window()->windowHandle()->startSystemMove();
+        if (p.y() < kTitlebarHeight) {
+            if (on_title_drag && on_title_drag(event->globalPosition().toPoint())) return;
+            if (window()->windowHandle()) window()->windowHandle()->startSystemMove();
+        }
         return;
     }
 

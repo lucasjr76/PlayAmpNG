@@ -18,6 +18,14 @@ namespace pang::ui {
 // linhas visiveis, entao dez mil itens custam o mesmo que dez.
 class PlaylistPanel : public QWidget {
 public:
+    // AP-08 — quem assume o arraste da faixa de titulo.
+    //
+    // Devolve true quando o shell tomou conta e vai aplicar encaixe. Quando
+    // devolve false — ou nao existe — cai no startSystemMove(), que entrega o
+    // arraste ao compositor: e o unico caminho no Wayland, e la nao ha encaixe
+    // porque o cliente nao sabe nem define a propria posicao.
+    std::function<bool(const QPoint& global)> on_title_drag;
+
     static constexpr int kWidth = 275;
     static constexpr int kMinimumHeight = 116;
 
@@ -60,6 +68,8 @@ protected:
     void keyPressEvent(QKeyEvent*) override;
     void dragEnterEvent(QDragEnterEvent*) override;
     void dropEvent(QDropEvent*) override;
+
+
 
 private:
     QPoint to_logical(const QPoint& physical) const;

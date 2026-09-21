@@ -2,6 +2,7 @@
 
 #include <QMenu>
 #include <QMouseEvent>
+#include <QWindow>
 #include <QPainter>
 #include <QPen>
 
@@ -11,6 +12,9 @@
 #include "ui/skin/winamp_layout.h"
 
 namespace pang::ui {
+
+// Altura da faixa de titulo, em pixels logicos — a mesma dos outros paineis.
+constexpr int kTitlebarHeight = 14;
 namespace {
 
 namespace wa = skin::winamp;
@@ -208,6 +212,15 @@ void EqualizerPanel::mousePressEvent(QMouseEvent* event) {
     if (index != -2) {
         dragging_ = index;
         apply_slider(index, p.y());
+        return;
+    }
+
+    // AP-08 — a faixa de titulo arrasta a janela. Ate aqui o equalizador
+    // destacado nao podia ser movido de lugar nenhum: era uma janela sem
+    // decoracao e sem arraste proprio.
+    if (p.y() < kTitlebarHeight) {
+        if (on_title_drag && on_title_drag(event->globalPosition().toPoint())) return;
+        if (window()->windowHandle()) window()->windowHandle()->startSystemMove();
     }
 }
 
