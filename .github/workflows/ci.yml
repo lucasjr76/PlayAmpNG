@@ -229,8 +229,12 @@ jobs:
         run: |
           flatpak-builder --user --force-clean --repo=repo-flatpak \
             build-flatpak packaging/linux/br.com.playampng.PlayAmpNG.yml
-          flatpak build-bundle repo-flatpak PlayAmpNG.flatpak \
-            br.com.playampng.PlayAmpNG
+          # --runtime-repo: o pacote leva o endereco de onde baixar o runtime
+          # do KDE. Sem isto, instalar num sistema sem o Flathub configurado —
+          # um Ubuntu recem-instalado, por exemplo — falha sem achar o runtime.
+          flatpak build-bundle \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo \
+            repo-flatpak PlayAmpNG.flatpak br.com.playampng.PlayAmpNG
 
       - uses: actions/upload-artifact@v4
         with:
