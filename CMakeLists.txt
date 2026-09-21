@@ -193,6 +193,7 @@ qt_add_executable(playampng
   src/ui/settings.cpp
   src/ui/single_instance.cpp
   src/ui/shell/recovery.cpp
+  src/ui/shell/snapping.cpp
   src/ui/skin/winamp_skin.cpp
   src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
@@ -219,6 +220,7 @@ qt_add_executable(pang_render
   tools/render_panels.cpp
   src/ui/settings.cpp
   src/ui/shell/recovery.cpp
+  src/ui/shell/snapping.cpp
   src/ui/skin/winamp_skin.cpp
   src/ui/skin/zip.cpp
   src/ui/panel/main_panel.cpp
@@ -391,6 +393,13 @@ target_link_libraries(pang_vis_tests PRIVATE pang_core)
 target_compile_definitions(pang_vis_tests PRIVATE
   PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
 set_target_properties(pang_vis_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(pang_snapping_tests tests/test_snapping.cpp src/ui/shell/snapping.cpp)
+target_include_directories(pang_snapping_tests PRIVATE src)
+target_link_libraries(pang_snapping_tests PRIVATE Qt6::Core)
+set_target_properties(pang_snapping_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_test(NAME snapping COMMAND pang_snapping_tests)
 
 add_executable(pang_recovery_tests tests/test_recovery.cpp src/ui/shell/recovery.cpp)
 target_include_directories(pang_recovery_tests PRIVATE src)
