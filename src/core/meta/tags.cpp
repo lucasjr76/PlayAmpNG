@@ -37,8 +37,25 @@ Track read_tags(const std::string& path) {
 
     route_ffmpeg_log();
 
+    // Fonte remota nao e aberta aqui. O que uma radio esta tocando chega pelo
+    // ICY durante a reproducao; abrir a conexao so para ler tags gastava rede,
+    // baixava audio de um fluxo ao vivo no thread de metadados e, sem prazo,
+    // podia prende-lo para sempre num servidor que nao responde — deixando
+    // todas as faixas seguintes da playlist sem duracao.
+    if (is_remote(path)) return t;
+
+    // AR-06/seguranca — as MESMAS opcoes que probe e decodificador usam, a
+    // lista de protocolos permitidos inclusive. Esta rota abria a fonte sem
+    // opcao nenhuma, e uma entrada de playlist "concat:" ou "subfile:" — que o
+    // probe recusa — era aberta aqui: a playlist de terceiros podia fazer o
+    // player ler o que nao devia pela porta das tags. Oitava dupla divergente
+    // deste projeto.
+    AVDictionary* opts = nullptr;
+    apply_network_options(&opts);
     AVFormatContext* fmt = nullptr;
-    if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) return t;
+    const int opened = avformat_open_input(&fmt, path.c_str(), nullptr, &opts);
+    av_dict_free(&opts);
+    if (opened < 0) return t;
     if (avformat_find_stream_info(fmt, nullptr) < 0) {
         avformat_close_input(&fmt);
         return t;

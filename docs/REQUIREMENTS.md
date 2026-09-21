@@ -47,7 +47,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | PL-05 | Próxima faixa | AUTO | M2 | OK (M2) |
 | PL-06 | Abrir arquivos por diálogo | MANUAL | M2 | OK (M2) |
 | PL-07 | Abrir diretório, com busca recursiva opcional | AUTO + MANUAL | M2 | OK (M2) |
-| PL-08 | Abrir URL de áudio | AUTO | M6 | OK (M6) |
+| PL-08 | Abrir URL de áudio | AUTO + MANUAL | M6 | OK (M8) — Ctrl+L ou menu "Abrir endereço…", e links arrastados do navegador; até o M8 só pela linha de comando ou por .m3u importada |
 | PL-09 | Volume com efeito real e rampa suave | MEDIDO | M3 | OK (M3) |
 | PL-10 | Balanço estéreo com efeito real | MEDIDO | M3 | OK (M3) |
 | PL-11 | Shuffle ligado/desligado | AUTO | M2 | OK (M2) |

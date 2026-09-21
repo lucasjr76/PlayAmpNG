@@ -12,6 +12,9 @@
 #include <QApplication>
 #include <QImage>
 #include <QMouseEvent>
+#include <QUrl>
+#include <QDropEvent>
+#include <QMimeData>
 
 #include <cstdio>
 #include <string>
@@ -224,6 +227,26 @@ int main(int argc, char** argv) {
         click(&panel, QPoint(40, tremida), QEvent::MouseButtonRelease);
         PANG_CHECK(controller.playlist().at(2).path == antes,
                    "tremer abaixo do limiar de arraste nao reordena nada");
+    }
+
+    // ---------------------------------------- PL-08: arrastar link de radio
+    //
+    // Arrastar do navegador entrega uma lista de URLs. Antes so arquivo local
+    // entrava, e o link de uma radio era ignorado em silencio. Testa-se o
+    // filtro, e nao o evento: o Qt so entrega um "soltar" dentro de um
+    // arraste de verdade — a primeira versao deste bloco mandava o evento a
+    // mao, ele nao era entregue, e o teste reprovava com o codigo correto.
+    {
+        const QStringList aceitos = pang::ui::PlaylistPanel::accepted_drop_paths(
+            {QUrl(QStringLiteral("https://ice1.somafm.com/groovesalad-128-mp3")),
+             QUrl::fromLocalFile(QStringLiteral("/musica/faixa.mp3")),
+             QUrl(QStringLiteral("ftp://servidor/arquivo.mp3")),
+             QUrl(QStringLiteral("javascript:alert(1)"))});
+        PANG_CHECK(aceitos.contains(QStringLiteral("https://ice1.somafm.com/groovesalad-128-mp3")),
+                   "link de radio arrastado entra na playlist");
+        PANG_CHECK(aceitos.contains(QStringLiteral("/musica/faixa.mp3")),
+                   "arquivo local continua entrando");
+        PANG_CHECK(aceitos.size() == 2, "ftp: e javascript: ficam de fora — so fonte remota de verdade");
     }
 
     return pang::check::exit_code();

@@ -9,6 +9,8 @@ EN-08. O que o player **não** faz, e por quê. Cada item traz a razão, e não 
 | AppImage exige glibc recente | O AppImage é montado no Ubuntu 24.04, que tem glibc 2.39, e essa passa a ser a versão **mínima** para executá-lo — Ubuntu 22.04, Debian 12 e derivados não o abrem. É inerente ao formato: quem constrói define o piso. Ampliar o alcance exigiria construir numa base antiga, o que ainda não foi feito |
 | macOS | `integration_none.cpp` no lugar de MPNowPlayingInfoCenter, e nenhum pacote. O player roda, só não aparece no painel do sistema nem recebe teclas de mídia pelo caminho do ambiente. M9 |
 
+| Arquivo em HTTP sem duração na playlist | O leitor de tags não abre fontes remotas — abria sem prazo e sem a lista de protocolos (`DEFEITOS.md` C-27). Um arquivo servido por HTTP, com tamanho conhecido, mostra a duração só quando começa a tocar. Para rádio isso não muda nada: rádio não tem duração |
+
 ## Funcionalidades fora de escopo
 
 | Item | Por quê |

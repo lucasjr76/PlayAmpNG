@@ -41,7 +41,7 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Teste de mutação em toda lógica nova.** Quebrar o código de propósito e confirmar que o teste reprova. Um teste que continua verde sem a regra que diz testar é vácuo, e isso já aconteceu aqui mais de uma vez.
 
-**Duas rotas para a mesma operação sempre divergem.** Aconteceu sete vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, as duas rotas que declaram o dispositivo de áudio perdido, e o título "do que está tocando" decidido em dois lugares. A correção é unificar numa rota só, não remendar a que quebrou.
+**Duas rotas para a mesma operação sempre divergem.** Aconteceu oito vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, as duas rotas que declaram o dispositivo de áudio perdido, o título "do que está tocando" decidido em dois lugares, e o leitor de tags abrindo fontes sem as opções de rede — o que deixava passar protocolo proibido. A correção é unificar numa rota só, não remendar a que quebrou.
 
 **Esperar o evento, nunca amostrar num instante arbitrário.** Testes que dormem um tempo fixo e depois conferem o estado são intermitentes. E o `sleep` do Windows tem resolução de ~15 ms: um teste que consome áudio com esperas curtas fica mais lento que o tempo real lá, e só lá.
 

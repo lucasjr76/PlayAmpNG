@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QUrl>
 #include <QWidget>
 
 #include <chrono>
@@ -55,6 +56,12 @@ public:
     std::function<void()> on_import;
     std::function<void()> on_export;
     std::function<void(const QStringList&)> on_drop;
+
+    // LI-02, PL-08 — o que entra na playlist de uma lista de URLs arrastadas:
+    // arquivos locais e fontes remotas (http/https). Separado do dropEvent
+    // para ser testavel: o Qt so entrega um "soltar" dentro de um arraste de
+    // verdade, que um teste sem tela nao tem.
+    static QStringList accepted_drop_paths(const QList<QUrl>& urls);
 
     // A altura mudou por arraste da aresta inferior; o shell reempilha.
     std::function<void()> on_height_changed;

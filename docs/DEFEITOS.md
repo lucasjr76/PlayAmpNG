@@ -12,6 +12,25 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-28 — Nenhum caminho na interface para abrir um endereço de rádio
+
+**Encontrado ao preparar o teste manual de streaming.** Não havia diálogo de endereço, e um link arrastado do navegador para a playlist era ignorado em silêncio — só arquivo local entrava. O PL-08 estava OK porque passava pela linha de comando e pelos testes; um usuário não tinha como chegar lá.
+
+**Correção:** Ctrl+L e item "Abrir endereço…" no menu, como no Winamp, entrando pela mesma rota de abrir arquivos e tocando na hora; e links http/https arrastados passam a entrar. Qualquer outro esquema (`ftp:`, `javascript:`) continua de fora.
+
+### C-27 — O leitor de tags abria protocolo proibido e podia travar num servidor mudo
+
+**Encontrado ao ligar o Ctrl+L, lendo o que acontece depois de incluir um endereço.** O leitor de tags abria a fonte **sem nenhuma** das opções de rede que o `probe` e o decodificador usam:
+
+- sem a lista de protocolos permitidos: medido, `concat:` de dois arquivos locais **foi aberto** pelo leitor de tags, enquanto o `probe` o recusou. Uma playlist de terceiros podia fazer o player ler o que não devia pela porta das tags;
+- sem prazo: num servidor que aceita a conexão e não responde, o thread de metadados ficaria preso indefinidamente, e as faixas seguintes da playlist sem duração.
+
+Oitava dupla divergente deste projeto.
+
+**Correção:** fonte remota não é aberta para ler tags — o que ela toca chega pelo ICY na reprodução; arquivo local abre com as mesmas opções do `probe`.
+
+**Verificado por mutação:** sem a lista, o `concat:` volta a abrir; lendo fonte remota, a leitura fica presa 10 117 ms num servidor mudo. A primeira versão desse segundo teste usava uma porta fechada, onde a conexão é recusada na hora, e passava com ou sem a proteção — foi refeita contra um servidor mudo.
+
 ### C-26 — Rádio engasgada aparecia como "tocando", em silêncio
 
 **Encontrado pelo CI:** o teste de buffering passou no Linux e reprovou no macOS.

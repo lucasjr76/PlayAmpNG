@@ -1,5 +1,7 @@
 #include "ui/panel/playlist_panel.h"
 
+#include "core/audio/network.h"
+
 #include <QApplication>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -616,10 +618,24 @@ void PlaylistPanel::dragEnterEvent(QDragEnterEvent* event) {
     if (event->mimeData()->hasUrls()) event->acceptProposedAction();
 }
 
-void PlaylistPanel::dropEvent(QDropEvent* event) {
+QStringList PlaylistPanel::accepted_drop_paths(const QList<QUrl>& urls) {
     QStringList paths;
-    for (const QUrl& url : event->mimeData()->urls())
-        if (url.isLocalFile()) paths << url.toLocalFile();
+    for (const QUrl& url : urls) {
+        if (url.isLocalFile()) {
+            paths << url.toLocalFile();
+            continue;
+        }
+        // PL-08 — link de radio arrastado do navegador. Antes era ignorado
+        // em silencio: so arquivo local entrava. Qualquer outro esquema
+        // (ftp:, javascript:) continua de fora — o mesmo criterio de "fonte
+        // remota" que o resto do player usa.
+        if (core::is_remote(url.toString().toStdString())) paths << url.toString();
+    }
+    return paths;
+}
+
+void PlaylistPanel::dropEvent(QDropEvent* event) {
+    const QStringList paths = accepted_drop_paths(event->mimeData()->urls());
     if (!paths.isEmpty() && on_drop) on_drop(paths);
     event->acceptProposedAction();
 }

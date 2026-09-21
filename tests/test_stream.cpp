@@ -19,6 +19,7 @@
 #include "core/audio/engine.h"
 #include "core/audio/network.h"
 #include "core/audio/probe.h"
+#include "core/meta/tags.h"
 #include "core/state/controller.h"
 #include "core/util/check.h"
 
@@ -260,6 +261,22 @@ void served_over_http(int port) {
                        "arquivo local nao se anuncia como conectando");
             engine.stop();
         }
+    }
+
+    // Fonte remota nao e aberta pelo leitor de tags: o que ela toca chega pelo
+    // ICY. Contra um servidor MUDO, e nao contra uma porta fechada: a primeira
+    // versao deste teste usava a porta 1, onde a conexao e recusada na hora, e
+    // passava com ou sem a protecao. Aqui, sem ela, a leitura fica presa ate o
+    // prazo da rede.
+    {
+        const auto t0 = std::chrono::steady_clock::now();
+        const Track remoto = meta::read_tags(base + "/trava");
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - t0)
+                            .count();
+        std::printf("  leitura de tags de servidor mudo: %lld ms\n", static_cast<long long>(ms));
+        PANG_CHECK(remoto.duration_ms == -1 && ms < 50,
+                   "fonte remota nao e aberta pelo leitor de tags, nem presa num servidor mudo");
     }
 
     // AR-09 — cancelar uma abertura de rede PRESA.

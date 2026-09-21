@@ -523,6 +523,17 @@ void test_broken_files() {
     PANG_CHECK(t.duration_ms == -1, "arquivo corrompido nao produz duracao inventada");
     PANG_CHECK(meta::read_tags("/nao/existe.mp3").title.empty(),
                "arquivo ausente devolve tags vazias, sem lancar");
+
+    // Seguranca — o leitor de tags usa a mesma lista de protocolos do probe e
+    // do decodificador. Ele abria a fonte sem opcao nenhuma, e uma entrada de
+    // playlist "concat:" — que o probe recusa — era lida aqui.
+    // Arquivo REAL: com um inexistente o concat falharia de qualquer jeito, e o
+    // teste passaria mesmo com a protecao desligada.
+    const std::string real = asset("tone.wav");
+    const Track concatenado = meta::read_tags("concat:" + real + "|" + real);
+    PANG_CHECK(concatenado.duration_ms == -1,
+               "protocolo fora da lista (concat:) e recusado tambem pelo leitor de tags");
+
 }
 
 // LI-04 com LI-05 — reordenar uma SELECAO, que nao e repetir o move de um.

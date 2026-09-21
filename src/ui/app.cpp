@@ -31,6 +31,7 @@
 #include <QTimer>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QShortcut>
 #include <QSysInfo>
 
 #include <QWidget>
@@ -61,6 +62,7 @@
 #include "core/playlist/m3u.h"
 #include "core/state/controller.h"
 #include "platform/audio_device.h"
+#include "core/audio/network.h"
 #include "core/audio/probe.h"
 #include "platform/integration.h"
 #include "ui/panel/equalizer_panel.h"
@@ -451,6 +453,38 @@ int main(int argc, char** argv) {
         if (was_empty) controller->play_index(0);
     };
 
+    // PL-08 — abrir endereco de radio ou de arquivo na rede, como o Ctrl+L do
+    // Winamp. Ate aqui um endereco so entrava pela linha de comando ou dentro
+    // de uma .m3u importada: o requisito passava nos testes, mas um usuario
+    // nao tinha como chegar la pela interface.
+    //
+    // Entra pela MESMA rota de abrir arquivos (add_paths), e toca na hora —
+    // quem digita um endereco quer ouvi-lo, nao so enfileira-lo.
+    const auto open_location = [&] {
+        bool ok = false;
+        const QString typed =
+            QInputDialog::getText(&shell, QStringLiteral("Abrir endereco"),
+                                  QStringLiteral("Endereco da radio ou do arquivo:"),
+                                  QLineEdit::Normal, QString(), &ok)
+                .trimmed();
+        if (!ok || typed.isEmpty()) return;
+        if (!pang::core::is_remote(typed.toStdString())) {
+            QMessageBox::information(
+                &shell, QStringLiteral("Abrir endereco"),
+                QStringLiteral("Use um endereco que comece com http:// ou https://.\n"
+                               "Para arquivos do computador, use Abrir (botao de ejetar)."));
+            return;
+        }
+        const int position = controller->playlist().size();
+        add_paths({typed});
+        controller->play_index(position);
+    };
+    {
+        auto* shortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+L")), &shell);
+        shortcut->setContext(Qt::ApplicationShortcut);
+        QObject::connect(shortcut, &QShortcut::activated, &shell, open_location);
+    }
+
     // ------------------------------------------------------------- ligacoes
 
     main_panel->on_open = open_files;
@@ -579,6 +613,7 @@ int main(int argc, char** argv) {
             "  Z X C V B     anterior, tocar, pausar, parar, proxima\n"
             "  Setas < >     retroceder e avancar 5 s\n"
             "  Setas ^ v     volume\n"
+            "  Ctrl+L        abrir endereco de radio\n"
             "\nJanela\n"
             "  Ctrl+1/2/3    escala 1x, 2x, 3x\n"
             "  Ctrl+W        modo barra\n"
@@ -635,6 +670,8 @@ int main(int argc, char** argv) {
         }
 
         menu.addSeparator();
+        QAction* location = menu.addAction(QStringLiteral("Abrir endereco...\tCtrl+L"));
+        menu.addSeparator();
 
         // MD-03 — propriedades tecnicas e localizacao do arquivo. Os dados vem
         // do probe, e nao da playlist: o que interessa aqui e o que a FONTE
@@ -664,6 +701,10 @@ int main(int argc, char** argv) {
         QAction* shortcuts = menu.addAction(QStringLiteral("Atalhos de teclado"));
 
         QAction* chosen = menu.exec(at);
+        if (chosen == location) {
+            open_location();
+            return;
+        }
         if (chosen == properties) {
             show_properties();
             return;
