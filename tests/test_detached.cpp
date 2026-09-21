@@ -192,5 +192,40 @@ int main(int argc, char** argv) {
         release_mouse_at(press + QPoint(70, 0));
     }
 
+    // ------------------------------------------ o arranjo do usuario fica
+    //
+    // Relatado em uso, no Windows: com a playlist posta AO LADO do painel
+    // principal, redimensiona-la com o mouse a arrancava de volta para baixo
+    // das outras. relayout() reempilhava tudo a cada chamada, e ele e chamado
+    // a cada movimento do redimensionamento.
+    {
+        const QPoint ao_lado(shell.frameGeometry().right() + 1, shell.pos().y());
+        pl_panel->move(ao_lado);
+        app.processEvents();
+
+        // O mesmo caminho do redimensionamento pelo mouse: nova altura e
+        // relayout().
+        pl_panel->set_logical_height(pl_panel->logical_height() + 40);
+        shell.relayout();
+        PANG_CHECK(pl_panel->pos() == ao_lado,
+                   "redimensionar a playlist nao a tira de onde o usuario a pos");
+
+        shell.set_equalizer_visible(false);
+        shell.set_equalizer_visible(true);
+        PANG_CHECK(pl_panel->pos() == ao_lado,
+                   "esconder e mostrar o equalizador tambem nao mexe na playlist");
+    }
+
+    // Ao destacar de novo, ai sim empilha: e o ponto de partida do modo.
+    {
+        shell.set_detached(false);
+        shell.set_detached(true);
+        app.processEvents();
+        PANG_CHECK(eq_panel->pos().y() == shell.frameGeometry().bottom() + 1,
+                   "ao destacar, o equalizador comeca logo abaixo do principal");
+        PANG_CHECK(pl_panel->pos().y() == eq_panel->frameGeometry().bottom() + 1,
+                   "e a playlist logo abaixo do equalizador");
+    }
+
     return pang::check::exit_code();
 }

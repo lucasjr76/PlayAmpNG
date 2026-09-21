@@ -12,6 +12,16 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-29 — Redimensionar a playlist destacada a arrancava de volta para baixo das outras
+
+**Observado em uso, no Windows:** com a playlist posta ao lado do painel principal, puxar a borda para redimensioná-la fazia a janela voltar para baixo do equalizador, impedindo o redimensionamento.
+
+**Causa:** no modo destacado, `relayout()` reempilhava todas as janelas abaixo do painel principal a cada chamada — e ele é chamado a cada movimento do mouse durante o redimensionamento, ao mostrar ou esconder o equalizador e ao mudar a escala. Qualquer arranjo feito pelo usuário se perdia no próximo desses eventos.
+
+**Correção:** o empilhamento acontece uma vez, ao entrar no modo destacado; depois disso, a posição de cada janela é do usuário.
+
+**Verificado:** o teste reproduz o relato — playlist ao lado, redimensionada, equalizador escondido e mostrado — e a implementação antiga reprova nos dois pontos. Sem o empilhamento inicial, o teste também reprova.
+
 ### C-28 — Nenhum caminho na interface para abrir um endereço de rádio
 
 **Encontrado ao preparar o teste manual de streaming.** Não havia diálogo de endereço, e um link arrastado do navegador para a playlist era ignorado em silêncio — só arquivo local entrava. O PL-08 estava OK porque passava pela linha de comando e pelos testes; um usuário não tinha como chegar lá.

@@ -125,6 +125,19 @@ void IntegratedShell::set_detached(bool detached) {
         }
     }
     relayout();
+
+    // Empilhar abaixo do painel principal acontece UMA vez, ao destacar — e
+    // para os dois paineis, visiveis ou nao, para que um que apareca depois ja
+    // tenha lugar. Depois disso, onde cada janela esta e decisao do usuario.
+    if (detached_) {
+        const int s = skin_.scale();
+        const int main_height = compact_ ? MainPanel::kCompactHeight : MainPanel::kHeight;
+        int below = pos().y() + main_height * s;
+        for (QWidget* panel : {static_cast<QWidget*>(equalizer_), static_cast<QWidget*>(playlist_)}) {
+            panel->move(pos().x(), below);
+            if (panel->isVisible()) below += panel->height();
+        }
+    }
 }
 
 QVector<QWidget*> IntegratedShell::detached_windows() {
@@ -233,16 +246,16 @@ void IntegratedShell::relayout() {
     if (detached_) {
         // Destacado: a janela do shell encolhe para o painel principal, e os
         // outros dois viram janelas proprias logo abaixo dele.
+        //
+        // SEM reposicionar. A primeira versao empilhava as janelas de novo a
+        // cada chamada, e relayout() e chamado a cada movimento do mouse ao
+        // redimensionar a playlist: o usuario punha a playlist ao lado, puxava
+        // a borda e ela era arrancada de volta para baixo das outras. O mesmo
+        // ao mostrar o equalizador ou mudar a escala. Relatado em uso, no
+        // Windows. O empilhamento inicial e feito uma vez, em set_detached().
         setFixedSize(MainPanel::kWidth * s, main_height * s);
-        int below = pos().y() + main_height * s;
-        for (auto* panel : {static_cast<QWidget*>(equalizer_), static_cast<QWidget*>(playlist_)}) {
-            const bool visible =
-                panel == static_cast<QWidget*>(equalizer_) ? show_equalizer : show_playlist;
-            panel->setVisible(visible);
-            if (!visible) continue;
-            panel->move(pos().x(), below);
-            below += panel->height();
-        }
+        equalizer_->setVisible(show_equalizer);
+        playlist_->setVisible(show_playlist);
         if (on_layout_changed) on_layout_changed();
         return;
     }
