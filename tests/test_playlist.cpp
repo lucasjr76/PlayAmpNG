@@ -150,6 +150,22 @@ void test_duration_and_title() {
     pl.apply_metadata(pl.at(0).id, full);
     PANG_CHECK(pl.at(0).display_title() == "A - Faixa",
                "com artista e titulo, exibe \"artista - titulo\"");
+
+    // AR-06 — fonte remota sem tags nao pode exibir a credencial. Tratada
+    // como caminho de arquivo, a URL virava o proprio titulo: inteira, ou
+    // cortada em "usuario:senha@host". Cada forma abaixo vazava de um jeito.
+    for (const char* url : {"http://usuario:SEGREDO@radio.example/",
+                            "http://usuario:SEGREDO@radio.example/stream?token=SEGREDO",
+                            "https://radio.example/live.mp3?token=SEGREDO",
+                            "http://usuario:SEGREDO@radio.example:8000"}) {
+        Track radio;
+        radio.path = url;
+        const std::string shown = radio.display_title();
+        PANG_CHECK(shown.find("SEGREDO") == std::string::npos,
+                   ("titulo de fonte remota sem credencial: " + shown).c_str());
+        PANG_CHECK(shown.find("radio.example") != std::string::npos,
+                   ("e ainda diz de onde vem: " + shown).c_str());
+    }
 }
 
 void test_sort_and_find() {

@@ -54,6 +54,29 @@ public:
     int current_index() const;
     std::uint64_t current_id() const { return current_id_; }
 
+    // MD-05 — o titulo do que esta tocando AGORA.
+    //
+    // Em stream, o que o servidor anuncia (ICY StreamTitle) vale mais que o
+    // titulo da entrada da playlist, que para uma radio e so o endereco. Vazio
+    // quando nada esta carregado.
+    //
+    // Uma rota so, usada pela janela principal e pelo painel de midia do
+    // sistema. Antes cada um decidia por conta propria, e divergiram: o painel
+    // do sistema mostrava a musica da radio, e a janela do proprio player
+    // mostrava o endereco.
+    std::string now_playing_title() const;
+
+    // MD-04 — o estado da fonte, em palavras, para quem olha a janela.
+    //
+    // O motor ja distinguia conectando, buffering e erro, mas nada disso
+    // chegava a tela: uma radio conectando era identica a uma parada, e uma
+    // que falhou nao dizia nada. Como no Winamp, o aviso vai no letreiro do
+    // titulo — sem arte nova, no lugar para onde o usuario ja olha.
+    //
+    // Vazio quando nao ha o que dizer. "Conectando" so para fonte remota:
+    // abrir um arquivo local e instantaneo, e o aviso so piscaria.
+    std::string now_playing_status() const;
+
     // Chamar periodicamente pela interface (ou pelo teste). Detecta fim de
     // faixa e avanca conforme repeat e shuffle.
     void poll();

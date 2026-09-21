@@ -1,5 +1,7 @@
 #include "core/state/controller.h"
 
+#include "core/audio/network.h"
+
 namespace pang::core {
 
 Controller::Controller(Engine& engine, Guard suspend, Guard resume)
@@ -13,6 +15,32 @@ void Controller::guarded(const std::function<void()>& action) {
 
 int Controller::current_index() const {
     return current_id_ == 0 ? -1 : playlist_.index_of(current_id_);
+}
+
+std::string Controller::now_playing_title() const {
+    const int index = current_index();
+    if (index < 0) return {};
+    if (std::string icy = engine_.icy_title(); !icy.empty()) return icy;
+    return playlist_.at(index).display_title();
+}
+
+std::string Controller::now_playing_status() const {
+    switch (engine_.snapshot().state) {
+        case State::Loading: {
+            const int index = current_index();
+            return index >= 0 && is_remote(playlist_.at(index).path) ? "[CONECTANDO]"
+                                                                      : std::string{};
+        }
+        case State::Buffering:
+            return "[BUFFER]";
+        case State::Error: {
+            // O erro do motor ja vem com o endereco redigido (AR-06).
+            const std::string error = engine_.last_error();
+            return error.empty() ? "[ERRO]" : "[ERRO] " + error;
+        }
+        default:
+            return {};
+    }
 }
 
 void Controller::playlist_changed() {

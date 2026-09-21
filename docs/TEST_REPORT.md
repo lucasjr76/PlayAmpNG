@@ -100,6 +100,25 @@ Um aviso que aparecia em **toda** abertura — `skin sem os bitmaps: eq_ex, pled
 
 **Limite declarado:** que o FFmpeg nunca escreva credencial não foi provado para todo caminho; foi medido nos cinco cenários de rede da suíte, e a redação em texto livre é a proteção para os demais.
 
+## Streaming — MD-04, MD-05, AR-06, AR-09
+
+Os quatro estavam parciais desde o M6 porque o servidor de teste não exercitava os casos que os motivam. Ganhou três caminhos: `/icy` fala o protocolo ICY de verdade e troca de música no meio; `/lento` envia abaixo do tempo real, o que esvazia o buffer com certeza; `/trava` aceita a conexão e nunca responde.
+
+| Requisito | O que faltava | Medido |
+|---|---|---|
+| AR-09 | o cancelamento testado era o da decodificação, não o de uma abertura de rede presa | parar com a abertura presa: **0 ms**; com o cancelamento desligado, **9 813 ms** — o prazo de leitura da rede |
+| MD-05 | o título ICY dentro do fluxo existia no código e nunca tinha rodado num teste; e a janela do player não o mostrava | título lido, troca de música recebida, e publicado no D-Bus lido de fora do player |
+| MD-04 | os estados existiam no motor e não chegavam à tela: conectando era idêntico a parado, e o erro não aparecia em lugar nenhum | `[CONECTANDO]`, `[BUFFER]` e `[ERRO] <motivo>` no letreiro, cada um provocado pelo servidor |
+| AR-06 | a redação do log foi medida no AR-05; a exibição, nunca | endereço com senha e token não aparece no título, nas propriedades, na mensagem de erro nem nos metadados do D-Bus |
+
+**O AR-06 tinha um vazamento real.** Uma rádio sem tags tinha como título o "nome do arquivo" da URL, e o de `http://usuario:senha@host/` é a URL inteira; o de `http://usuario:senha@host:8000`, `usuario:senha@host`. Esse título ia para a playlist, a janela principal e o painel de mídia do sistema, e o `xesam:url` ia cru ao D-Bus, onde qualquer programa da sessão lê.
+
+**A decisão de "qual é o título do que está tocando" tinha duas rotas**: o painel do sistema mostrava a música anunciada pela rádio, e a janela do próprio player, o endereço. Agora é uma, no controlador.
+
+**Prova de que o teste do AR-09 mede o que diz:** 0 ms era bom demais para aceitar. O teste passou a conferir que no instante da parada a abertura ainda estava presa, e a mutação que desliga o cancelamento levou a parada a 9 813 ms.
+
+Mutações: sem cancelamento, sem leitura do título ICY, título ignorando o ICY, URL crua no D-Bus, título de fonte remota sem redação, buffering não exibido, erro sem o motivo, "conectando" para arquivo local — todas detectadas; a última em três execuções de três.
+
 ## AU-08 — formatos disponíveis NO PACOTE
 
 Medido tocando cada arquivo **de dentro do AppImage**, e não na máquina de desenvolvimento. É essa a diferença que o requisito pede: a disponibilidade é propriedade do artefato distribuído.

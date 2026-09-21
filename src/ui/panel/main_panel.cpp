@@ -307,11 +307,17 @@ void MainPanel::paint_title(QPainter& painter, const QRect& area) {
     if (index >= 0)
         title = QStringLiteral("%1. %2")
                     .arg(index + 1)
-                    .arg(QString::fromStdString(controller_.playlist().at(index).display_title()));
+                    .arg(QString::fromStdString(controller_.now_playing_title()));
     else if (snapshot_.state == State::Error)
         title = QStringLiteral("ERRO");
     else
         title = QStringLiteral("PLAYAMP NG");
+
+    // MD-04 — conectando, buffering e erro aparecem ANTES do titulo, no mesmo
+    // letreiro. So aqui, na janela do player: o painel de midia do sistema tem
+    // campo proprio de estado e nao recebe este texto.
+    if (const std::string status = controller_.now_playing_status(); !status.empty() && index >= 0)
+        title = QString::fromStdString(status) + QStringLiteral("  ") + title;
 
     const int s = skin_.scale();
     painter.save();

@@ -170,8 +170,8 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | MD-01 | Ler título, artista, álbum, nº da faixa, gênero, ano e duração quando disponíveis | AUTO | M2 | OK (M2) |
 | MD-02 | Sem tags, usar o nome do arquivo | AUTO | M2 | OK (M2) |
 | MD-03 | Janela de propriedades técnicas e localização do arquivo | MANUAL | M6 | OK (M6) |
-| MD-04 | Estados de conexão, buffering, reprodução e erro em stream | MANUAL | M6 | PARCIAL (M6) |
-| MD-05 | Leitura de metadados ICY quando fornecidos | AUTO | M6 | PARCIAL (M6) |
+| MD-04 | Estados de conexão, buffering, reprodução e erro em stream | AUTO + MANUAL | M6 | OK (M8) — `[CONECTANDO]`, `[BUFFER]` e `[ERRO] <motivo>` no letreiro do título; cada estado provocado por um servidor de teste |
+| MD-05 | Leitura de metadados ICY quando fornecidos | AUTO | M6 | OK (M8) — título lido de dentro do fluxo e troca de música verificados; mostrado na janela e no painel do sistema |
 | MD-06 | Tratamento de redirecionamentos HTTP | AUTO | M6 | OK (M6) |
 | MD-07 | Reconexão com número e intervalo de tentativas limitados | AUTO | M6 | OK (M6) |
 | MD-08 | Busca temporal desabilitada em fonte não pesquisável | AUTO | M6 | OK (M6) |
@@ -202,10 +202,10 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AR-03 | Resposta assíncrona de geração antiga é descartada sem efeito | AUTO | M2 | OK (M2) |
 | AR-04 | Interface reflete o estado confirmado pelo backend, inclusive em falha | AUTO | M1 | OK (M1) |
 | AR-05 | Logs úteis para diagnóstico | AUTO + MANUAL | M1 | OK (M8) — avaliado contra nove perguntas de diagnóstico; ver TEST_REPORT |
-| AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | PARCIAL (M1) — funcao de redacao verificada; integracao com streaming em M6 |
+| AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | OK (M8) — log, título da playlist, propriedades, mensagem de erro e metadados do D-Bus, lidos de fora do player |
 | AR-07 | `core/` não inclui Qt nem API de sistema operacional | AUTO (verificação de build) | M0 | OK (M0) |
 | AR-08 | `core/` permanece único e compartilhado, sem API de sistema, e passa na íntegra a suíte nos três sistemas | AUTO | M8/M9 | OK (M8) — CI verde em Linux, Windows e macOS; `core_purity` confere 41 arquivos a cada build. Quatro testes se declaram PULADOS fora do Linux (`device_loss`, `mpris`, `single_instance`, `session`) porque exigem PulseAudio ou D-Bus — nenhum deles é de `core/` |
-| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 100 ms | AUTO | M1 | PARCIAL (M1) — mecanismo ativo e parada pronta; cancelamento de abertura de rede bloqueada so em M6 |
+| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 100 ms | AUTO | M1 | OK (M8) — parar uma abertura de rede presa volta em 0 ms; sem o cancelamento, 9 813 ms |
 | AR-10 | Verificações de teste permanecem ativas em build de release (`PANG_CHECK`, não `assert`) | AUTO | M0 | OK (M0) |
 | AR-11 | Estado publicado por seqlock; nenhum tipo presumido lock-free sem `static_assert` | AUTO | M1 | OK (M1) |
 

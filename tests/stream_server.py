@@ -9,6 +9,12 @@ exercitar sem um servidor de verdade:
     /stream     MP3 contínuo sem Content-Length, com cabeçalhos ICY — ao vivo
     /corta      começa a enviar e fecha a conexão no meio, e recusa daí em
                 diante — exercita o limite de tentativas de reconexão
+    /icy        rádio com metadados DENTRO do fluxo (protocolo ICY, a cada
+                `icy-metaint` bytes), trocando de música no meio — MD-05
+    /lento      rádio que envia abaixo do tempo real — meio segundo de áudio
+                por segundo —, o que esvazia o buffer com certeza (MD-04)
+    /trava      aceita a conexão e nunca responde — a abertura de rede presa
+                que o cancelamento de AR-09 precisa interromper
 
 Imprime a porta escolhida na primeira linha da saída padrão e fica no ar até
 receber SIGTERM. A porta é escolhida pelo sistema para que a suíte possa rodar
@@ -90,6 +96,63 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.wfile.flush()
                     time.sleep(0.02)
             except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        elif self.path.startswith("/icy"):
+            # Protocolo ICY: o servidor so intercala metadados se o cliente
+            # pediu, com "Icy-MetaData: 1". Sem o pedido, o fluxo sai puro — e o
+            # teste reprova, que e o sinal certo de que o player parou de pedir.
+            pediu = self.headers.get("Icy-MetaData") == "1"
+            intervalo = 4096
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/mpeg")
+            self.send_header("icy-name", "Radio de Teste")
+            if pediu:
+                self.send_header("icy-metaint", str(intervalo))
+            self.end_headers()
+
+            def bloco(titulo):
+                texto = f"StreamTitle='{titulo}';".encode("utf-8")
+                tamanho = (len(texto) + 15) // 16
+                return bytes([tamanho]) + texto.ljust(tamanho * 16, b"\0")
+
+            enviados = 0
+            fluxo = MP3 * 400
+            try:
+                for inicio in range(0, len(fluxo), intervalo):
+                    self.wfile.write(fluxo[inicio:inicio + intervalo])
+                    if pediu:
+                        # A musica muda depois de ~200 KB, cerca de um segundo
+                        # no ritmo de envio: o bastante para o primeiro titulo
+                        # ser visto antes da troca.
+                        titulo = ("Artista A - Musica Um" if enviados < 200000
+                                  else "Artista B - Musica Dois")
+                        self.wfile.write(bloco(titulo))
+                    enviados += intervalo
+                    self.wfile.flush()
+                    time.sleep(0.02)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        elif self.path.startswith("/lento"):
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/mpeg")
+            self.end_headers()
+            try:
+                for _ in range(30):
+                    self.wfile.write(MP3)  # 0,5 s de audio
+                    self.wfile.flush()
+                    time.sleep(1.0)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        elif self.path.startswith("/trava"):
+            # Recebe o pedido e nao responde nada, por muito mais tempo do que
+            # qualquer teste espera. So o cancelamento do player tira a
+            # abertura daqui.
+            try:
+                time.sleep(120)
+            except Exception:
                 pass
 
         elif self.path.startswith("/corta"):

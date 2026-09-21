@@ -1,5 +1,8 @@
 #include "core/playlist/playlist.h"
 
+#include "core/audio/network.h"
+#include "core/util/log.h"
+
 #include <iterator>
 #include <algorithm>
 #include <cctype>
@@ -34,6 +37,15 @@ std::string Track::display_title() const {
         if (!artist.empty()) return artist + " - " + title;
         return title;
     }
+    // AR-06 — fonte remota sem tags mostra o ENDERECO, redigido.
+    //
+    // Tratar uma URL como caminho de arquivo expunha a credencial: o "nome do
+    // arquivo" de "http://usuario:senha@host/" e a URL inteira, e o de
+    // "http://usuario:senha@host:8000" sai "usuario:senha@host". Esse titulo
+    // vai para a playlist, para a janela principal e para o painel de midia
+    // do sistema — ou seja, sai do programa.
+    if (is_remote(path)) return log::redact(path);
+
     // MD-02 — sem tags, o nome do arquivo, sem diretorio e sem extensao.
     const std::filesystem::path p(path);
     const std::string stem = p.stem().string();

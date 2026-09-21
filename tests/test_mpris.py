@@ -183,6 +183,55 @@ finally:
     if os.path.exists(media):
         os.remove(media)
 
+# AR-06, MD-05 — uma radio com credencial no endereco, lida de FORA do player.
+#
+# O titulo publicado no barramento e o endereco (xesam:url) sao lidos por
+# qualquer programa da sessao, entao publicar credencial ali e exibi-la. A
+# primeira versao publicava: o titulo de uma URL sem tags era a propria URL, e
+# o xesam:url ia cru. Aqui a radio de teste manda titulo DENTRO do fluxo, e e
+# ele que precisa aparecer — nao o endereco.
+aqui = os.path.dirname(os.path.abspath(__file__))
+servidor = subprocess.Popen(
+    [sys.executable, os.path.join(aqui, "stream_server.py"),
+     os.path.join(aqui, "..", "assets", "test")],
+    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+perfil2 = tempfile.mkdtemp(prefix="pang_perfil_")
+proc = None
+try:
+    porta = servidor.stdout.readline().strip()
+    url = f"http://usuario:SEGREDO@127.0.0.1:{porta}/icy?token=SEGREDO"
+    proc = subprocess.Popen([binario, url],
+                            env=dict(os.environ, QT_QPA_PLATFORM="offscreen",
+                                     XDG_CONFIG_HOME=perfil2),
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    servico = esperar(lambda: servico_do_player(proc.pid), 15.0)
+    checar(bool(servico), "o player da radio aparece no barramento")
+    if servico:
+        # Espera o titulo que a radio anuncia chegar ao barramento.
+        # Se o titulo nunca chegar, le mesmo assim: senao as verificacoes
+        # seguintes falhariam em cascata, por variavel vazia, apontando a
+        # causa errada.
+        metadados = esperar(
+            lambda: (lambda m: m if "Musica" in m else None)(
+                dbus(servico, PLAYER, "Metadata", propriedade=True) or ""), 10.0) \
+            or dbus(servico, PLAYER, "Metadata", propriedade=True) or ""
+        checar("Musica" in metadados,
+               "MD-05: o titulo publicado e o que a radio anuncia dentro do fluxo")
+        checar("SEGREDO" not in metadados,
+               "AR-06: nenhuma credencial nos metadados publicados no barramento")
+        checar("xesam:url" in metadados and "***" in metadados,
+               "o endereco continua publicado, mas redigido")
+        dbus(servico, ROOT, "Quit")
+        proc.wait(timeout=10)
+finally:
+    for p_ in (proc, servidor):
+        if p_ is not None and p_.poll() is None:
+            p_.terminate()
+            try:
+                p_.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                p_.kill()
+
 if falhas:
     print(f"{len(falhas)} verificacao(oes) falharam", file=sys.stderr)
     sys.exit(1)

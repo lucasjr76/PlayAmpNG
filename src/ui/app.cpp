@@ -516,7 +516,9 @@ int main(int argc, char** argv) {
         const auto ou = [](const QString& v) { return v.isEmpty() ? QStringLiteral("nao informado") : v; };
         QString text;
         QTextStream out(&text);
-        out << "Localizacao\n" << QString::fromStdString(track.path) << "\n\n";
+        // AR-06 — a janela de propriedades e exibicao tambem.
+        out << "Localizacao\n" << QString::fromStdString(pang::core::log::redact(track.path))
+            << "\n\n";
         if (info) {
             out << "Formato       " << QString::fromStdString(info->format) << "\n";
             out << "Codec         " << QString::fromStdString(info->codec) << "\n";
@@ -743,14 +745,13 @@ int main(int argc, char** argv) {
         const int index = controller->current_index();
         if (index >= 0 && index < controller->playlist().size()) {
             const auto& track = controller->playlist().at(index);
-            now.title = track.display_title();
+            now.title = controller->now_playing_title();
             now.artist = track.artist;
             now.album = track.album;
-            now.url = track.path;
+            // AR-06 — o endereco vai para o D-Bus (xesam:url), onde qualquer
+            // programa da sessao le. Publicar a credencial ali e exibi-la.
+            now.url = pang::core::log::redact(track.path);
         }
-        // MD-05 — em stream, o que o servidor diz estar tocando vale mais que o
-        // nome do arquivo, que nem existe.
-        if (const std::string icy = engine->icy_title(); !icy.empty()) now.title = icy;
         if (const std::string station = engine->station(); !station.empty()) now.album = station;
 
         // MD-09 — duracao so vai ao barramento quando a fonte informa.

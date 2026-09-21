@@ -12,6 +12,20 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-25 — Credencial de rádio exibida como título da faixa
+
+**Encontrado ao fechar o AR-06, medindo em vez de supor.** Uma rádio sem tags tinha como título o "nome do arquivo" da URL:
+
+```
+http://usuario:SENHA@radio.example/        -> http://usuario:SENHA@radio.example/
+.../stream?token=TOKEN                     -> stream?token=TOKEN
+http://usuario:SENHA@radio.example:8000    -> usuario:SENHA@radio
+```
+
+Esse título ia para a playlist, a janela principal e o painel de mídia do sistema. A janela de propriedades mostrava o endereço cru, e o `xesam:url` o publicava cru no D-Bus.
+
+**Correção:** título de fonte remota é o endereço redigido; propriedades e D-Bus também passam pela redação. Verificado lendo os metadados pelo D-Bus, de fora do player.
+
 ### C-24 — Modo compacto só com o tempo, sem dois-pontos e sem botões
 
 **Observado em uso:** a barra compacta mostrava o logotipo, o tempo como `0010` e o texto fixo "PLAYAMP NG". Não havia botões — sair do compacto só com duplo-clique — nem controles de reprodução.

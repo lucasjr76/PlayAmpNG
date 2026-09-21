@@ -41,7 +41,7 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Teste de mutação em toda lógica nova.** Quebrar o código de propósito e confirmar que o teste reprova. Um teste que continua verde sem a regra que diz testar é vácuo, e isso já aconteceu aqui mais de uma vez.
 
-**Duas rotas para a mesma operação sempre divergem.** Aconteceu seis vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, e as duas rotas que declaram o dispositivo de áudio perdido. A correção é unificar numa rota só, não remendar a que quebrou.
+**Duas rotas para a mesma operação sempre divergem.** Aconteceu sete vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, as duas rotas que declaram o dispositivo de áudio perdido, e o título "do que está tocando" decidido em dois lugares. A correção é unificar numa rota só, não remendar a que quebrou.
 
 **Esperar o evento, nunca amostrar num instante arbitrário.** Testes que dormem um tempo fixo e depois conferem o estado são intermitentes.
 
@@ -53,11 +53,13 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **O log fica em `playampng.log`, ao lado da configuração**, nos três sistemas, com a execução anterior em `.1`. Toda linha tem hora. É o primeiro lugar a olhar num relato de defeito.
 
+**Teste de mutação restaura o arquivo com `trap`.** Uma sessão interrompida no meio de uma mutação já deixou um arquivo mutado no disco; sem a restauração garantida, o próximo commit levaria o defeito plantado de propósito.
+
 **Testes precisam devolver `pang::check::exit_code()`.** `PANG_CHECK` registra a falha e segue; o `main` que devolve 0 descarta o registro.
 
 ## Estado — setembro de 2026
 
-163 requisitos OK, 22 testes, CI verde em Linux, Windows e macOS.
+167 requisitos OK, 22 testes, CI verde em Linux, Windows e macOS.
 
 | Marco | Situação |
 |---|---|
@@ -69,7 +71,6 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 | Requisito | O que falta |
 |---|---|
-| MD-04, MD-05, AR-06, AR-09 | Parciais do M6, todos no caminho de streaming. Convém tratá-los juntos |
 | EN-10 | Pacote macOS (M9) |
 
 **Decisões de plataforma que parecem defeito e não são**

@@ -18,6 +18,7 @@
 #include "core/audio/engine.h"
 #include "core/audio/network.h"
 #include "core/audio/probe.h"
+#include "core/state/controller.h"
 #include "core/util/check.h"
 
 namespace {
@@ -135,6 +136,145 @@ void served_over_http(int port) {
         PANG_CHECK(saw_error, "stream cortado termina em Error apos esgotar as tentativas");
         PANG_CHECK(!engine.last_error().empty(), "o erro traz mensagem de diagnostico");
         engine.stop();
+    }
+
+    // MD-05 — o titulo que a radio manda DENTRO do fluxo, e a troca dele.
+    //
+    // O codigo que le isso existia desde o M6 e nunca tinha rodado num teste:
+    // o servidor nao intercalava metadados, so mandava o nome da estacao no
+    // cabecalho. O /icy fala o protocolo de verdade e troca de musica no meio.
+    {
+        Engine engine(44100, 2);
+        engine.load(base + "/icy", State::Playing);
+        std::vector<float> block(512 * 2);
+        // Consome o audio enquanto espera: sem isso o buffer enche, o
+        // decodificador para de ler e a troca de musica nunca chega.
+        const auto tocando_ate = [&](const std::string& titulo) {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (std::chrono::steady_clock::now() < deadline) {
+                if (engine.icy_title() == titulo) return true;
+                engine.render(block.data(), 512);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            return false;
+        };
+        PANG_CHECK(tocando_ate("Artista A - Musica Um"),
+                   ("MD-05: titulo ICY lido de dentro do fluxo; visto: \"" + engine.icy_title() +
+                    "\"").c_str());
+        PANG_CHECK(tocando_ate("Artista B - Musica Dois"),
+                   ("MD-05: a troca de musica chega; visto: \"" + engine.icy_title() + "\"")
+                       .c_str());
+        PANG_CHECK(engine.station() == "Radio de Teste", "e o nome da estacao, do cabecalho");
+        engine.stop();
+    }
+
+    // MD-04 — o que a janela diz em cada estado de uma radio.
+    //
+    // Pelo controlador, que e quem monta o texto; a janela so o desenha. Os
+    // enderecos levam credencial de proposito: a mensagem de erro exibida
+    // tambem e exibicao (AR-06).
+    {
+        const std::string auth = "http://usuario:SEGREDO@127.0.0.1:" + std::to_string(port);
+        std::vector<float> block(512 * 2);
+
+        // Conectando: servidor que nunca responde.
+        {
+            Engine engine(44100, 2);
+            Controller controller(engine);
+            controller.playlist().add(auth + "/trava?token=SEGREDO");
+            controller.playlist_changed();
+            controller.play_index(0);
+            PANG_CHECK(wait_for([&] { return controller.now_playing_status() == "[CONECTANDO]"; },
+                                std::chrono::seconds(2)),
+                       ("MD-04: abrindo uma radio, a janela diz que esta conectando; visto: \"" +
+                        controller.now_playing_status() + "\"").c_str());
+            engine.stop();
+        }
+
+        // Buffering: fonte mais lenta que o tempo real.
+        {
+            Engine engine(44100, 2);
+            Controller controller(engine);
+            controller.playlist().add(auth + "/lento");
+            controller.playlist_changed();
+            controller.play_index(0);
+            // Consome sem ritmo: o buffer esvazia muito antes do proximo envio.
+            const bool buffering = wait_for(
+                [&] {
+                    engine.render(block.data(), 512);
+                    return controller.now_playing_status() == "[BUFFER]";
+                },
+                std::chrono::seconds(10));
+            PANG_CHECK(buffering, ("MD-04: buffer vazio numa radio aparece como buffering; visto: \"" +
+                                   controller.now_playing_status() + "\"").c_str());
+            engine.stop();
+        }
+
+        // Erro: conexao cortada, tentativas esgotadas.
+        {
+            Engine engine(44100, 2);
+            Controller controller(engine);
+            controller.playlist().add(auth + "/corta?token=SEGREDO");
+            controller.playlist_changed();
+            controller.play_index(0);
+            const bool failed = wait_for(
+                [&] {
+                    engine.render(block.data(), 512);
+                    return controller.now_playing_status().rfind("[ERRO]", 0) == 0;
+                },
+                std::chrono::seconds(20));
+            const std::string status = controller.now_playing_status();
+            std::printf("  erro exibido: %s\n", status.c_str());
+            PANG_CHECK(failed, "MD-04: radio que falhou diz que falhou, com o motivo");
+            PANG_CHECK(status.size() > std::string("[ERRO]").size(),
+                       "e o motivo vem junto, nao so a palavra erro");
+            PANG_CHECK(status.find("SEGREDO") == std::string::npos,
+                       "AR-06: a mensagem de erro exibida nao traz a credencial");
+            engine.stop();
+        }
+
+        // Arquivo local nao diz "conectando": abrir e instantaneo e o aviso so
+        // piscaria.
+        {
+            Engine engine(44100, 2);
+            Controller controller(engine);
+            controller.playlist().add(std::string(PANG_TEST_ASSETS) + "/tone.wav");
+            controller.playlist_changed();
+            controller.play_index(0);
+            PANG_CHECK(controller.now_playing_status() != "[CONECTANDO]",
+                       "arquivo local nao se anuncia como conectando");
+            engine.stop();
+        }
+    }
+
+    // AR-09 — cancelar uma abertura de rede PRESA.
+    //
+    // O cancelamento testado ate aqui era o da decodificacao. O caso que
+    // motiva o requisito e outro: o servidor aceita a conexao e nao responde,
+    // e o player fica dentro do avformat_open_input. Parar — ou trocar de
+    // estacao — tem de voltar em menos de 100 ms, e nao depois do prazo de
+    // leitura da rede.
+    {
+        Engine engine(44100, 2);
+        engine.load(base + "/trava", State::Playing);
+        PANG_CHECK(wait_for([&] { return engine.snapshot().state == State::Loading; },
+                            std::chrono::seconds(2)),
+                   "a abertura comeca");
+        // O servidor nunca responde: a qualquer momento daqui em diante a
+        // abertura esta presa. A espera so garante que ela ja entrou na rede.
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        // Sem esta verificacao o teste pode medir o nada: se a abertura ja
+        // tivesse falhado sozinha, parar voltaria na hora e passaria.
+        PANG_CHECK(engine.snapshot().state == State::Loading,
+                   "no instante da parada, a abertura ainda esta presa na rede");
+
+        const auto t0 = std::chrono::steady_clock::now();
+        engine.stop();
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - t0)
+                            .count();
+        std::printf("  parar durante abertura presa: %lld ms\n", static_cast<long long>(ms));
+        PANG_CHECK(ms < 100, "AR-09: parar uma abertura de rede presa volta em menos de 100 ms");
     }
 }
 
