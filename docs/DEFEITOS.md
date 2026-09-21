@@ -12,6 +12,16 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-26 — Rádio engasgada aparecia como "tocando", em silêncio
+
+**Encontrado pelo CI:** o teste de buffering passou no Linux e reprovou no macOS.
+
+**Causa:** a entrada em `Buffering` era decidida no laço do decodificador, logo depois de ler da rede. Com a rede parada, que é justamente o caso do buffering, o decodificador fica bloqueado na leitura e a verificação não roda; quando os dados voltam, ele escreve e só então olha o nível, que já subiu. O `render()` via o buffer secar e só contava uma interrupção de áudio. No Linux o teste passava por sorte de tempo.
+
+**Correção:** cada lado decide o que observa. Quem consome declara o buffer secando, na hora; quem produz declara que encheu de novo. As duas transições usam troca condicional, para uma pausa do usuário não ser sobrescrita.
+
+**O teste também estava errado.** O servidor mandava áudio devagar, e com dados chegando aos poucos a verificação antiga rodava de vez em quando e acertava por acaso — a implementação com defeito passava três de três no Linux. Agora o servidor manda 4 s e fica **mudo**: a implementação antiga reprova três de três, a nova passa.
+
 ### C-26 — Rádio engasgando aparecia como "tocando", em silêncio
 
 **Encontrado pelo CI do macOS**, na verificação nova do MD-04 — que passava no Linux.

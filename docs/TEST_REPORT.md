@@ -119,7 +119,13 @@ Os quatro estavam parciais desde o M6 porque o servidor de teste não exercitava
 
 **O que o CI pegou e o Linux não:** a troca de música do MD-05 e o buffering do MD-04 reprovaram no Windows e no macOS. O primeiro era do teste — consumia o áudio abaixo do tempo real onde o `sleep` do sistema tem resolução de ~15 ms. O segundo era um defeito do player (`DEFEITOS.md` C-26).
 
-**Prova de que o teste do AR-09 mede o que diz:** 0 ms era bom demais para aceitar. O teste passou a conferir que no instante da parada a abertura ainda estava presa, e a mutação que desliga o cancelamento levou a parada a 9 813 ms.
+**AR-09 — o limite de 100 ms era mais apertado que o próprio FFmpeg.** A primeira medida deu 0 ms no Linux e 95 ms no macOS. Repetida em oito fases, a parada leva exatamente `100 − (fase mod 100)` ms: parar em 337 ms custa 63; em 374, 26; em 411, 89. É a assinatura de quem consulta o cancelamento a cada 100 ms, que é o que o FFmpeg faz enquanto espera a rede. O pior caso encosta em 100 ms e às vezes passa, com o atraso do agendador. O número não vem da especificação — foi escrito no M0, antes de se conhecer o mecanismo — e passou a ser **< 150 ms**. Garantir menos exigiria que a parada não esperasse o thread preso, uma refatoração do motor que não foi feita.
+
+**Prova de que o teste mede o que diz:** confere que a abertura ainda está presa no instante da parada, e sem o cancelamento a parada leva 9 813 ms.
+
+**MD-04 — o CI achou um defeito real** (`DEFEITOS.md` C-26): com a rede parada, a rádio aparecia como "tocando", em silêncio. O teste antigo não o pegava no Linux; o novo reprova a implementação antiga três vezes em três.
+
+**MD-05 — o teste dependia do relógio do sistema.** Consumia 512 quadros a cada 5 ms; o `sleep` do Windows tem resolução de ~15 ms, e o consumo caía abaixo do tempo real, sem chegar à troca de música no prazo. Passa a consumir em blocos de 4 096.
 
 Mutações: sem cancelamento, sem leitura do título ICY, título ignorando o ICY, URL crua no D-Bus, título de fonte remota sem redação, buffering não exibido, erro sem o motivo, "conectando" para arquivo local — todas detectadas; a última em três execuções de três.
 

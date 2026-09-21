@@ -43,7 +43,9 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Duas rotas para a mesma operação sempre divergem.** Aconteceu sete vezes: probe e decoder, desenho e clique da barra de rolagem, restauração de sessão e inclusão de arquivos, gravação e leitura de configuração, flags da janela no app e no teste, as duas rotas que declaram o dispositivo de áudio perdido, e o título "do que está tocando" decidido em dois lugares. A correção é unificar numa rota só, não remendar a que quebrou.
 
-**Esperar o evento, nunca amostrar num instante arbitrário.** Testes que dormem um tempo fixo e depois conferem o estado são intermitentes.
+**Esperar o evento, nunca amostrar num instante arbitrário.** Testes que dormem um tempo fixo e depois conferem o estado são intermitentes. E o `sleep` do Windows tem resolução de ~15 ms: um teste que consome áudio com esperas curtas fica mais lento que o tempo real lá, e só lá.
+
+**Um teste que passa só no Linux não prova nada.** Verificar que a implementação ANTIGA reprova no próprio teste novo: já houve teste que aprovava o código com defeito aqui e só reprovava no macOS, por acaso de tempo.
 
 **Não desfazer decisão visual já aceita sem consultar.** Mudança de aparência se propõe antes de aplicar.
 
