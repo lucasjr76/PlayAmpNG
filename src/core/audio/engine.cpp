@@ -261,16 +261,22 @@ void Engine::decode_loop(std::string url, State desired) {
             continue;
         }
 
-        // MD-04 — em fonte ao vivo o buffer pode esvaziar sem que nada esteja
-        // errado. O estado passa a Buffering e volta a Playing sozinho. A
-        // histerese evita piscar entre os dois a cada bloco.
-        if (live_.load(std::memory_order_relaxed)) {
-            const std::size_t level = ring_.readable() / channels_;
-            const State now = state_.load(std::memory_order_relaxed);
-            if (now == State::Playing && level < kBufferingLowFrames)
-                state_.store(State::Buffering, std::memory_order_relaxed);
-            else if (now == State::Buffering && level >= kBufferingHighFrames)
-                state_.store(State::Playing, std::memory_order_relaxed);
+        // MD-04 — SAIR do buffering e decidido aqui, por quem enche o buffer.
+        // ENTRAR e decidido em render(), por quem o esvazia.
+        //
+        // A primeira versao decidia as duas coisas aqui, e a entrada nunca
+        // acontecia quando mais importava: com a rede parada, este laco fica
+        // bloqueado na leitura e nao roda; quando os dados voltam, ele escreve
+        // e so entao olha o nivel, que ja subiu. Uma radio engasgando aparecia
+        // como "tocando", em silencio. Passava no Linux por sorte de tempo, e
+        // reprovou no macOS.
+        //
+        // Troca condicional: se o usuario pausou nesse meio-tempo, a pausa
+        // vale e nao e sobrescrita.
+        if (live_.load(std::memory_order_relaxed) &&
+            ring_.readable() / channels_ >= kBufferingHighFrames) {
+            State expected = State::Buffering;
+            state_.compare_exchange_strong(expected, State::Playing, std::memory_order_relaxed);
         }
 
         if (auto title = decoder_.take_icy_title()) {
@@ -432,6 +438,17 @@ void Engine::render(float* out, std::uint32_t frames) noexcept {
             } else {
                 underruns_.fetch_add(1, std::memory_order_relaxed);
             }
+        }
+        // MD-04 — o buffer de uma fonte ao vivo esta secando: e aqui, no
+        // consumo, que isso se percebe na hora. A histerese (entra abaixo de
+        // 0,25 s, sai acima de 0,75 s) evita piscar entre os estados.
+        //
+        // AU-21 — sem alocacao nem trava: uma leitura e uma troca atomica.
+        if (live_.load(std::memory_order_relaxed) && !eof_.load(std::memory_order_acquire) &&
+            ring_.readable() / channels_ < kBufferingLowFrames) {
+            State expected = State::Playing;
+            state_.compare_exchange_strong(expected, State::Buffering,
+                                           std::memory_order_relaxed);
         }
     } else {
         std::memset(out, 0, wanted * sizeof(float));

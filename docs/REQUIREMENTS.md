@@ -205,7 +205,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AR-06 | Credenciais em URL nunca registradas em log nem exibidas | AUTO | M6 | OK (M8) — log, título da playlist, propriedades, mensagem de erro e metadados do D-Bus, lidos de fora do player |
 | AR-07 | `core/` não inclui Qt nem API de sistema operacional | AUTO (verificação de build) | M0 | OK (M0) |
 | AR-08 | `core/` permanece único e compartilhado, sem API de sistema, e passa na íntegra a suíte nos três sistemas | AUTO | M8/M9 | OK (M8) — CI verde em Linux, Windows e macOS; `core_purity` confere 41 arquivos a cada build. Quatro testes se declaram PULADOS fora do Linux (`device_loss`, `mpris`, `single_instance`, `session`) porque exigem PulseAudio ou D-Bus — nenhum deles é de `core/` |
-| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 100 ms | AUTO | M1 | OK (M8) — parar uma abertura de rede presa volta em 0 ms; sem o cancelamento, 9 813 ms |
+| AR-09 | I/O de rede e disco cancelável (`AVIOInterruptCB` + timeout): cancelamento retorna em < 150 ms | AUTO | M1 | OK (M8) — pior caso medido em oito fases: 90 ms; sem o cancelamento, 10 s. O limite era < 100 ms até o M8: mais apertado que o próprio FFmpeg, que consulta o cancelamento a cada 100 ms |
 | AR-10 | Verificações de teste permanecem ativas em build de release (`PANG_CHECK`, não `assert`) | AUTO | M0 | OK (M0) |
 | AR-11 | Estado publicado por seqlock; nenhum tipo presumido lock-free sem `static_assert` | AUTO | M1 | OK (M1) |
 

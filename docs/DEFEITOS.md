@@ -12,6 +12,16 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-26 — Rádio engasgando aparecia como "tocando", em silêncio
+
+**Encontrado pelo CI do macOS**, na verificação nova do MD-04 — que passava no Linux.
+
+**Causa:** a entrada em `Buffering` era decidida no laço do decodificador, logo depois de ler da rede. Com a rede parada — exatamente o caso de buffering — o decodificador fica bloqueado na leitura e não roda a verificação; quando os dados voltam, ele escreve e só então olha o nível, que já subiu.
+
+**Correção:** entrar em `Buffering` é decidido em `render()`, por quem esvazia o buffer e percebe a hora em que ele seca; sair, pelo decodificador, que sabe quando encheu. Troca condicional nas duas, para não sobrescrever uma pausa do usuário.
+
+**O primeiro teste não separava o código certo do errado:** a implementação antiga passava três de três no Linux, porque o servidor de teste mandava dados devagar, e o decodificador rodava por acaso de vez em quando. O servidor passou a **parar** de mandar (`/engasga`); com a rede muda, a implementação antiga reprova três de três, e a nova passa.
+
 ### C-25 — Credencial de rádio exibida como título da faixa
 
 **Encontrado ao fechar o AR-06, medindo em vez de supor.** Uma rádio sem tags tinha como título o "nome do arquivo" da URL:

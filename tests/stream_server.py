@@ -11,8 +11,8 @@ exercitar sem um servidor de verdade:
                 diante — exercita o limite de tentativas de reconexão
     /icy        rádio com metadados DENTRO do fluxo (protocolo ICY, a cada
                 `icy-metaint` bytes), trocando de música no meio — MD-05
-    /lento      rádio que envia abaixo do tempo real — meio segundo de áudio
-                por segundo —, o que esvazia o buffer com certeza (MD-04)
+    /engasga    rádio que manda um trecho e depois fica muda por 30 s — a rede
+                parada, que é o caso em que o buffering precisa aparecer (MD-04)
     /trava      aceita a conexão e nunca responde — a abertura de rede presa
                 que o cancelamento de AR-09 precisa interromper
 
@@ -134,15 +134,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
-        elif self.path.startswith("/lento"):
+        elif self.path.startswith("/engasga"):
+            # Um trecho e depois silencio de rede. A primeira versao deste
+            # caminho so enviava devagar, e isso nao separava o player com
+            # defeito do correto: com dados chegando aos pouquinhos, o
+            # decodificador rodava de vez em quando e acabava declarando o
+            # buffering por acaso. Com a rede PARADA, so quem consome o audio
+            # pode perceber que o buffer secou.
             self.send_response(200)
             self.send_header("Content-Type", "audio/mpeg")
             self.end_headers()
             try:
-                for _ in range(30):
-                    self.wfile.write(MP3)  # 0,5 s de audio
-                    self.wfile.flush()
-                    time.sleep(1.0)
+                # 4 s: mais que os 2 s que a analise inicial do fluxo le antes
+                # de decidir o formato. Com menos, a radio nem comeca a tocar
+                # e o teste mediria a abertura, nao o engasgo no meio.
+                self.wfile.write(MP3 * 8)
+                self.wfile.flush()
+                time.sleep(30)
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
