@@ -91,3 +91,22 @@ A referência não tem caixa escura atrás de rótulo nenhum. O `text.bmp` do fo
 - Em compositor que aplica opacidade a janelas sem foco — o caso do Hyprland nesta máquina — o conteúdo atrás aparece através do painel. É configuração do ambiente, não do aplicativo.
 - **Encaixe magnético entre janelas destacadas** indisponível no Wayland, por restrição do protocolo — ver `ARCHITECTURE.md §8`.
 - Em compositor de modo *tiling*, a janela precisa da dica de flutuante. O aplicativo já a envia (`Qt::Dialog`), mas a decisão final é do compositor; no Hyprland pode ser necessária uma regra de janela.
+
+## Modo compacto e divergências do formato de skin
+
+O modo compacto (AP-11) segue as coordenadas do *windowshade* do Winamp 2.x, conferidas na implementação de referência Webamp (`css/main-window.css` e `js/skinSprites.ts`), e não de memória. A razão é concreta: nos skins Winamp os mini-controles vêm desenhados dentro da imagem de fundo, e as áreas de clique só acertam se estiverem onde o skin os desenhou.
+
+| Peça | Posição | Origem |
+|---|---|---|
+| mini-controles ⏮ ▶ ⏸ ⏹ ⏭ ⏏ | 169–224 | formato |
+| tempo `MM:SS` | 127 | formato |
+| barra de posição | 226–242 | formato |
+| minimizar, expandir, fechar | 244, 254, 264 | formato, **só no compacto** |
+| título da faixa | 20–119 | **nosso** — o Winamp não mostra título no compacto; aqui ele ocupa o lugar da mini-visualização |
+
+No modo normal os botões da janela ficam em 232/242/252, na grade do projeto (decisão já aceita). No compacto eles precisam ir para as posições do formato, porque a barra de posição ocupa 226–242 e colidiria com o minimizar em 232.
+
+Duas divergências do formato encontradas no `titlebar.bmp`, **sem efeito com o skin próprio**, registradas porque importariam se o player um dia carregar skins de terceiros:
+
+- a barra com e sem foco estão invertidas: aqui, sem foco em y=0 e com foco em y=15; no formato, o contrário;
+- o botão "compacto" ocupa a célula (0,0), que no formato é o botão de opções; no formato ele fica em (0,18).

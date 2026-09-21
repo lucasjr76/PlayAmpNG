@@ -57,7 +57,7 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 ## Estado — setembro de 2026
 
-163 requisitos OK, 21 testes, CI verde em Linux, Windows e macOS.
+163 requisitos OK, 22 testes, CI verde em Linux, Windows e macOS.
 
 | Marco | Situação |
 |---|---|

@@ -92,6 +92,23 @@ private:
     void paint_sliders(QPainter&);
     void paint_buttons(QPainter&);
 
+    // AP-11 — modo compacto.
+    void paint_compact(QPainter&);
+    Hit hit_test_compact(const QPoint& logical) const;
+
+    // PL-14 — titulo com rolagem, numa area dada. Uma rota so para o modo
+    // normal e o compacto: duas copias do codigo de rolagem divergiriam no
+    // primeiro ajuste, como ja aconteceu neste projeto com outras duplas.
+    void paint_title(QPainter&, const QRect& area);
+
+    // Barra de posicao em uso: a do modo normal ou a do compacto. O desenho e
+    // a conversao do clique em tempo usam a MESMA conta.
+    struct Groove {
+        QRect area;
+        int thumb_width;
+    };
+    Groove position_groove() const;
+
     core::Controller& controller_;
     core::Engine& engine_;
     skin::WinampSkin& skin_;

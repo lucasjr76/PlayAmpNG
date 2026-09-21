@@ -86,5 +86,11 @@ int main(int argc, char** argv) {
     save(main_panel, "main");
     save(equalizer, "eq");
     save(playlist, "playlist");
+    // AP-11 — o modo compacto tambem vai para o render: sem isto ele so era
+    // visto por quem abria o player e apertava Ctrl+W, e os defeitos dele
+    // (tempo sem dois-pontos, sem botoes) passaram despercebidos.
+    main_panel.set_compact(true);
+    save(main_panel, "compact");
+
     return 0;
 }

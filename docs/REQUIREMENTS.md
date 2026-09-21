@@ -27,7 +27,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | AP-08 | Encaixe magnético entre janelas destacadas (limiar 10 px), onde a plataforma permite | AUTO | M5 | OK (M8) — geometria e arraste verificados em teste headless; indisponível no Wayland, ver AP-18 |
 | AP-09 | Janelas destacadas encostadas movem-se como grupo, onde a plataforma permite | AUTO | M5 | OK (M8) — grupo é o fecho transitivo de "encostado"; verificado com janelas de topo reais |
 | AP-10 | Persistência de posição, tamanho e visibilidade | AUTO | M5 | OK (M5) |
-| AP-11 | Modo compacto (barra) | MANUAL | M5 | OK (M5) |
+| AP-11 | Modo compacto (barra) | AUTO + MANUAL | M5 | OK (M8) — título, tempo, mini-controles e barra de posição, nas coordenadas do formato Winamp; geometria e cliques verificados por teste |
 | AP-12 | Escala inteira 1×/2×/3× sem recorte de texto | MANUAL | M5 | OK (M5) |
 | AP-13 | Áreas clicáveis escalam junto com a interface | MANUAL | M5 | OK (M5) |
 | AP-14 | Recuperação de janela fora da área visível: faixa de arraste (altura min(16,h)) com < 64 px visíveis → realoca | AUTO | M5 | OK (M5) |

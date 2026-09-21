@@ -12,6 +12,16 @@ Nenhum. Os dois que estavam aqui foram resolvidos no M8: o encaixe entre painéi
 
 ## Corrigidos
 
+### C-24 — Modo compacto só com o tempo, sem dois-pontos e sem botões
+
+**Observado em uso:** a barra compacta mostrava o logotipo, o tempo como `0010` e o texto fixo "PLAYAMP NG". Não havia botões — sair do compacto só com duplo-clique — nem controles de reprodução.
+
+**Causas, medidas no renderizador sem tela:** o tempo reaproveitava a função do mostrador grande, que devolve quatro dígitos sem separador porque lá os dois-pontos vêm desenhados no fundo; e o compacto desenhava só a barra de título normal, sem nenhum controle.
+
+**Correção:** disposição do *windowshade* do Winamp (`APROXIMACOES.md`), com título da faixa rolando, tempo `MM:SS`, mini-controles, barra de posição e os três botões. O título usa a mesma rota de desenho do modo normal, e a barra de posição a mesma conta para desenho e clique.
+
+**Verificado:** `test_layout` confere a geometria do compacto e `test_compact` clica em cada controle. Seis mutações detectadas — duas áreas sobrepostas, título descentrado ou fora do poço, botão fora da barra, áreas de clique trocadas e o tempo sem dois-pontos. A primeira versão da verificação do tempo era vácua: com `0010`, a terceira célula recebe o dígito "1", que também tem tinta; agora confere também que existe uma quinta célula.
+
 ### C-23 — Segundo lançamento destruía o log da instância aberta
 
 **Encontrado na análise do AR-05, lendo o código.** O arquivo de log era aberto antes da verificação de instância única. Abrir um arquivo pelo gerenciador com o player já aberto inicia um segundo processo, que só entrega o arquivo à janela existente e sai — mas antes renomeava o log da instância em uso para `.1` e truncava o arquivo. O log de diagnóstico se perdia justamente num uso comum.

@@ -190,9 +190,7 @@ void MainPanel::paintEvent(QPaintEvent*) {
     painter.setRenderHint(QPainter::SmoothPixmapTransform, false);
 
     if (compact_) {
-        skin_.draw(painter, hasFocus() ? wa::kTitlebarActive : wa::kTitlebarInactive, {0, 0});
-        skin_.draw_text(painter, format_time(snapshot_.position_frames, engine_.sample_rate()),
-                        {46, 4});
+        paint_compact(painter);
         return;
     }
 
@@ -207,6 +205,46 @@ void MainPanel::paintEvent(QPaintEvent*) {
     paint_limiter(painter);
     paint_sliders(painter);
     paint_buttons(painter);
+}
+
+// AP-11 — modo compacto: fundo com os mini-controles ja desenhados, e por
+// cima so o que muda.
+void MainPanel::paint_compact(QPainter& painter) {
+    skin_.draw(painter, hasFocus() ? wa::kCompactActive : wa::kCompactInactive, {0, 0});
+    paint_title(painter, wa::kCompactTitle);
+
+    // Com dois-pontos. A primeira versao do compacto reaproveitava o formato
+    // do mostrador grande, "MMSS" sem separador — la os dois-pontos vem
+    // desenhados no fundo do main.bmp —, e aqui aparecia "0010".
+    //
+    // Sempre o decorrido: o restante precisaria de um sinal, e "-MM:SS" sao
+    // seis glifos num poco de cinco.
+    const QString digits = format_time(snapshot_.position_frames, engine_.sample_rate());
+    skin_.draw_text(painter, digits.left(2) + QLatin1Char(':') + digits.mid(2), wa::kCompactTimeAt);
+
+    skin_.draw(painter, wa::kCompactPositionBackground, wa::kCompactPosition.topLeft());
+    if (snapshot_.seekable && snapshot_.duration_frames > 0) {
+        const Groove groove = position_groove();
+        const float fraction =
+            std::clamp(static_cast<float>(snapshot_.position_frames) / snapshot_.duration_frames,
+                       0.0f, 1.0f);
+        skin_.draw(painter, wa::kCompactPositionThumb,
+                   {groove.area.x() +
+                        static_cast<int>(fraction * (groove.area.width() - groove.thumb_width)),
+                    groove.area.y()});
+    }
+
+    skin_.draw(painter, pressed_ == Hit::Minimize ? wa::kMinimizePressed : wa::kMinimizeNormal,
+               wa::kCompactMinimizeAt);
+    skin_.draw(painter, pressed_ == Hit::Shade ? wa::kExpandPressed : wa::kExpandNormal,
+               wa::kCompactExpandAt);
+    skin_.draw(painter, pressed_ == Hit::Close ? wa::kClosePressed : wa::kCloseNormal,
+               wa::kCompactCloseAt);
+}
+
+MainPanel::Groove MainPanel::position_groove() const {
+    if (compact_) return {wa::kCompactPosition, wa::kCompactPositionThumb.source.width()};
+    return {kPositionArea, kPositionThumbWidth};
 }
 
 void MainPanel::paint_display(QPainter& painter) {
@@ -259,6 +297,10 @@ void MainPanel::paint_display(QPainter& painter) {
     skin_.draw(painter, snapshot_.channels == 1 ? wa::kMonoOn : wa::kMonoOff, wa::kMonoAt);
     skin_.draw(painter, snapshot_.channels > 1 ? wa::kStereoOn : wa::kStereoOff, wa::kStereoAt);
 
+    paint_title(painter, wa::kSongTitle);
+}
+
+void MainPanel::paint_title(QPainter& painter, const QRect& area) {
     // PL-20 e PL-14 — posicao na playlist e titulo com rolagem.
     const int index = controller_.current_index();
     QString title;
@@ -273,18 +315,16 @@ void MainPanel::paint_display(QPainter& painter) {
 
     const int s = skin_.scale();
     painter.save();
-    painter.setClipRect(wa::kSongTitle.x() * s, wa::kSongTitle.y() * s,
-                        wa::kSongTitle.width() * s, wa::kSongTitle.height() * s);
-    if (skin_.text_width(title) <= wa::kSongTitle.width()) {
+    painter.setClipRect(area.x() * s, area.y() * s, area.width() * s, area.height() * s);
+    if (skin_.text_width(title) <= area.width()) {
         title_offset_ = 0;
-        skin_.draw_text(painter, title, wa::kSongTitle.topLeft());
+        skin_.draw_text(painter, title, area.topLeft());
     } else {
         // Emendado consigo mesmo, para nao saltar ao dar a volta.
         const QString marquee = title + QStringLiteral("   ***   ");
         const int span = skin_.text_width(marquee);
         if (title_offset_ >= span) title_offset_ = 0;
-        skin_.draw_text(painter, marquee + marquee,
-                        {wa::kSongTitle.x() - title_offset_, wa::kSongTitle.y()});
+        skin_.draw_text(painter, marquee + marquee, {area.x() - title_offset_, area.y()});
     }
     painter.restore();
 }
@@ -432,7 +472,8 @@ void MainPanel::paint_sliders(QPainter& painter) {
         skin_.draw(
             painter,
             dragging_ == Hit::Position ? wa::kPositionThumbPressed : wa::kPositionThumbNormal,
-            {wa::kPositionAt.x() + static_cast<int>(fraction * (kPositionArea.width() - kPositionThumbWidth)),
+            {wa::kPositionAt.x() + static_cast<int>(fraction * (position_groove().area.width() -
+                                                                position_groove().thumb_width)),
              wa::kPositionAt.y()});
     }
 }
@@ -480,7 +521,29 @@ void MainPanel::paint_buttons(QPainter& painter) {
 
 // ------------------------------------------------------------------ entrada
 
+// AP-11 — as areas mudam, as ACOES nao: cada area aponta para o mesmo Hit do
+// modo normal, e o que um botao faz continua decidido num lugar so.
+MainPanel::Hit MainPanel::hit_test_compact(const QPoint& p) const {
+    const struct {
+        QRect area;
+        Hit hit;
+    } regions[] = {
+        {wa::kCompactPrevious, Hit::Previous}, {wa::kCompactPlay, Hit::Play},
+        {wa::kCompactPause, Hit::Pause},       {wa::kCompactStop, Hit::Stop},
+        {wa::kCompactNext, Hit::Next},         {wa::kCompactEject, Hit::Eject},
+        {wa::kCompactPosition, Hit::Position},
+        {area_of(wa::kCompactMinimizeAt, {9, 9}), Hit::Minimize},
+        {area_of(wa::kCompactExpandAt, {9, 9}), Hit::Shade},
+        {area_of(wa::kCompactCloseAt, {9, 9}), Hit::Close},
+        {kTitlebarArea, Hit::Titlebar},
+    };
+    for (const auto& region : regions)
+        if (region.area.contains(p)) return region.hit;
+    return Hit::None;
+}
+
 MainPanel::Hit MainPanel::hit_test(const QPoint& p) const {
+    if (compact_) return hit_test_compact(p);
     const struct {
         QRect area;
         Hit hit;
@@ -561,9 +624,10 @@ void MainPanel::mouseReleaseEvent(QMouseEvent* event) {
     const QPoint p = to_logical(event->pos());
 
     if (dragging_ == Hit::Position) {
+        const Groove groove = position_groove();
         const float fraction =
-            std::clamp(static_cast<float>(p.x() - kPositionArea.x() - kPositionThumbWidth / 2) /
-                           (kPositionArea.width() - kPositionThumbWidth),
+            std::clamp(static_cast<float>(p.x() - groove.area.x() - groove.thumb_width / 2) /
+                           (groove.area.width() - groove.thumb_width),
                        0.0f, 1.0f);
         controller_.seek(static_cast<double>(fraction) * snapshot_.duration_frames /
                          engine_.sample_rate());

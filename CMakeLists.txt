@@ -338,6 +338,20 @@ target_compile_definitions(pang_playlist_ui_tests PRIVATE
   PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin")
 add_test(NAME playlist_ui COMMAND pang_playlist_ui_tests)
 
+# AP-11 — modo compacto: cada mini-controle dispara a acao certa.
+qt_add_executable(pang_compact_tests
+  tests/test_compact.cpp
+  src/ui/panel/main_panel.cpp
+  src/ui/skin/winamp_skin.cpp
+  src/ui/skin/zip.cpp)
+target_link_libraries(pang_compact_tests PRIVATE Qt6::Widgets ZLIB::ZLIB pang_core)
+target_compile_definitions(pang_compact_tests PRIVATE
+  PLAYAMPNG_SKIN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/skin"
+  PANG_TEST_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets/test")
+add_test(NAME compact COMMAND pang_compact_tests)
+set_tests_properties(compact PROPERTIES
+  TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # AP-08, AP-09 — arraste com encaixe, com janelas de topo de verdade. O
 # test_snapping cobre a geometria; este cobre a LIGACAO entre ela e as janelas.
 qt_add_executable(pang_detached_tests

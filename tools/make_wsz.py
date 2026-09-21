@@ -442,7 +442,77 @@ def make_titlebar():
                 for i in range(5):
                     b.set(x + 2 + i + o, y + 2 + i + o, BTN_INK)
                     b.set(x + 6 - i + o, y + 2 + i + o, BTN_INK)
+
+    # AP-11 — modo compacto, nas celulas que o formato Winamp reserva para ele
+    # (conferido no Webamp): fundo com e sem foco em (27,29) e (27,42), botao
+    # de sair do compacto em (0,27), barra de posicao em (0,36).
+    for y, active in ((29, True), (42, False)):
+        compact_bar(b, 27, y, active)
+
+    # Sair do compacto: o simbolo e o do "compacto" invertido — uma linha so,
+    # a barra a que a janela foi reduzida, virando a janela inteira de volta.
+    for col, pressed in enumerate((False, True)):
+        x = col * 9
+        face_button(b, x, 27, 9, 9, pressed)
+        o = 1 if pressed else 0
+        b.rect(x + 2 + o, 27 + 2 + o, 5, 5, BTN_INK)
+        b.rect(x + 3 + o, 27 + 4 + o, 3, 2, FACE_TOP)
+
+    # Barra de posicao: poco de 17x7 e cursor de 3x7.
+    b.rect(0, 36, 17, 7, BG_DARK)
+    b.hline(0, 36, 17, OUTLINE)
+    b.vline(0, 36, 7, OUTLINE)
+    b.hline(0, 42, 17, FACE_SHADE)
+    b.vline(16, 36, 7, FACE_SHADE)
+    face_button(b, 20, 36, 3, 7)
     return b
+
+
+def compact_bar(b, x, y, active):
+    """Fundo do modo compacto, 275x14, com os mini-controles desenhados.
+
+    Os mini-controles vem PRONTOS no fundo, como no formato Winamp: a interface
+    so desenha o que muda — titulo, tempo, barra de posicao e os tres botoes da
+    janela. Posicoes do formato, conferidas no Webamp.
+    """
+    ink = CREAM if active else LABEL_DIM
+    b.gradient(x, y, 275, 14, BG_LIGHT, BG_SHADE)
+    for j in (4, 6, 8):
+        b.hline(x, y + j, 275, ink)
+        b.hline(x, y + j + 1, 275, BG_SHADE)
+    b.rect(x + 1, y + 1, 16, 12, BG_SHADE)
+    draw_bolt(b, x + 3, y + 3, GOLD if active else LABEL_DIM)
+
+    # Pocos do titulo (18..121) e do tempo (125..153), para o texto de
+    # text.bmp — que tem fundo preto — nao carregar caixa preta sobre a face.
+    b.well(x + 18, y + 2, 104, 10)
+    b.well(x + 125, y + 2, 29, 10)
+    # Liso por tras dos controles e dos botoes, para as listras nao passarem
+    # entre eles.
+    b.rect(x + 166, y + 1, 108, 12, BG_SHADE)
+
+    for name, left, width in (('previous', 169, 7), ('play', 176, 10), ('pause', 186, 9),
+                              ('stop', 195, 9), ('next', 204, 10), ('eject', 215, 10)):
+        face_button(b, x + left, y + 2, width, 10)
+        mini_symbol(b, name, x + left, y + 2, width, 10)
+
+
+def mini_symbol(b, name, x, y, w, h, color=BTN_INK):
+    """Simbolos de transporte em tamanho de 10 px de altura."""
+    cx, cy = x + w // 2, y + h // 2
+
+    def triangle(x0, direction):
+        for i in range(3):
+            b.vline(x0 + direction * i, cy - 2 + i, 5 - 2 * i, color)
+
+    if name == 'play':       triangle(cx - 1, 1)
+    elif name == 'pause':    b.rect(cx - 2, cy - 2, 1, 5, color); b.rect(cx + 1, cy - 2, 1, 5, color)
+    elif name == 'stop':     b.rect(cx - 2, cy - 2, 4, 5, color)
+    elif name == 'previous': b.vline(cx - 2, cy - 2, 5, color); triangle(cx + 1, -1)
+    elif name == 'next':     b.vline(cx + 2, cy - 2, 5, color); triangle(cx - 1, 1)
+    elif name == 'eject':
+        for i in range(3): b.hline(cx - i, cy - 2 + i, 1 + i * 2, color)
+        b.hline(cx - 2, cy + 2, 5, color)
 
 
 def make_numbers():

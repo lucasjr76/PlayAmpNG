@@ -90,6 +90,41 @@ constexpr QPoint kShadeAt{242, 3};
 constexpr QPoint kMinimizeAt{232, 3};
 constexpr QPoint kCloseAt{252, 3};
 
+// ------------------------------------------ modo compacto (AP-11), 275x14
+//
+// Coordenadas do modo "windowshade" do Winamp 2.x, conferidas na
+// implementacao de referencia (Webamp: css/main-window.css e
+// js/skinSprites.ts) e NAO de memoria. Seguir o formato a risca importa por
+// um motivo concreto: nos skins Winamp os mini-controles vem DESENHADOS na
+// imagem de fundo, e as areas de clique so acertam se estiverem exatamente
+// onde o skin os desenhou.
+//
+// Unica peca nossa: o titulo da faixa. O Winamp nao mostra titulo no
+// compacto; aqui ele ocupa o lugar da mini-visualizacao.
+constexpr Sprite kCompactActive{"titlebar", {27, 29, 275, 14}};
+constexpr Sprite kCompactInactive{"titlebar", {27, 42, 275, 14}};
+constexpr Sprite kExpandNormal{"titlebar", {0, 27, 9, 9}};
+constexpr Sprite kExpandPressed{"titlebar", {9, 27, 9, 9}};
+constexpr Sprite kCompactPositionBackground{"titlebar", {0, 36, 17, 7}};
+constexpr Sprite kCompactPositionThumb{"titlebar", {20, 36, 3, 7}};
+
+constexpr QRect kCompactTitle{20, 4, 100, 6};   // ~20 caracteres, rolando
+constexpr QPoint kCompactTimeAt{127, 4};        // "MM:SS", 5 glifos de text.bmp
+constexpr QRect kCompactPrevious{169, 2, 7, 10};
+constexpr QRect kCompactPlay{176, 2, 10, 10};
+constexpr QRect kCompactPause{186, 2, 9, 10};
+constexpr QRect kCompactStop{195, 2, 9, 10};
+constexpr QRect kCompactNext{204, 2, 10, 10};
+constexpr QRect kCompactEject{215, 2, 10, 10};
+constexpr QRect kCompactPosition{226, 4, 17, 7};
+
+// Os botoes da janela vao para as posicoes do Winamp SO no compacto: a barra
+// de posicao ocupa 226..242 e colidiria com o minimizar em 232. No modo
+// normal eles ficam na grade do projeto (232/242/252), decisao ja aceita.
+constexpr QPoint kCompactMinimizeAt{244, 3};
+constexpr QPoint kCompactExpandAt{254, 3};
+constexpr QPoint kCompactCloseAt{264, 3};
+
 // -------------------------------------------- numbers.bmp (108x13)
 //
 // Onze celulas de 9x13: digitos 0 a 9 e uma celula vazia. O dois-pontos nao e

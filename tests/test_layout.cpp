@@ -232,8 +232,59 @@ void frame_strips() {
 
 }  // namespace
 
+// AP-11 — modo compacto.
+//
+// As regras da grade (margem 14..260, vao minimo 3) NAO valem aqui, e de
+// proposito: as coordenadas sao as do formato Winamp, um contrato externo. Os
+// mini-controles encostam uns nos outros e os botoes da janela vao ate 272,
+// porque e ali que um skin Winamp os desenha. O que se confere e o que vale em
+// qualquer disposicao: nada se cruza, tudo cabe na barra, e o texto fica
+// dentro do seu poco e centrado.
+void compact_window() {
+    std::printf("\nMODO COMPACTO  (275x14, coordenadas do formato Winamp)\n");
+    const QRect title_well(18, 2, 104, 10);
+    const QRect time_well(125, 2, 29, 10);
+    const QRect time_text(wa::kCompactTimeAt, QSize(5 * wa::kGlyphWidth, 6));
+    const std::vector<Piece> pieces{
+        {"poco do titulo", title_well},
+        {"poco do tempo", time_well},
+        {"anterior", wa::kCompactPrevious},
+        {"tocar", wa::kCompactPlay},
+        {"pausar", wa::kCompactPause},
+        {"parar", wa::kCompactStop},
+        {"proxima", wa::kCompactNext},
+        {"ejetar", wa::kCompactEject},
+        {"posicao", wa::kCompactPosition},
+        {"minimizar", placed(wa::kCompactMinimizeAt, wa::kMinimizeNormal)},
+        {"expandir", placed(wa::kCompactExpandAt, wa::kExpandNormal)},
+        {"fechar", placed(wa::kCompactCloseAt, wa::kCloseNormal)},
+    };
+    for (const Piece& piece : pieces) {
+        std::printf("    %-22s %3d..%-3d  y %2d..%-2d\n", piece.name.c_str(), piece.area.x(),
+                    right(piece.area), piece.area.y(), bottom(piece.area));
+        PANG_CHECK(piece.area.x() >= 0 && right(piece.area) < 275 && piece.area.y() >= 0 &&
+                       bottom(piece.area) < 14,
+                   (piece.name + " sai da barra de 275x14").c_str());
+    }
+    no_overlap(pieces);
+
+    // Texto dentro do poco, sem encostar na borda de relevo.
+    const auto inside = [](const QRect& text, const QRect& well) {
+        return text.x() > well.x() && right(text) < right(well) && text.y() > well.y() &&
+               bottom(text) < bottom(well);
+    };
+    PANG_CHECK(inside(wa::kCompactTitle, title_well), "o titulo cabe no seu poco");
+    PANG_CHECK(inside(time_text, time_well), "o tempo cabe no seu poco");
+
+    // Centrado na barra de 14: o mesmo espaco acima e abaixo do texto.
+    PANG_CHECK(wa::kCompactTitle.y() == 14 - bottom(wa::kCompactTitle) - 1,
+               "o titulo fica centrado na vertical");
+    PANG_CHECK(time_text.y() == 14 - bottom(time_text) - 1, "o tempo fica centrado na vertical");
+}
+
 int main() {
     main_window();
+    compact_window();
     equalizer_window();
     frame_strips();
     std::printf("\n");
