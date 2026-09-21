@@ -141,6 +141,21 @@ jobs:
           if-no-files-found: error
           path: dist/PlayAmpNG-x86_64.AppImage
 
+      # EN-10 — o .dmg do macOS. Sem assinatura: exige conta de desenvolvedor
+      # Apple, decisao a parte. O script confere vinculos e de onde o skin e
+      # carregado, porque defeito de pacote nao aparece na maquina que o monta.
+      - name: Pacote (macOS)
+        if: matrix.name == 'macos'
+        run: packaging/macos/build-dmg.sh build dist
+
+      - name: Publicar pacote (macOS)
+        if: matrix.name == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playampng-macos
+          if-no-files-found: error
+          path: dist/*.dmg
+
       # EN-09 — o instalador e montado no proprio CI para que nunca dependa da
       # maquina de um desenvolvedor. Reaproveita o diretorio `build` ja
       # compilado: o cmake so reconfigura, e nao recompila.
@@ -235,6 +250,7 @@ jobs:
           cp artefatos/playampng-linux/PlayAmpNG-x86_64.AppImage publicar/
           cp artefatos/playampng-windows/packaging/windows/*-setup.exe publicar/
           cp artefatos/playampng-flatpak/PlayAmpNG.flatpak publicar/
+          cp artefatos/playampng-macos/*.dmg publicar/
           (cd publicar && sha256sum * > SHA256SUMS.txt)
           ls -l publicar
 
@@ -251,7 +267,7 @@ jobs:
             | Windows x64 | `PlayAmpNG-<versao>-setup.exe` — instala no perfil do usuario, sem pedir administrador |
             | Linux (Flatpak) | `PlayAmpNG.flatpak` — `flatpak install --user PlayAmpNG.flatpak`; nao tem o piso de glibc do AppImage, porque roda sobre o runtime do KDE |
 
-            macOS ainda nao tem pacote.
+            | macOS (Apple Silicon) | `PlayAmpNG-<versao>-macos-arm64.dmg` — **sem assinatura e ainda nao testado em um Mac de verdade**. Na primeira abertura o macOS bloqueia: clique com o botao direito no app e escolha *Abrir*, ou rode `xattr -dr com.apple.quarantine /Applications/PlayAmpNG.app`. Macs com processador Intel nao sao atendidos por este pacote |
 
             Confira os arquivos com `SHA256SUMS.txt`.
 

@@ -215,6 +215,15 @@ target_compile_definitions(playampng PRIVATE
 # proposito, e marca-los assim faria a saida deles sumir.
 set_target_properties(playampng PROPERTIES WIN32_EXECUTABLE TRUE)
 
+# EN-10 — no macOS o player e um .app. O identificador e o mesmo do Flatpak e
+# do metainfo, para o sistema reconhecer um so programa.
+set_target_properties(playampng PROPERTIES
+  MACOSX_BUNDLE TRUE
+  MACOSX_BUNDLE_BUNDLE_NAME "PlayAmpNG"
+  MACOSX_BUNDLE_GUI_IDENTIFIER "br.com.playampng.PlayAmpNG"
+  MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+  MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+
 # Renderizador headless dos paineis, para medir alinhamento em pixel.
 qt_add_executable(pang_render
   tools/render_panels.cpp
@@ -245,7 +254,9 @@ target_compile_definitions(pang_fontgen PRIVATE
 # pacote de um formato acabaria sem um arquivo que o outro tem.
 include(GNUInstallDirs)
 
-install(TARGETS playampng RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS playampng
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  BUNDLE DESTINATION .)  # macOS: o .app vai inteiro para a raiz do prefixo
 
 # O skin proprio acompanha o binario: sem ele o player abre sem desenho.
 install(DIRECTORY assets/skin/default/

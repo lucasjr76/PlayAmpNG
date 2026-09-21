@@ -268,6 +268,61 @@ int main(int argc, char** argv) {
     if (!log_path.isEmpty())
         pang::core::log::info("log: " + QDir::toNativeSeparators(log_path).toStdString());
 
+    // -------------------------------------------------------------- skin
+    //
+    // ANTES do audio. O skin nao depende dele, e numa maquina sem dispositivo
+    // de audio o player para na abertura do audio: carregado depois, o skin
+    // nunca era carregado ali — e a verificacao dos pacotes, que confere no
+    // log de onde o skin veio, dependeria de a maquina de build ter placa de
+    // som.
+
+    // A aparencia e um skin no formato do Winamp 2.x. Nao ha selecao na
+    // interface — a secao 2 da especificacao proibe; o que se adota e o
+    // FORMATO, e o arquivo carregado e a aparencia fixa. Aceita .wsz ou pasta.
+    pang::ui::skin::WinampSkin skin;
+    QString skin_error;
+
+    // EN-04 — o skin e procurado ao lado do BINARIO, e so depois no diretorio
+    // de fontes. Fixar o caminho de compilacao funcionava enquanto o player
+    // rodava da arvore de build; instalado num pacote, aquele caminho nao
+    // existe e a janela abriria sem desenho nenhum.
+    //
+    // A ordem cobre os tres casos: instalado em prefixo (incluindo AppImage e
+    // Flatpak, onde o prefixo e relativo ao executavel), skin ao lado do
+    // binario, e arvore de desenvolvimento.
+    const QString exe_dir = QCoreApplication::applicationDirPath();
+    const QStringList skin_candidates{
+        exe_dir + QStringLiteral("/../share/playampng/skin/default"),
+        exe_dir + QStringLiteral("/skin/default"),
+        // EN-10 — dentro de um .app o executavel fica em Contents/MacOS e os
+        // recursos em Contents/Resources.
+        exe_dir + QStringLiteral("/../Resources/skin/default"),
+        // Ultima de proposito: o caminho do codigo-fonte, fixado na
+        // compilacao. Existe na maquina de build e em nenhuma outra — um
+        // pacote sem o skin dentro funcionaria no CI e falharia no usuario, e
+        // e por isso que a verificacao dos pacotes confere no log DE ONDE o
+        // skin veio.
+        QStringLiteral(PLAYAMPNG_SKIN_DIR "/default"),
+    };
+    QString skin_path;
+    for (const QString& candidate : skin_candidates) {
+        if (!QFileInfo::exists(candidate)) continue;
+        if (skin.load(candidate, skin_error)) {
+            skin_path = candidate;
+            break;
+        }
+    }
+    if (skin_path.isEmpty()) {
+        pang::core::log::error("skin nao encontrado em nenhum de: " +
+                               skin_candidates.join(QStringLiteral(", ")).toStdString() +
+                               (skin_error.isEmpty() ? "" : " (" + skin_error.toStdString() + ")"));
+        return 1;
+    }
+    pang::core::log::info("skin: " + QDir::cleanPath(skin_path).toStdString());
+    if (!skin.missing().isEmpty())
+        pang::core::log::warn(("skin sem os bitmaps: " +
+                               skin.missing().join(QStringLiteral(", ")).toStdString()));
+
     pang::platform::AudioOutput output;
     struct Bridge {
         pang::core::Engine* engine = nullptr;
@@ -307,46 +362,6 @@ int main(int argc, char** argv) {
     auto controller = std::make_unique<pang::core::Controller>(
         *engine, [&output] { output.suspend(); }, [&output] { output.resume(); });
 
-    // -------------------------------------------------------------- skin
-
-    // A aparencia e um skin no formato do Winamp 2.x. Nao ha selecao na
-    // interface — a secao 2 da especificacao proibe; o que se adota e o
-    // FORMATO, e o arquivo carregado e a aparencia fixa. Aceita .wsz ou pasta.
-    pang::ui::skin::WinampSkin skin;
-    QString skin_error;
-
-    // EN-04 — o skin e procurado ao lado do BINARIO, e so depois no diretorio
-    // de fontes. Fixar o caminho de compilacao funcionava enquanto o player
-    // rodava da arvore de build; instalado num pacote, aquele caminho nao
-    // existe e a janela abriria sem desenho nenhum.
-    //
-    // A ordem cobre os tres casos: instalado em prefixo (incluindo AppImage e
-    // Flatpak, onde o prefixo e relativo ao executavel), skin ao lado do
-    // binario, e arvore de desenvolvimento.
-    const QString exe_dir = QCoreApplication::applicationDirPath();
-    const QStringList skin_candidates{
-        exe_dir + QStringLiteral("/../share/playampng/skin/default"),
-        exe_dir + QStringLiteral("/skin/default"),
-        QStringLiteral(PLAYAMPNG_SKIN_DIR "/default"),
-    };
-    QString skin_path;
-    for (const QString& candidate : skin_candidates) {
-        if (!QFileInfo::exists(candidate)) continue;
-        if (skin.load(candidate, skin_error)) {
-            skin_path = candidate;
-            break;
-        }
-    }
-    if (skin_path.isEmpty()) {
-        pang::core::log::error("skin nao encontrado em nenhum de: " +
-                               skin_candidates.join(QStringLiteral(", ")).toStdString() +
-                               (skin_error.isEmpty() ? "" : " (" + skin_error.toStdString() + ")"));
-        return 1;
-    }
-    pang::core::log::info("skin: " + QDir::cleanPath(skin_path).toStdString());
-    if (!skin.missing().isEmpty())
-        pang::core::log::warn(("skin sem os bitmaps: " +
-                               skin.missing().join(QStringLiteral(", ")).toStdString()));
 
     // Confere que a premissa acima se sustenta: se algum ambiente ainda
     // entregar ratio diferente de 1, o desenho sai reamostrado e e melhor
