@@ -536,8 +536,9 @@ void test_move_selection() {
         // com o tamanho da selecao — que e o que torna o defeito confuso na
         // tela: com um item arrastado, quase acerta; com cinco, vai longe.
         Playlist pl = montar();
-        pl.move(std::vector<int>{0, 1}, 4);
+        const int inicio = pl.move(std::vector<int>{0, 1}, 4);
         PANG_CHECK(ordem(pl) == "cdabe", "a e b entram antes de e, e nao no fim");
+        PANG_CHECK(inicio == 2, "devolve onde a selecao foi parar, para a interface mostra-la");
     }
 
     {   // Selecao descontinua mantem a ordem relativa, e nao a de clique.
@@ -558,7 +559,7 @@ void test_move_selection() {
         PANG_CHECK(ordem(pl) == "abcde", "indices fora da lista sao ignorados");
         pl.move(std::vector<int>{1, 1, 1}, 0);
         PANG_CHECK(ordem(pl) == "bacde", "indice repetido conta uma vez so");
-        pl.move(std::vector<int>{}, 0);
+        PANG_CHECK(pl.move(std::vector<int>{}, 0) == -1, "selecao vazia devolve -1");
         PANG_CHECK(ordem(pl) == "bacde", "selecao vazia nao faz nada");
         pl.move(std::vector<int>{0}, 999);
         PANG_CHECK(ordem(pl) == "acdeb", "destino alem do fim vai para o fim");

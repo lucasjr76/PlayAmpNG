@@ -38,6 +38,7 @@ public:
     // possa ser verificada, e nao so olhada.
     std::vector<int> selection() const { return {selected_.begin(), selected_.end()}; }
     int scroll_position() const { return scroll_; }
+    void set_scroll_position(int row) { scroll_ = row; clamp_scroll(); update(); }
     int rows_visible() const { return visible_rows(); }
     QRect scroll_thumb() const { return scroll_thumb_rect(); }
     QRect scrollbar() const { return scrollbar_rect(); }
@@ -75,6 +76,10 @@ private:
     QPoint to_logical(const QPoint& physical) const;
     int visible_rows() const;
     int row_at(const QPoint& logical) const;
+
+    // LI-04 — posicao ENTRE linhas mais proxima do ponto, de 0 a size(). E o
+    // que um arraste precisa: o usuario solta entre duas faixas, nao em cima.
+    int drop_position_at(const QPoint& logical) const;
     QRect button_rect(int index) const;
     int footer_top() const;
 
@@ -103,6 +108,18 @@ private:
     int resize_origin_ = 0;
     int resize_start_height_ = 0;
     std::set<int> selected_;
+
+    // LI-04 — arraste para reordenar.
+    //
+    // O clique numa linha JA selecionada so vira "selecionar apenas ela" no
+    // release, e so se nao houve arraste. Decidir no press destruiria a
+    // selecao multipla antes de o arraste comecar — e arrastar tres faixas
+    // passaria a arrastar uma.
+    int press_row_ = -1;              // linha pressionada, candidata a arraste
+    int press_y_ = 0;                 // em pixels fisicos, para o limiar
+    bool press_on_selected_ = false;  // o press caiu numa linha ja selecionada
+    bool reordering_ = false;         // o limiar foi vencido: e arraste
+    int drop_before_ = -1;            // posicao entre linhas; -1 sem indicador
 
     // LI-09 — busca por digitacao; o texto expira depois de um segundo parado.
     QString search_;

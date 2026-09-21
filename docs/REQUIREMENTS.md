@@ -148,7 +148,7 @@ Legenda de estado: `PENDENTE` · `OK` · `PARCIAL` · `NÃO VERIFICADO` · `FORA
 | LI-01 | Inclusão de arquivos e pastas por diálogo | MANUAL | M2 | OK (M2) |
 | LI-02 | Inclusão por drag-and-drop | MANUAL | M2 | OK (M2) |
 | LI-03 | Busca recursiva opcional em diretórios | AUTO | M2 | OK (M2) |
-| LI-04 | Reordenação por arrastar | MANUAL | M5 | PENDENTE — painel em sprites ainda sem arraste |
+| LI-04 | Reordenação por arrastar | AUTO + MANUAL | M5 | OK (M8) — move a seleção inteira, preservando a ordem relativa; verificado com eventos de mouse no painel |
 | LI-05 | Seleção múltipla | MANUAL | M5 | OK (M5) |
 | LI-06 | Remoção de itens sem excluir os arquivos originais | AUTO | M2 | OK (M2) |
 | LI-07 | Limpeza da lista | AUTO | M2 | OK (M2) |

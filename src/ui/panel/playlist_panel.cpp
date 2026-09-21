@@ -1,5 +1,6 @@
 #include "ui/panel/playlist_panel.h"
 
+#include <QApplication>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QKeyEvent>
@@ -10,6 +11,7 @@
 #include <QWindow>
 
 #include <algorithm>
+#include <cstdlib>
 #include <chrono>
 
 #include "ui/skin/winamp_layout.h"
@@ -180,6 +182,14 @@ int PlaylistPanel::row_at(const QPoint& p) const {
     return row;
 }
 
+int PlaylistPanel::drop_position_at(const QPoint& p) const {
+    const int top = kTitlebarHeight;
+    // Arredonda para a fronteira mais proxima: a metade superior de uma linha
+    // significa "antes dela", a inferior "depois dela".
+    const int position = scroll_ + (p.y() - top + kRowHeight / 2) / kRowHeight;
+    return std::clamp(position, 0, controller_.playlist().size());
+}
+
 // Barra de rolagem: uma conta so, usada pelo desenho E pelo clique. Quando o
 // desenho e o teste de acerto calculam a geometria cada um por sua conta, eles
 // divergem e o cursor deixa de pegar onde aparece.
@@ -303,6 +313,15 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
         skin_.draw_text(painter, duration, {kWidth - kListMargin - duration_width, y + 1}, ink);
     }
 
+    // LI-04 — onde a selecao vai cair. Uma linha de 1 px na FRONTEIRA entre
+    // duas faixas, e nao um realce em cima de uma: o arraste insere entre
+    // linhas, e um realce de linha inteira sugeriria "substituir esta".
+    if (reordering_ && drop_before_ >= scroll_ && drop_before_ <= scroll_ + rows) {
+        const int y = top + (drop_before_ - scroll_) * kRowHeight;
+        painter.fillRect(kListMargin * s, y * s - s / 2, (kWidth - 2 * kListMargin) * s,
+                         std::max(1, s), kCurrentText);
+    }
+
     // Barra de rolagem, so quando ha o que rolar.
     if (const QRect thumb = scroll_thumb_rect(); !thumb.isNull()) {
         const QRect track = scrollbar_rect();
@@ -383,6 +402,14 @@ void PlaylistPanel::paintEvent(QPaintEvent*) {
 void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
     const QPoint p = to_logical(event->pos());
 
+    // Todo gesto comeca do zero. Um press sem o release correspondente — a
+    // janela perdeu o foco no meio do clique, por exemplo — deixava o arraste
+    // anterior pendurado, e o proximo movimento sobre a barra de rolagem era
+    // lido como reordenacao. O teste da rolagem pegou isso na primeira vez.
+    press_row_ = -1;
+    reordering_ = false;
+    drop_before_ = -1;
+
     // Aresta inferior redimensiona: sem isso nao ha como ver mais linhas.
     if (p.y() >= logical_height_ - kResizeGrip) {
         resizing_ = true;
@@ -441,22 +468,46 @@ void PlaylistPanel::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
+    // LI-04 — candidata a arraste. Vale para qualquer clique sem modificador
+    // numa linha: se o ponteiro se mexer alem do limiar, e reordenacao.
+    press_row_ = row;
+    press_y_ = event->pos().y();
+    reordering_ = false;
+    press_on_selected_ = selected_.count(row) > 0;
+
     // LI-05 — selecao multipla com os modificadores de sempre.
     if (event->modifiers() & Qt::ControlModifier) {
+        press_row_ = -1;  // Ctrl alterna a selecao; nao inicia arraste
         if (selected_.count(row)) selected_.erase(row); else selected_.insert(row);
         anchor_ = row;
     } else if ((event->modifiers() & Qt::ShiftModifier) && anchor_ >= 0) {
+        press_row_ = -1;
         selected_.clear();
         for (int i = std::min(anchor_, row); i <= std::max(anchor_, row); ++i) selected_.insert(i);
-    } else {
+    } else if (!press_on_selected_) {
         selected_.clear();
         selected_.insert(row);
         anchor_ = row;
     }
+    // Clique sem modificador numa linha ja selecionada: nada muda AGORA. Se
+    // virar arraste, a selecao inteira vai junto; se nao, o release a reduz.
     update();
 }
 
 void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
+    if (press_row_ >= 0 && (event->buttons() & Qt::LeftButton)) {
+        if (!reordering_ &&
+            std::abs(event->pos().y() - press_y_) >= QApplication::startDragDistance())
+            reordering_ = true;
+        if (reordering_) {
+            const int position = drop_position_at(to_logical(event->pos()));
+            if (position != drop_before_) {
+                drop_before_ = position;
+                update();
+            }
+        }
+        return;
+    }
     if (scrolling_) {
         scroll_to_position(to_logical(event->pos()).y());
         update();
@@ -477,6 +528,30 @@ void PlaylistPanel::mouseMoveEvent(QMouseEvent* event) {
 void PlaylistPanel::mouseReleaseEvent(QMouseEvent*) {
     resizing_ = false;
     scrolling_ = false;
+
+    if (press_row_ >= 0) {
+        if (reordering_ && drop_before_ >= 0 && !selected_.empty()) {
+            const std::vector<int> rows(selected_.begin(), selected_.end());
+            const int first = controller_.playlist().move(rows, drop_before_);
+            if (first >= 0) {
+                // A selecao acompanha as faixas para onde foram, contiguas.
+                selected_.clear();
+                for (int i = 0; i < static_cast<int>(rows.size()); ++i) selected_.insert(first + i);
+                anchor_ = first;
+                controller_.playlist_changed();
+                ensure_visible(first);
+            }
+        } else if (press_on_selected_) {
+            // Clique sem arraste numa linha ja selecionada: agora sim, so ela.
+            selected_.clear();
+            selected_.insert(press_row_);
+            anchor_ = press_row_;
+        }
+    }
+    press_row_ = -1;
+    reordering_ = false;
+    drop_before_ = -1;
+    update();
 }
 
 void PlaylistPanel::mouseDoubleClickEvent(QMouseEvent* event) {

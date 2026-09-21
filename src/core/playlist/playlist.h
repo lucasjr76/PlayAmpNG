@@ -46,7 +46,12 @@ public:
     // Mover varios nao e repetir o move de um: cada movimento desloca os
     // indices dos seguintes, e aplicar em sequencia embaralha a selecao. Aqui
     // os indices sao todos lidos ANTES de qualquer mudanca.
-    void move(std::vector<int> indices, int before);
+    //
+    // Devolve o indice onde o PRIMEIRO item movido foi parar — os demais vem
+    // em seguida, contiguos. -1 quando nada foi movido. Quem mostra a selecao
+    // precisa disso, e recalcular do lado de fora seria uma segunda rota para
+    // a mesma conta, que e o que mais diverge neste projeto.
+    int move(std::vector<int> indices, int before);
 
     // LI-08 — ordenacao estavel; itens sem o campo vao para o fim.
     void sort(SortKey key, bool ascending);

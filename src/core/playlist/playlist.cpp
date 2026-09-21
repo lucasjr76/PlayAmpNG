@@ -107,13 +107,13 @@ void Playlist::move(int from, int to) {
     tracks_.insert(tracks_.begin() + to, std::move(moved));
 }
 
-void Playlist::move(std::vector<int> indices, int before) {
+int Playlist::move(std::vector<int> indices, int before) {
     std::sort(indices.begin(), indices.end());
     indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
     indices.erase(std::remove_if(indices.begin(), indices.end(),
                                  [this](int i) { return i < 0 || i >= size(); }),
                   indices.end());
-    if (indices.empty()) return;
+    if (indices.empty()) return -1;
     before = std::clamp(before, 0, size());
 
     // O destino muda quando ha selecionados ANTES dele: ao tira-los da lista,
@@ -140,6 +140,7 @@ void Playlist::move(std::vector<int> indices, int before) {
 
     tracks_.insert(tracks_.begin() + destination, std::make_move_iterator(moved.begin()),
                    std::make_move_iterator(moved.end()));
+    return destination;
 }
 
 void Playlist::sort(SortKey key, bool ascending) {

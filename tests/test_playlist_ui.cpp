@@ -148,5 +148,83 @@ int main(int argc, char** argv) {
               QEvent::MouseButtonRelease);
     }
 
+    // ------------------------------------------- LI-04: arrastar para reordenar
+    //
+    // Pelo painel, com eventos de mouse, e nao chamando Playlist::move: o que
+    // se verifica aqui e a INTERACAO — limiar de arraste, selecao preservada
+    // durante o gesto, destino entre linhas. A conta em si ja tem teste no
+    // core.
+    {
+        panel.set_scroll_position(0);
+        const auto path_at = [&](int i) { return controller.playlist().at(i).path; };
+        const auto y_of = [](int row) { return 14 + row * 8 + 4; };  // meio da linha
+        const int x = 40;
+
+        const std::string item1 = path_at(1), item2 = path_at(2), item3 = path_at(3);
+        const std::string item6 = path_at(6);
+
+        // Seleciona as linhas 1, 2 e 3.
+        click(&panel, QPoint(x, y_of(1)));
+        click(&panel, QPoint(x, y_of(1)), QEvent::MouseButtonRelease);
+        {
+            QMouseEvent shift(QEvent::MouseButtonPress, QPointF(x, y_of(3)),
+                              QPointF(panel.mapToGlobal(QPoint(x, y_of(3)))), Qt::LeftButton,
+                              Qt::LeftButton, Qt::ShiftModifier);
+            QCoreApplication::sendEvent(&panel, &shift);
+            click(&panel, QPoint(x, y_of(3)), QEvent::MouseButtonRelease);
+        }
+        PANG_CHECK(panel.selection() == std::vector<int>({1, 2, 3}), "tres linhas selecionadas");
+
+        // Pega a linha 2 — que ja esta selecionada — e arrasta para antes da 7.
+        click(&panel, QPoint(x, y_of(2)));
+        PANG_CHECK(panel.selection() == std::vector<int>({1, 2, 3}),
+                   "pegar uma linha ja selecionada NAO desfaz a selecao multipla");
+
+        click(&panel, QPoint(x, y_of(7) - 4), QEvent::MouseMove);  // fronteira 6|7
+        click(&panel, QPoint(x, y_of(7) - 4), QEvent::MouseButtonRelease);
+
+        PANG_CHECK(path_at(3) == item6, "o que estava depois sobe para abrir espaco");
+        PANG_CHECK(path_at(4) == item1 && path_at(5) == item2 && path_at(6) == item3,
+                   "as tres faixas foram juntas, na ordem em que estavam");
+        PANG_CHECK(panel.selection() == std::vector<int>({4, 5, 6}),
+                   "a selecao acompanha as faixas para a nova posicao");
+    }
+
+    // ---------------------------- LI-04: clique sem arraste reduz a selecao
+    {
+        panel.set_scroll_position(0);
+        const auto y_of = [](int row) { return 14 + row * 8 + 4; };
+        // A selecao 4..6 do bloco anterior continua valendo.
+        click(&panel, QPoint(40, y_of(5)));
+        click(&panel, QPoint(40, y_of(5)), QEvent::MouseButtonRelease);
+        PANG_CHECK(panel.selection() == std::vector<int>({5}),
+                   "clicar e soltar sem arrastar numa linha selecionada seleciona so ela");
+    }
+
+    // ------------------------------------ LI-04: tremida nao e arraste
+    //
+    // A primeira versao deste bloco tremia 1 px no meio da linha e passava
+    // com ou sem limiar: o destino caia na fronteira da propria faixa, e
+    // mover para onde ja se esta nao muda nada. Um teste que nao reprova
+    // quando a regra some nao testa a regra. A tremida agora parte do FUNDO
+    // da linha e anda ate um pixel antes do limiar — o bastante para
+    // atravessar uma fronteira, e portanto para reordenar se o limiar faltar.
+    {
+        panel.set_scroll_position(0);
+        const int limiar = QApplication::startDragDistance();
+        const int fundo_da_linha_2 = 14 + 2 * 8 + 7;
+        const int tremida = fundo_da_linha_2 + limiar - 1;
+        const int fronteira_3_4 = 14 + 4 * 8 - 4;  // a partir daqui arredonda para 4
+        PANG_CHECK(tremida >= fronteira_3_4,
+                   "a tremida atravessa uma fronteira; senao este bloco nao testaria nada");
+
+        const std::string antes = controller.playlist().at(2).path;
+        click(&panel, QPoint(40, fundo_da_linha_2));
+        click(&panel, QPoint(40, tremida), QEvent::MouseMove);
+        click(&panel, QPoint(40, tremida), QEvent::MouseButtonRelease);
+        PANG_CHECK(controller.playlist().at(2).path == antes,
+                   "tremer abaixo do limiar de arraste nao reordena nada");
+    }
+
     return pang::check::exit_code();
 }
