@@ -110,3 +110,22 @@ Duas divergências do formato encontradas no `titlebar.bmp`, **sem efeito com o 
 
 - a barra com e sem foco estão invertidas: aqui, sem foco em y=0 e com foco em y=15; no formato, o contrário;
 - o botão "compacto" ocupa a célula (0,0), que no formato é o botão de opções; no formato ele fica em (0,18).
+
+## A grade do modo normal não é a do formato
+
+Medido contra a mesma referência (Webamp `css/main-window.css`), peça por peça. A coluna "nosso" sai de `src/ui/skin/winamp_layout.h`:
+
+| Peça | Nosso x | Formato x | Diferença |
+|---|---|---|---|
+| título da faixa | 107 (y=27, largura 150) | 111 (y=24, largura 154) | −4, e 3 px mais baixo |
+| controle de volume | 103 | 107 | −4 |
+| controle de balanço | 174 | 177 | −3 |
+| botão de ejetar | 133 | 136 | −3 |
+| barra de posição | 14 | 16 | −2 |
+| ⏮ ▶ ⏸ ⏹ ⏭ | 14, 37, 60, 83, 106 | 16, 39, 62, 85, 108 | −2 em todos |
+
+É a **grade do projeto**, com margem 14 à esquerda e 260 à direita, adotada porque o desenho anterior ficava deslocado para a direita. Decisão visual já aceita, e o skin próprio é desenhado nessa grade: com ele, nada está fora de lugar.
+
+**A consequência, e a razão de isto estar escrito aqui:** num skin de terceiros os poços do mostrador, os trilhos dos controles e os rótulos vêm **desenhados dentro do `main.bmp`**, nas coordenadas do formato. Carregar um deles deixaria o cursor de volume 4 px fora do trilho e o título fora do poço. O carregador aceita o arquivo; o resultado é que o desenho de fundo e o que o player pinta em cima não coincidem.
+
+Sustentar skins de terceiros exigiria **dois conjuntos de coordenadas** — a grade do projeto para a arte própria, as do formato quando o skin vem de fora —, além das duas correções de `titlebar.bmp` acima. Não está feito, e por isso a limitação está registrada em `LIMITACOES.md`.

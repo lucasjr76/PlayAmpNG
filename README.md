@@ -101,9 +101,11 @@ The artwork lives in code: any adjustment is a readable diff. The glyph table is
 | Keyboard shortcuts | [`docs/ATALHOS.md`](docs/ATALHOS.md) (Portuguese), and in the program: right-click → *Atalhos de teclado* |
 | Choose the audio output | right-click the main window → *Dispositivo de saída* |
 | Track properties | right-click → *Propriedades da faixa* |
-| Change the skin | any Winamp 2.x `.wsz`, or a folder with the bitmaps |
+| Change the skin | **you can't.** The appearance is fixed, by design — see below |
 
 Media keys and desktop-level control work over MPRIS, without the window being focused.
+
+**About skins.** What the project adopts is the Winamp 2.x skin **format** — the geometry: which pieces exist and where each one lives inside each bitmap. The artwork is our own, drawn by `tools/make_wsz.py`. There is no skin picker in the interface, because the specification waives visual customisation, and **third-party skins are not supported**: the main-window grid is the project's own, sitting 2 to 4 px left of the format's positions in six pieces. Since a third-party skin ships its sliders' tracks and display wells drawn into the background, its artwork and what the player paints on top would not line up. The measurement is in [`docs/APROXIMACOES.md`](docs/APROXIMACOES.md) (Portuguese).
 
 The interface itself is in Portuguese.
 

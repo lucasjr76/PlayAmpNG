@@ -19,6 +19,8 @@ EN-08. O que o player **não** faz, e por quê. Cada item traz a razão, e não 
 | Presets do usuário no equalizador (`EQ-07`) | Criar e salvar funciona; editar e excluir pela interface ficou pendente |
 | Cálculo de ReplayGain | O player **lê** as tags, não calcula. Calcular seria um scanner de biblioteca, outro programa |
 | Velocidade de reprodução variável | Não previsto na especificação, e mexeria no contrato de gapless |
+| Escolher o skin pela interface | O §2 da especificação dispensa personalização visual (AP-15). A aparência é fixa: o player procura `skin/default` ao lado do binário e no prefixo de instalação, e não há opção de menu, argumento de linha de comando nem chave de configuração para apontar outro |
+| Skins de terceiros | O carregador lê `.wsz` — saiu de graça ao adotar o formato como especificação —, mas a **grade do modo normal é a do projeto, não a do formato**: título, volume, balanço, ejetar, barra de posição e os botões de transporte estão de 2 a 4 px à esquerda das posições do Winamp (medição em `APROXIMACOES.md`). Como um skin de terceiros traz os poços e os trilhos desenhados no `main.bmp`, nas coordenadas do formato, o fundo e o que o player pinta em cima não coincidiriam. Sustentá-los exigiria dois conjuntos de coordenadas |
 
 ## Saída com escala fracionária torna o desenho impreciso
 

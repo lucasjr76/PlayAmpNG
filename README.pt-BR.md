@@ -99,9 +99,11 @@ A arte vive em código: qualquer ajuste é um diff legível. A tabela de glifos 
 | Atalhos de teclado | [`docs/ATALHOS.md`](docs/ATALHOS.md), e no programa: botão direito → *Atalhos de teclado* |
 | Escolher a saída de áudio | botão direito na janela principal → *Dispositivo de saída* |
 | Propriedades da faixa | botão direito → *Propriedades da faixa* |
-| Trocar o skin | qualquer `.wsz` do Winamp 2.x, ou uma pasta com os bitmaps |
+| Trocar o skin | **não dá.** A aparência é fixa, por decisão de projeto — veja abaixo |
 
 Teclas de mídia e controle pelo ambiente funcionam via MPRIS, sem a janela em foco.
+
+**Sobre skins.** O que o projeto adota é o **formato** de skin do Winamp 2.x — a geometria: quais peças existem e onde cada uma mora dentro de cada bitmap. A arte é própria, desenhada por `tools/make_wsz.py`. Não há escolha de skin na interface, porque a especificação dispensa personalização visual, e **skins de terceiros não são suportados**: a grade do modo normal é a do projeto, e está de 2 a 4 px à esquerda das posições do formato em seis peças. Como um skin de terceiros traz os trilhos e os poços desenhados no fundo, o desenho dele e o que o player pinta em cima não coincidiriam. A medição está em [`docs/APROXIMACOES.md`](docs/APROXIMACOES.md).
 
 ---
 
