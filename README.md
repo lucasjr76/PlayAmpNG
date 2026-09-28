@@ -1,51 +1,55 @@
 # PlayAmpNG
 
-Reprodutor de áudio para desktop com a diagramação e as proporções do formato de skin do **Winamp 2.x**: painéis de tamanho fixo, fonte bitmap, analisador de espectro e equalizador de dez bandas.
+*Leia em [português](README.pt-BR.md).*
 
-Toca MP3, WAV, FLAC, Ogg Vorbis, Opus e AAC — local ou por streaming HTTP — com reprodução sem lacuna, ReplayGain e integração MPRIS.
+A desktop audio player with the layout and proportions of the **Winamp 2.x** skin format: fixed-size panels, a bitmap font, a spectrum analyser and a ten-band equaliser.
 
-**Licença: GPL-3.0-or-later** (`LICENSE`). A razão da escolha está em [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md).
+Plays MP3, WAV, FLAC, Ogg Vorbis, Opus and AAC — local files or HTTP streams — with gapless playback, ReplayGain and MPRIS integration.
+
+**Licence: GPL-3.0-or-later** (`LICENSE`). The reasoning behind the choice is in [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md).
+
+> **A note on language.** The code comments, commit messages and everything under `docs/` are written in **Portuguese**. This README is the only translated document. Issues and pull requests in English are welcome.
 
 <p align="center">
-  <img src="docs/img/playampng.png" alt="As três janelas do PlayAmpNG: player, equalizador e playlist" width="420">
+  <img src="docs/img/playampng.png" alt="The three PlayAmpNG windows: player, equaliser and playlist" width="420">
 </p>
 
-As três janelas em escala 2×: player, equalizador de dez bandas e playlist. A arte é própria, desenhada no formato de skin do Winamp 2.x — o layout segue a geometria do formato, os pixels não são dele.
+The three windows at 2× scale: player, ten-band equaliser and playlist. The artwork is our own, drawn in the Winamp 2.x skin format — the layout follows the geometry of the format, the pixels do not come from it.
 
-A linha curta em âmbar abaixo do tempo é o medidor de redução do limitador: ela acende quando o ganho do equalizador excede o que cabe na saída, e é a diferença entre ouvir o som "estranho" e ver por quê.
+The short amber line below the time display is the limiter's gain-reduction meter: it lights up when the equaliser gain exceeds what fits in the output, and it is the difference between hearing the sound go "strange" and seeing why.
 
 ---
 
-## Baixar e rodar
+## Download and run
 
-Os pacotes estão em **[Releases](https://github.com/lucasjr76/PlayAmpNG/releases)**. Todos são construídos e testados pelo CI a partir do mesmo commit, e acompanham um `SHA256SUMS.txt`.
+The packages are on **[Releases](https://github.com/lucasjr76/PlayAmpNG/releases)**. All of them are built and tested by CI from the same commit, and ship with a `SHA256SUMS.txt`.
 
-| Sistema | Arquivo | Como usar |
+| System | File | How to use |
 |---|---|---|
-| Linux | `PlayAmpNG-x86_64.AppImage` | `chmod +x` e executar. Não instala nada, não precisa de root. Exige glibc 2.39 ou mais novo (Ubuntu 24.04+) |
-| Linux | `PlayAmpNG.flatpak` | `flatpak install --user PlayAmpNG.flatpak`. Sem o piso de glibc do AppImage |
-| Windows | `PlayAmpNG-<versão>-setup.exe` | Instala no perfil do usuário, sem pedir administrador |
-| macOS (Apple Silicon) | `PlayAmpNG-<versão>-macos-arm64.dmg` | Arrastar para Aplicativos. **Sem assinatura da Apple:** na primeira abertura, clique com o botão direito no app e escolha *Abrir* |
+| Linux | `PlayAmpNG-x86_64.AppImage` | `chmod +x` and run. Installs nothing, needs no root. Requires glibc 2.39 or newer (Ubuntu 24.04+) |
+| Linux | `PlayAmpNG.flatpak` | `flatpak install --user PlayAmpNG.flatpak`. Without the AppImage's glibc floor |
+| Windows | `PlayAmpNG-<version>-setup.exe` | Installs into the user profile, without asking for administrator |
+| macOS (Apple Silicon) | `PlayAmpNG-<version>-macos-arm64.dmg` | Drag to Applications. **Not signed by Apple:** on first launch, right-click the app and choose *Open* |
 
-O pacote do macOS é montado e aberto pelo CI, mas **ainda não foi testado por uma pessoa num Mac** — relatos são bem-vindos. Macs com processador Intel não são atendidos por ele.
+The macOS package is built and launched by CI, but **has not been tested by a person on a Mac yet** — reports are welcome. Intel Macs are not covered by it.
 
-## Compilar a partir da fonte
+## Build from source
 
-### Dependências
+### Dependencies
 
-| Item | Versão mínima | Pacote (Arch) | Pacote (Debian/Ubuntu) |
+| Item | Minimum version | Package (Arch) | Package (Debian/Ubuntu) |
 |---|---|---|---|
 | CMake | 3.24 | `cmake` | `cmake` |
-| Compilador C++20 | GCC 12 / Clang 15 | `gcc` | `g++` |
+| C++20 compiler | GCC 12 / Clang 15 | `gcc` | `g++` |
 | Qt 6 (Widgets, Network, DBus) | 6.4 | `qt6-base` | `qt6-base-dev` |
-| Qt 6 Wayland (só para gerar o AppImage) | 6.4 | `qt6-wayland` | `qt6-wayland` |
+| Qt 6 Wayland (only to build the AppImage) | 6.4 | `qt6-wayland` | `qt6-wayland` |
 | FFmpeg (libavformat, libavcodec, libavutil, libswresample) | 6.0 | `ffmpeg` | `libavformat-dev libavcodec-dev libavutil-dev libswresample-dev` |
 | zlib | 1.2 | `zlib` | `zlib1g-dev` |
 | Python 3 | 3.9 | `python` | `python3` |
 
-`miniaudio` é buscado pelo CMake com `FetchContent` numa tag fixa; a primeira compilação precisa de rede.
+`miniaudio` is fetched by CMake with `FetchContent` at a pinned tag; the first build needs network access.
 
-### Compilar, testar, instalar
+### Build, test, install
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -54,9 +58,9 @@ ctest --test-dir build --output-on-failure
 sudo cmake --install build --prefix /usr/local
 ```
 
-A suíte roda sem tela e sem placa de som. Os testes que precisam de barramento D-Bus, servidor PulseAudio/PipeWire ou `pactl` são **pulados**, não reprovados, onde esses recursos não existirem.
+The suite runs with no display and no sound card. Tests that need a D-Bus bus, a PulseAudio/PipeWire server or `pactl` are **skipped**, not failed, where those are missing.
 
-### Gerar os pacotes
+### Build the packages
 
 ```sh
 packaging/linux/build-appimage.sh          # -> dist/PlayAmpNG-x86_64.AppImage
@@ -67,51 +71,55 @@ flatpak-builder --user --install --force-clean build-flatpak \
 flatpak run br.com.playampng.PlayAmpNG
 ```
 
-O script do AppImage baixa `linuxdeploy` e `appimagetool` na primeira execução e não exige root.
+The AppImage script downloads `linuxdeploy` and `appimagetool` on first run and needs no root.
 
-No Windows, com Qt e o ambiente do MSVC no `PATH`:
+On Windows, with Qt and the MSVC environment on `PATH`:
 
 ```powershell
 packaging\windows\build-installer.ps1 -FfmpegRoot C:\ffmpeg
 ```
 
-No Windows o log vai para `playampng.log`, ao lado da configuração em `%LOCALAPPDATA%\PlayAmpNG`; a execução anterior fica como `playampng.log.1`. Para vê-lo ao vivo no terminal, `playampng.exe --console` — nesse modo o player fica preso ao terminal e fechá-lo encerra o player.
+On Windows the log goes to `playampng.log`, next to the configuration in `%LOCALAPPDATA%\PlayAmpNG`; the previous run is kept as `playampng.log.1`. To watch it live in a terminal, run `playampng.exe --console` — in that mode the player is tied to the terminal, and closing it closes the player.
 
-Monta `dist\windows\`, um diretório que já roda por si só, e — se `makensis` estiver disponível — o instalador `PlayAmpNG-<versão>-setup.exe`. O instalador não pede administrador: instala em `%LOCALAPPDATA%`, as associações de arquivo são opcionais e desmarcadas, e desinstalar não apaga a configuração do usuário. O zlib do Windows vem do vcpkg (`vcpkg install zlib:x64-windows`, depois `ZLIB_ROOT`); o Qt para Windows não traz cabeçalho de zlib.
+That builds `dist\windows\`, a directory that already runs on its own, and — if `makensis` is available — the `PlayAmpNG-<version>-setup.exe` installer. The installer does not ask for administrator: it installs into `%LOCALAPPDATA%`, file associations are optional and unchecked, and uninstalling does not delete the user's configuration. zlib for Windows comes from vcpkg (`vcpkg install zlib:x64-windows`, then `ZLIB_ROOT`); Qt for Windows ships no zlib header.
 
-### Regerar a arte do skin
+### Regenerate the skin artwork
 
 ```sh
-python3 tools/make_wsz.py          # bitmaps do formato + .wsz
+python3 tools/make_wsz.py          # format bitmaps + .wsz
 cmake --build build --target pang_fontgen && ./build/pang_fontgen
 ```
 
-A arte vive em código: qualquer ajuste é um diff legível. A tabela de glifos é **extraída da fonte Silkscreen** por `pang_fontgen`, e não desenhada à mão — três versões manuais saíram com forma de letra errada.
+The artwork lives in code: any adjustment is a readable diff. The glyph table is **extracted from the Silkscreen font** by `pang_fontgen`, not drawn by hand — three hand-made versions came out with the wrong letter shapes.
 
 ---
 
-## Usar
+## Using it
 
 | | |
 |---|---|
-| Atalhos de teclado | [`docs/ATALHOS.md`](docs/ATALHOS.md), e no programa: botão direito → *Atalhos de teclado* |
-| Escolher a saída de áudio | botão direito na janela principal → *Dispositivo de saída* |
-| Propriedades da faixa | botão direito → *Propriedades da faixa* |
-| Trocar o skin | qualquer `.wsz` do Winamp 2.x, ou uma pasta com os bitmaps |
+| Keyboard shortcuts | [`docs/ATALHOS.md`](docs/ATALHOS.md) (Portuguese), and in the program: right-click → *Atalhos de teclado* |
+| Choose the audio output | right-click the main window → *Dispositivo de saída* |
+| Track properties | right-click → *Propriedades da faixa* |
+| Change the skin | any Winamp 2.x `.wsz`, or a folder with the bitmaps |
 
-Teclas de mídia e controle pelo ambiente funcionam via MPRIS, sem a janela em foco.
+Media keys and desktop-level control work over MPRIS, without the window being focused.
+
+The interface itself is in Portuguese.
 
 ---
 
-## Documentação
+## Documentation
 
-| Arquivo | Conteúdo |
+All of it in Portuguese.
+
+| File | Contents |
 |---|---|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | camadas, contratos de thread, árvore do código |
-| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | matriz de requisitos, com estado e evidência |
-| [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) | o que foi medido, com números e máquina |
-| [`docs/DEFEITOS.md`](docs/DEFEITOS.md) | defeitos encontrados em uso, causa medida e correção |
-| [`docs/LIMITACOES.md`](docs/LIMITACOES.md) | o que o player **não** faz, e por quê |
-| [`docs/APROXIMACOES.md`](docs/APROXIMACOES.md) | onde a aparência diverge da referência, e a medição |
-| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | versões, licenças e a decisão de GPL-3.0 |
-| [`docs/PLAN.md`](docs/PLAN.md) | marcos, riscos e o que ficou fora |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | layers, thread contracts, source tree |
+| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | requirement matrix, with state and evidence |
+| [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md) | what was measured, with numbers and machine |
+| [`docs/DEFEITOS.md`](docs/DEFEITOS.md) | defects found in use, measured cause and fix |
+| [`docs/LIMITACOES.md`](docs/LIMITACOES.md) | what the player does **not** do, and why |
+| [`docs/APROXIMACOES.md`](docs/APROXIMACOES.md) | where the appearance diverges from the reference, and the measurement |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | versions, licences and the GPL-3.0 decision |
+| [`docs/PLAN.md`](docs/PLAN.md) | milestones, risks and what was left out |

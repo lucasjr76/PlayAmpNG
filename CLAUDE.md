@@ -53,6 +53,8 @@ Aprendidas neste projeto, quase todas depois de um defeito.
 
 **Nada pessoal ou da máquina no repositório.** O repositório é público: nenhum caminho de diretório pessoal, nome de usuário, e-mail ou dado de configuração local em código, documentação ou mensagem de commit.
 
+**Os dois READMEs mudam no mesmo commit.** `README.md` (inglês, porta de entrada do repositório) e `README.pt-BR.md` (português) têm as mesmas seções, na mesma ordem. Mexer num sem o outro é a mesma armadilha das duas rotas: eles divergem na primeira versão ou formato que mudar. Todo o resto — `docs/`, comentários, commits — é só em português, e o README em inglês diz isso.
+
 **O log fica em `playampng.log`, ao lado da configuração**, nos três sistemas, com a execução anterior em `.1`. Toda linha tem hora. É o primeiro lugar a olhar num relato de defeito.
 
 **Teste de mutação restaura o arquivo com `trap`.** Uma sessão interrompida no meio de uma mutação já deixou um arquivo mutado no disco; sem a restauração garantida, o próximo commit levaria o defeito plantado de propósito.
